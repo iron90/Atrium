@@ -72,6 +72,8 @@ React UI
   │  ├─ scan-request-gate         最新扫描请求优先的并发闸门
   │  ├─ ProjectListRow             列表行事件边界
   │  ├─ ProjectListRowCells        项目、Git、上下文和操作单元
+  │  ├─ use-project-reorder        排序门面与预览顺序投影
+  │  ├─ use-project-drag-session   HTML5 拖拽会话与落点反馈
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
