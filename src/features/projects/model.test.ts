@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   collectFilterOptions,
   filterAndSortProjects,
-  mergeWorkspaceSnapshots,
   reorderProjectMeta,
   type ProjectMeta,
-} from "./model";
+} from "./project-list-model";
+import { mergeWorkspaceSnapshots } from "./workspace-snapshot";
 import type { Facet, ProjectSnapshot } from "../../bridge/types";
 
 const project = (

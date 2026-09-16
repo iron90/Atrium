@@ -2,7 +2,11 @@ import type { Facet, ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { ProjectFilterBar } from "./ProjectFilterBar";
 import { ProjectListRow } from "./ProjectListRow";
-import { metaForProject, type ProjectMeta, type ProjectSort } from "./model";
+import {
+  metaForProject,
+  type ProjectMeta,
+  type ProjectSort,
+} from "./project-list-model";
 import { useProjectReorder } from "./use-project-reorder";
 
 export interface ProjectListProps {

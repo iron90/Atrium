@@ -7,7 +7,7 @@ import { useI18n, localizedFacetLabel } from "../../i18n";
 import { FacetMark } from "./FacetMark";
 import { facetTitle } from "./facets";
 import { ProjectIconView } from "./ProjectIconView";
-import type { ProjectMeta } from "./model";
+import type { ProjectMeta } from "./project-list-model";
 import type { DropPosition } from "./project-reorder";
 import {
   hasTrustedContext,

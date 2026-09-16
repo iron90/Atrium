@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { WorkspaceSnapshot } from "../../bridge/types";
-import { snapshotFingerprint } from "./model";
+import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
 
 export type WorkspaceMessage =

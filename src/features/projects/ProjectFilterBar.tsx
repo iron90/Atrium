@@ -1,6 +1,6 @@
 import type { Facet } from "../../bridge";
 import { useI18n } from "../../i18n";
-import type { ProjectSort } from "./model";
+import type { ProjectSort } from "./project-list-model";
 
 export interface ProjectFilterBarProps {
   search: string;

@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge";
-import { metaForProject, reorderProjectMeta, type ProjectMeta } from "./model";
+import {
+  metaForProject,
+  reorderProjectMeta,
+  type ProjectMeta,
+} from "./project-list-model";
 
 export interface ProjectMetaState {
   projectMeta: Record<string, ProjectMeta>;

@@ -5,7 +5,7 @@ import {
   filterAndSortProjects,
   type ProjectMeta,
   type ProjectSort,
-} from "./model";
+} from "./project-list-model";
 
 export interface ProjectListViewState {
   search: string;

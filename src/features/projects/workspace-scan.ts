@@ -1,7 +1,7 @@
 import { bridge } from "../../bridge";
 import type { WorkspaceSnapshot } from "../../bridge";
 import { translate, type Language } from "../../i18n";
-import { emptySnapshot, mergeWorkspaceSnapshots } from "./model";
+import { emptySnapshot, mergeWorkspaceSnapshots } from "./workspace-snapshot";
 
 export type WorkspaceScanner = (
   rootPath: string,

@@ -13,7 +13,8 @@ import {
   type ProjectAction,
 } from "./features/projects/project-actions";
 import { useProjectInspectorActions } from "./features/projects/use-project-inspector-actions";
-import { emptySnapshot, metaForProject } from "./features/projects/model";
+import { metaForProject } from "./features/projects/project-list-model";
+import { emptySnapshot } from "./features/projects/workspace-snapshot";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
 import {

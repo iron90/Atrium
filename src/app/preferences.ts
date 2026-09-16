@@ -1,5 +1,5 @@
 import type { Language } from "../i18n";
-import type { ProjectMeta } from "../features/projects/model";
+import type { ProjectMeta } from "../features/projects/project-list-model";
 import {
   isLayoutId,
   isThemeId,
