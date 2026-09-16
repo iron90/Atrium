@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { demoSnapshot, fakeRun } from "./fake-bridge";
+import { isTauriRuntime } from "./runtime";
 import type {
   CleanupResult,
   GitChangeSummary,
@@ -12,8 +13,7 @@ import type {
   WorkspaceSnapshot,
 } from "./types";
 
-export const isTauriRuntime = (): boolean =>
-  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+export { isTauriRuntime };
 
 export const bridge = {
   defaultWorkspacePath: async (): Promise<string> => {

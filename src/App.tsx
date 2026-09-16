@@ -4,10 +4,10 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { FaDesktop, FaGlobe, FaWindows } from "react-icons/fa6";
 import { SiAndroid, SiApple, SiIos, SiLinux, SiMacos } from "react-icons/si";
 import { bridge, isTauriRuntime } from "./bridge";
+import { subscribeToRunEvents } from "./bridge/events";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import { I18nProvider, localizedFacetLabel, translate, useI18n } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
@@ -22,7 +22,6 @@ import type {
   ProjectSnapshot,
   ProjectStorage,
   RunFinished,
-  RunOutput,
   RunStarted,
   StorageEntry,
   WorkspaceSnapshot,
@@ -1091,16 +1090,13 @@ export default function App() {
   }, [selectedProjectId, snapshot.projects]);
 
   useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-
     let disposed = false;
-    let cleanup: Array<() => void> = [];
-    const registrations = Promise.all([
-      listen<RunOutput>("run-output", (event) => {
-        setOutputLines((lines) => [...lines, event.payload.line].slice(-180));
-      }),
-      listen<RunFinished>("run-finished", (event) => {
-        const finished = event.payload;
+    let cleanup: (() => void) | undefined;
+    void subscribeToRunEvents({
+      onOutput: (output) => {
+        setOutputLines((lines) => [...lines, output.line].slice(-180));
+      },
+      onFinished: (finished) => {
         setActiveRuns((runs) => {
           const next = { ...runs };
           delete next[finished.runId];
@@ -1111,20 +1107,18 @@ export default function App() {
           displayCommand: finished.displayCommand,
           status: finished.status,
         });
-      }),
-    ]);
-
-    void registrations.then((listeners) => {
+      },
+    }).then((unsubscribe) => {
       if (disposed) {
-        listeners.forEach((unlisten) => unlisten());
+        unsubscribe();
       } else {
-        cleanup = listeners;
+        cleanup = unsubscribe;
       }
     });
 
     return () => {
       disposed = true;
-      cleanup.forEach((unlisten) => unlisten());
+      cleanup?.();
     };
   }, []);
 
