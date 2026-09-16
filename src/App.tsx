@@ -13,13 +13,15 @@ import {
   collectFilterOptions,
   emptySnapshot,
   filterAndSortProjects,
-  mergeWorkspaceSnapshots,
   metaForProject,
   reorderProjectMeta,
-  snapshotFingerprint,
   type ProjectMeta,
   type ProjectSort,
 } from "./features/projects/model";
+import {
+  useProjectWorkspace,
+  type WorkspaceMessage,
+} from "./features/projects/use-project-workspace";
 import { I18nProvider, localizedFacetLabel, translate, useI18n } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import type {
@@ -386,15 +388,11 @@ const navItems: Array<{
 
 type RunMessage =
   | { type: "ready" }
-  | { type: "projects"; count: number }
-  | { type: "workspaceUpdated"; count: number }
+  | WorkspaceMessage
   | {
       type: "localized";
-      key: "scanFailed" | "commandStartFailed" | "refreshFailed";
+      key: "commandStartFailed";
     }
-  | { type: "projectRefreshed" }
-  | { type: "refreshingWorkspace" }
-  | { type: "scanning" }
   | { type: "cancelled" }
   | {
       type: "command";
@@ -472,10 +470,6 @@ export default function App() {
     preferences.language ?? "en",
   );
   const [activePage, setActivePage] = useState<PageId>("projects");
-  const [rootPath, setRootPath] = useState(initialRootPath);
-  const [workspacePaths, setWorkspacePaths] = useState<string[]>(
-    initialWorkspacePaths,
-  );
   const [excludeNames, setExcludeNames] = useState<string[]>(
     preferences.excludeNames ?? [],
   );
@@ -487,19 +481,11 @@ export default function App() {
   const [channelFilter, setChannelFilter] = useState("all");
   const [projectSort, setProjectSort] = useState<ProjectSort>("manual");
   const [showHiddenProjects, setShowHiddenProjects] = useState(false);
-  const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>(() =>
+  const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
     isTauriRuntime()
       ? emptySnapshot(initialRootPath)
       : demoSnapshot(initialRootPath),
   );
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    snapshot.projects[0]?.id ?? "",
-  );
-  const [inspectorProject, setInspectorProject] = useState<
-    ProjectSnapshot | undefined
-  >(() => (isTauriRuntime() ? undefined : snapshot.projects[0]));
-  const [isLoadingDetails, setIsLoadingDetails] = useState(isTauriRuntime());
-  const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guidanceMessage, setGuidanceMessage] = useState<string | null>(null);
   const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
@@ -514,14 +500,66 @@ export default function App() {
   const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
   const [outputLines, setOutputLines] = useState<string[]>([]);
   const [runMessage, setRunMessage] = useState<RunMessage>({ type: "ready" });
-  const [refreshingProjectId, setRefreshingProjectId] = useState<string | null>(
-    null,
+
+  const handleWorkspaceError = useCallback(
+    (message: string | null) => setError(message),
+    [],
   );
-  const detailRequest = useRef(0);
-  const selectedProjectIdRef = useRef(selectedProjectId);
-  const workspaceFingerprintRef = useRef(snapshotFingerprint(snapshot));
-  const workspaceScanInFlight = useRef(false);
-  const skipNextDetailRequest = useRef<string | null>(null);
+  const handleWorkspaceMessage = useCallback(
+    (message: WorkspaceMessage) => setRunMessage(message),
+    [],
+  );
+  const resetProjectInspection = useCallback(() => {
+    setGuidanceMessage(null);
+    setAgentPrompt(null);
+    setIsAgentPromptCopied(false);
+    setCleanupFeedback(null);
+    setCleanupSelection([]);
+    setIsCleaningArtifacts(false);
+  }, []);
+  const ensureProjectMeta = useCallback((nextSnapshot: WorkspaceSnapshot) => {
+    setProjectMeta((current) => {
+      const next = { ...current };
+      nextSnapshot.projects.forEach((project, index) => {
+        if (!next[project.id]) {
+          next[project.id] = {
+            favorite: false,
+            hidden: false,
+            order: index,
+          };
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  const {
+    rootPath,
+    workspacePaths,
+    snapshot,
+    selectedProject,
+    inspectorProject,
+    isLoadingDetails,
+    isScanning,
+    refreshingProjectId,
+    updateInspectorProject,
+    updateWorkspacePaths,
+    selectProject,
+    scanWorkspace,
+    refreshProject,
+  } = useProjectWorkspace({
+    nativeRuntime: isTauriRuntime(),
+    preferences,
+    initialRootPath,
+    initialWorkspacePaths,
+    initialSnapshot,
+    excludeNames,
+    language,
+    onError: handleWorkspaceError,
+    onMessage: handleWorkspaceMessage,
+    onProjectSelected: resetProjectInspection,
+    onSnapshotApplied: ensureProjectMeta,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -559,13 +597,6 @@ export default function App() {
       t: (key: TranslationKey) => translate(language, key),
     }),
     [language],
-  );
-
-  const selectedProject = useMemo(
-    () =>
-      snapshot.projects.find((project) => project.id === selectedProjectId) ??
-      snapshot.projects[0],
-    [selectedProjectId, snapshot.projects],
   );
 
   const activeRun = selectedProject
@@ -642,261 +673,6 @@ export default function App() {
     [reorderProjects, visibleProjects],
   );
 
-  const updateWorkspacePaths = (nextPaths: string[]) => {
-    const trimmed = nextPaths.map((path) => path.trim());
-    const normalized = Array.from(new Set(trimmed.filter(Boolean)));
-    if (trimmed[trimmed.length - 1] === "") normalized.push("");
-    setWorkspacePaths(normalized);
-    setRootPath(normalized[0] ?? "");
-  };
-
-  const selectProject = useCallback((projectId: string) => {
-    selectedProjectIdRef.current = projectId;
-    setSelectedProjectId(projectId);
-    setInspectorProject(undefined);
-    setIsLoadingDetails(true);
-    setGuidanceMessage(null);
-    setAgentPrompt(null);
-    setIsAgentPromptCopied(false);
-    setCleanupFeedback(null);
-    setCleanupSelection([]);
-    setIsCleaningArtifacts(false);
-  }, []);
-
-  const applyWorkspaceSnapshot = useCallback(
-    (nextSnapshot: WorkspaceSnapshot) => {
-      const currentProjectId = selectedProjectIdRef.current;
-      const nextProjectId = nextSnapshot.projects.some(
-        (project) => project.id === currentProjectId,
-      )
-        ? currentProjectId
-        : (nextSnapshot.projects[0]?.id ?? "");
-
-      workspaceFingerprintRef.current = snapshotFingerprint(nextSnapshot);
-      setSnapshot(nextSnapshot);
-      setProjectMeta((current) => {
-        const next = { ...current };
-        nextSnapshot.projects.forEach((project, index) => {
-          if (!next[project.id]) {
-            next[project.id] = {
-              favorite: false,
-              hidden: false,
-              order: index,
-            };
-          }
-        });
-        return next;
-      });
-      if (nextProjectId !== currentProjectId) {
-        if (nextProjectId) {
-          selectProject(nextProjectId);
-        } else {
-          selectedProjectIdRef.current = "";
-          setSelectedProjectId("");
-          setInspectorProject(undefined);
-          setIsLoadingDetails(false);
-        }
-      }
-    },
-    [selectProject],
-  );
-
-  const scanAllWorkspaces = useCallback(
-    async (paths: string[]): Promise<WorkspaceSnapshot> => {
-      const normalized = Array.from(
-        new Set(paths.map((path) => path.trim()).filter(Boolean)),
-      );
-      if (!normalized.length) return emptySnapshot("");
-      const results = await Promise.allSettled(
-        normalized.map((path) => bridge.scanWorkspace(path, excludeNames)),
-      );
-      const snapshots = results
-        .filter(
-          (result): result is PromiseFulfilledResult<WorkspaceSnapshot> =>
-            result.status === "fulfilled",
-        )
-        .map((result) => result.value);
-      if (!snapshots.length) {
-        const failure = results.find(
-          (result): result is PromiseRejectedResult =>
-            result.status === "rejected",
-        );
-        throw failure?.reason ?? new Error("No workspace could be scanned");
-      }
-      const scan = mergeWorkspaceSnapshots(snapshots, normalized[0]);
-      const rejected = results
-        .map((result, index) =>
-          result.status === "rejected"
-            ? `Workspace ${normalized[index] ?? ""}: ${String(result.reason)}`
-            : null,
-        )
-        .filter((warning): warning is string => Boolean(warning));
-      const overlap = normalized.some((left, index) =>
-        normalized.some(
-          (right, rightIndex) =>
-            index !== rightIndex &&
-            (right.startsWith(`${left}/`) || left.startsWith(`${right}/`)),
-        ),
-      );
-      return {
-        ...scan,
-        warnings: [
-          ...scan.warnings,
-          ...rejected,
-          ...(overlap ? [translate(language, "workspaceOverlap")] : []),
-        ],
-      };
-    },
-    [excludeNames, language],
-  );
-
-  useEffect(() => {
-    if (!isTauriRuntime()) return undefined;
-
-    let disposed = false;
-    workspaceScanInFlight.current = true;
-    void bridge
-      .defaultWorkspacePath()
-      .then((defaultPath) => {
-        const nextRoot = preferences.rootPath?.trim() || defaultPath;
-        if (!nextRoot) {
-          throw new Error("No default workspace path is available.");
-        }
-        const nextPaths = preferences.workspaces?.length
-          ? preferences.workspaces
-          : [nextRoot];
-        if (!disposed) {
-          setRootPath(nextPaths[0] ?? nextRoot);
-          setWorkspacePaths(nextPaths);
-        }
-        return scanAllWorkspaces(nextPaths);
-      })
-      .then((nextSnapshot) => {
-        if (disposed) return;
-        applyWorkspaceSnapshot(nextSnapshot);
-        setRunMessage({
-          type: "projects",
-          count: nextSnapshot.projects.length,
-        });
-      })
-      .catch((scanError) => {
-        if (disposed) return;
-        setError(
-          scanError instanceof Error ? scanError.message : String(scanError),
-        );
-        setRunMessage({ type: "localized", key: "scanFailed" });
-      })
-      .finally(() => {
-        workspaceScanInFlight.current = false;
-      });
-
-    return () => {
-      disposed = true;
-    };
-    // The first native scan is intentionally tied to the app lifetime.
-  }, [
-    applyWorkspaceSnapshot,
-    preferences.rootPath,
-    preferences.workspaces,
-    scanAllWorkspaces,
-  ]);
-
-  useEffect(() => {
-    if (!isTauriRuntime() || !workspacePaths.some((path) => path.trim()))
-      return undefined;
-
-    let disposed = false;
-    const refreshWorkspace = async () => {
-      if (disposed || workspaceScanInFlight.current) return;
-      workspaceScanInFlight.current = true;
-      setRunMessage({ type: "refreshingWorkspace" });
-      try {
-        const nextSnapshot = await scanAllWorkspaces(workspacePaths);
-        if (disposed) return;
-        const changed =
-          workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
-        if (changed) {
-          applyWorkspaceSnapshot(nextSnapshot);
-          setError(null);
-          setRunMessage({
-            type: "workspaceUpdated",
-            count: nextSnapshot.projects.length,
-          });
-        } else {
-          setSnapshot((current) => ({
-            ...current,
-            scannedAt: nextSnapshot.scannedAt,
-          }));
-          setRunMessage({
-            type: "projects",
-            count: nextSnapshot.projects.length,
-          });
-        }
-      } catch {
-        if (!disposed) {
-          setRunMessage({ type: "localized", key: "refreshFailed" });
-        }
-      } finally {
-        workspaceScanInFlight.current = false;
-      }
-    };
-
-    const interval = window.setInterval(() => void refreshWorkspace(), 10_000);
-    return () => {
-      disposed = true;
-      window.clearInterval(interval);
-    };
-    // The native scanner performs lightweight, deterministic checks on this interval.
-  }, [applyWorkspaceSnapshot, scanAllWorkspaces, workspacePaths]);
-
-  useEffect(() => {
-    const project = snapshot.projects.find(
-      (candidate) => candidate.id === selectedProjectId,
-    );
-    if (!project) {
-      return undefined;
-    }
-
-    let disposed = false;
-    const requestId = ++detailRequest.current;
-    if (skipNextDetailRequest.current === project.id) {
-      skipNextDetailRequest.current = null;
-      return undefined;
-    }
-    const timer = window.setTimeout(() => {
-      if (disposed) return;
-      setInspectorProject(undefined);
-      setIsLoadingDetails(true);
-      void bridge
-        .inspectProject(project.path)
-        .then((details) => {
-          if (!disposed && requestId === detailRequest.current) {
-            setInspectorProject(details);
-          }
-        })
-        .catch((detailError) => {
-          if (!disposed && requestId === detailRequest.current) {
-            setError(
-              detailError instanceof Error
-                ? detailError.message
-                : String(detailError),
-            );
-            setInspectorProject(project);
-          }
-        })
-        .finally(() => {
-          if (!disposed && requestId === detailRequest.current) {
-            setIsLoadingDetails(false);
-          }
-        });
-    }, 0);
-
-    return () => {
-      disposed = true;
-      window.clearTimeout(timer);
-    };
-  }, [selectedProjectId, snapshot.projects]);
-
   useEffect(() => {
     let disposed = false;
     let cleanup: (() => void) | undefined;
@@ -929,73 +705,6 @@ export default function App() {
       cleanup?.();
     };
   }, []);
-
-  const handleScan = async () => {
-    const nextPaths = workspacePaths.map((path) => path.trim()).filter(Boolean);
-    if (!nextPaths.length) {
-      setError(t("enterWorkspace"));
-      return;
-    }
-    setIsScanning(true);
-    setRootPath(nextPaths[0]);
-    setWorkspacePaths(nextPaths);
-    setError(null);
-    setRunMessage({ type: "scanning" });
-    workspaceScanInFlight.current = true;
-    try {
-      const nextSnapshot = await scanAllWorkspaces(nextPaths);
-      applyWorkspaceSnapshot(nextSnapshot);
-      setRunMessage({ type: "projects", count: nextSnapshot.projects.length });
-    } catch (scanError) {
-      setError(
-        scanError instanceof Error ? scanError.message : String(scanError),
-      );
-      setRunMessage({ type: "localized", key: "scanFailed" });
-    } finally {
-      workspaceScanInFlight.current = false;
-      setIsScanning(false);
-    }
-  };
-
-  const handleRefreshProject = async (project: ProjectSnapshot) => {
-    if (refreshingProjectId) return;
-    setRefreshingProjectId(project.id);
-    setError(null);
-    detailRequest.current += 1;
-    try {
-      const details = await bridge.inspectProject(project.path);
-      const isStillSelected = selectedProjectIdRef.current === project.id;
-      const nextProjects = snapshot.projects.map((candidate) =>
-        candidate.id === project.id ? details : candidate,
-      );
-      workspaceFingerprintRef.current = snapshotFingerprint({
-        ...snapshot,
-        projects: nextProjects,
-        scannedAt: details.scannedAt,
-      });
-      setSnapshot((current) => ({
-        ...current,
-        projects: current.projects.map((candidate) =>
-          candidate.id === project.id ? details : candidate,
-        ),
-        scannedAt: details.scannedAt,
-      }));
-      if (isStillSelected) {
-        skipNextDetailRequest.current = project.id;
-        setInspectorProject(details);
-        setIsLoadingDetails(false);
-        setRunMessage({ type: "projectRefreshed" });
-      }
-    } catch (refreshError) {
-      setError(
-        refreshError instanceof Error
-          ? refreshError.message
-          : String(refreshError),
-      );
-    } finally {
-      setRefreshingProjectId(null);
-    }
-  };
 
   const handleRun = async (
     command: ProjectCommand,
@@ -1089,7 +798,7 @@ export default function App() {
         project.path,
         selectedPaths,
       );
-      setInspectorProject((current) =>
+      updateInspectorProject((current) =>
         current?.id === project.id
           ? { ...current, storage: result.storage }
           : current,
@@ -1256,7 +965,7 @@ export default function App() {
               onWorkspacePathsChange={updateWorkspacePaths}
               excludeNames={excludeNames}
               setExcludeNames={setExcludeNames}
-              onScan={() => void handleScan()}
+              onScan={() => void scanWorkspace()}
               isScanning={isScanning}
             />
           ) : activePage === "git" ? (
@@ -1405,9 +1114,7 @@ export default function App() {
                 onRun={(command, profileId, profileAction) =>
                   void handleRun(command, undefined, profileId, profileAction)
                 }
-                onRefreshProject={(project) =>
-                  void handleRefreshProject(project)
-                }
+                onRefreshProject={(project) => void refreshProject(project)}
                 isRefreshing={refreshingProjectId === selectedProject?.id}
                 onStop={() => void handleStop()}
                 onGenerateGuidance={(project) =>

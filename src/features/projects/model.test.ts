@@ -6,7 +6,7 @@ import {
   reorderProjectMeta,
   type ProjectMeta,
 } from "./model";
-import type { Facet, ProjectSnapshot } from "../../bridge";
+import type { Facet, ProjectSnapshot } from "../../bridge/types";
 
 const project = (
   id: string,
