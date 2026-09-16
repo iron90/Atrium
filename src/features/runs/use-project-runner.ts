@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { bridge } from "../../bridge";
-import { subscribeToRunEvents } from "../../bridge/events";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
 import type {
   ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
+  RunError,
   RunFinished,
   RunStarted,
 } from "../../bridge";
+import { useRunEventStream } from "./use-run-event-stream";
 
 export type RunMessage =
   | { type: "ready" }
@@ -58,44 +59,31 @@ export function useProjectRunner({
   onError,
   onMessage,
 }: UseProjectRunnerOptions): UseProjectRunnerResult {
-  const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
-  const [outputLines, setOutputLines] = useState<string[]>([]);
-
-  useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => void) | undefined;
-    void subscribeToRunEvents({
-      onOutput: (output) => {
-        setOutputLines((lines) => [...lines, output.line].slice(-180));
-      },
-      onError: (runError) => {
-        onError(runError.message);
-      },
-      onFinished: (finished) => {
-        setActiveRuns((runs) => {
-          const next = { ...runs };
-          delete next[finished.runId];
-          return next;
-        });
-        onMessage({
-          type: "finished",
-          displayCommand: finished.displayCommand,
-          status: finished.status,
-        });
-      },
-    }).then((unsubscribe) => {
-      if (disposed) {
-        unsubscribe();
-      } else {
-        cleanup = unsubscribe;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      cleanup?.();
-    };
-  }, [onError, onMessage]);
+  const handleRunError = useCallback(
+    (error: RunError) => onError(error.message),
+    [onError],
+  );
+  const handleRunFinished = useCallback(
+    (finished: RunFinished) => {
+      onMessage({
+        type: "finished",
+        displayCommand: finished.displayCommand,
+        status: finished.status,
+      });
+    },
+    [onMessage],
+  );
+  const {
+    activeRuns,
+    outputLines,
+    clearOutput,
+    registerRun,
+    completeRun,
+    replaceOutput,
+  } = useRunEventStream({
+    onError: handleRunError,
+    onFinished: handleRunFinished,
+  });
 
   const activeRun = useMemo(
     () =>
@@ -117,7 +105,7 @@ export function useProjectRunner({
       const targetProject = projectOverride ?? selectedProject;
       if (!targetProject) return;
       onError(null);
-      setOutputLines([]);
+      clearOutput();
       onMessage({
         type: "command",
         commandKind: command.kind,
@@ -131,15 +119,11 @@ export function useProjectRunner({
           profileId,
           profileAction,
         );
-        setActiveRuns((runs) => ({ ...runs, [started.runId]: started }));
+        registerRun(started);
         if (!nativeRuntime) {
           window.setTimeout(() => {
-            setActiveRuns((runs) => {
-              const next = { ...runs };
-              delete next[started.runId];
-              return next;
-            });
-            setOutputLines([translate(language, "demoCompleted")]);
+            completeRun(started.runId);
+            replaceOutput([translate(language, "demoCompleted")]);
             onMessage({
               type: "demo",
               displayCommand: command.displayCommand,
@@ -153,25 +137,31 @@ export function useProjectRunner({
         onMessage({ type: "localized", key: "commandStartFailed" });
       }
     },
-    [language, nativeRuntime, onError, onMessage, selectedProject],
+    [
+      clearOutput,
+      completeRun,
+      language,
+      nativeRuntime,
+      onError,
+      onMessage,
+      registerRun,
+      replaceOutput,
+      selectedProject,
+    ],
   );
 
   const stopActiveRun = useCallback(async () => {
     if (!activeRun) return;
     try {
       await bridge.stopProjectCommand(activeRun.runId);
-      setActiveRuns((runs) => {
-        const next = { ...runs };
-        delete next[activeRun.runId];
-        return next;
-      });
+      completeRun(activeRun.runId);
       onMessage({ type: "cancelled" });
     } catch (stopError) {
       onError(
         stopError instanceof Error ? stopError.message : String(stopError),
       );
     }
-  }, [activeRun, onError, onMessage]);
+  }, [activeRun, completeRun, onError, onMessage]);
 
   return { activeRun, outputLines, runProjectCommand, stopActiveRun };
 }
