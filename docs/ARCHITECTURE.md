@@ -66,7 +66,7 @@ React UI
   │  ├─ use-project-guidance-actions 协议引导与 Agent 提示词
   │  ├─ use-project-cleanup-actions 产物清理选择与执行
   │  ├─ git-presentation          Git 状态展示纯函数
-  │  ├─ protocol-presentation     协议能力展示纯函数
+  │  ├─ protocol-presentation     协议能力展示与决策纯函数
   │  ├─ command-presentation      命令与配置映射纯函数
   │  ├─ storage-presentation      存储与产物标签纯函数
   │  ├─ scan-request-gate         最新扫描请求优先的并发闸门

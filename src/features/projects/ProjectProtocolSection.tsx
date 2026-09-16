@@ -5,6 +5,7 @@ import { InspectorSection } from "./InspectorPrimitives";
 import {
   capabilityLabel,
   capabilityStatusLabel,
+  protocolViewModel,
   protocolManifestLabel,
 } from "./presentation";
 
@@ -32,45 +33,23 @@ export function ProjectProtocolSection({
   const { t } = useI18n();
   const protocol = inspectedProject.protocol;
   const iconConformance = inspectedProject.iconConformance;
-  const coreCapabilities = protocol.capabilities.filter(
-    (capability) => capability.id !== "cleanup",
-  );
-  const protocolReady =
-    protocol.manifestStatus === "configured" &&
-    coreCapabilities.length > 0 &&
-    coreCapabilities.every((capability) => capability.status === "configured");
-  const protocolCardStatus =
-    protocol.manifestStatus !== "configured"
-      ? protocol.manifestStatus
-      : protocol.capabilities.some(
-            (capability) => capability.status !== "configured",
-          )
-        ? "partial"
-        : "configured";
+  const protocolView = protocolViewModel(inspectedProject);
   const protocolDetailsSummary = fill(
     t("protocolDetailsSummary"),
     "count",
     String(protocol.capabilities.length),
   );
-  const showConfigurationGuidance =
-    inspectedProject.configuration.status !== "configured" ||
-    inspectedProject.buildProfiles.length === 0;
-  const cleanupCapability = protocol.capabilities.find(
-    (capability) => capability.id === "cleanup",
-  );
-  const showProtocolGuidance =
-    !protocolReady ||
-    showConfigurationGuidance ||
-    cleanupCapability?.status === "invalid";
 
   return (
     <InspectorSection title={t("atriumProtocol")}>
-      <div className={`protocol-card protocol-status-${protocolCardStatus}`}>
+      <div
+        className={`protocol-card protocol-status-${protocolView.cardStatus}`}
+      >
         <div>
           <strong>{protocolManifestLabel(protocol.manifestStatus, t)}</strong>
           <span>{t("iconConformanceDescription")}</span>
         </div>
-        {showProtocolGuidance ? (
+        {protocolView.shouldShowGuidance ? (
           <button
             className="protocol-action"
             type="button"

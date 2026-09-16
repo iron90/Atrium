@@ -1,6 +1,50 @@
 import type { ProjectSnapshot } from "../../bridge";
 import type { TranslationKey } from "../../i18n";
 
+export type ProtocolCardStatus =
+  "configured" | "partial" | "missing" | "invalid";
+
+export interface ProtocolViewModel {
+  isReady: boolean;
+  cardStatus: ProtocolCardStatus;
+  shouldShowGuidance: boolean;
+}
+
+export const protocolViewModel = (
+  project: ProjectSnapshot,
+): ProtocolViewModel => {
+  const coreCapabilities = project.protocol.capabilities.filter(
+    (capability) => capability.id !== "cleanup",
+  );
+  const isReady =
+    project.protocol.manifestStatus === "configured" &&
+    coreCapabilities.length > 0 &&
+    coreCapabilities.every((capability) => capability.status === "configured");
+  const cardStatus: ProtocolCardStatus =
+    project.protocol.manifestStatus !== "configured"
+      ? project.protocol.manifestStatus
+      : project.protocol.capabilities.some(
+            (capability) => capability.status !== "configured",
+          )
+        ? "partial"
+        : "configured";
+  const hasConfigurationGap =
+    project.configuration.status !== "configured" ||
+    project.buildProfiles.length === 0;
+  const cleanupCapability = project.protocol.capabilities.find(
+    (capability) => capability.id === "cleanup",
+  );
+
+  return {
+    isReady,
+    cardStatus,
+    shouldShowGuidance:
+      !isReady ||
+      hasConfigurationGap ||
+      cleanupCapability?.status === "invalid",
+  };
+};
+
 export const hasConfiguredCapability = (
   project: ProjectSnapshot,
   capabilityId: string,
