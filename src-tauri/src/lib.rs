@@ -6,6 +6,7 @@ mod git_commands;
 mod guidance;
 mod history;
 mod manifest;
+mod manifest_projection;
 mod manifest_schema;
 mod model;
 mod project_scan;
