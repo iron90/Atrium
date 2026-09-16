@@ -1,9 +1,12 @@
 use std::cmp::Reverse;
 use std::fs;
-use std::path::PathBuf;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use tauri::{AppHandle, Manager};
+use uuid::Uuid;
 
 use crate::model::RunFinished;
 use crate::os_open;
@@ -32,7 +35,8 @@ pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(),
         .map_err(|error| format!("Cannot create Atrium history directory: {error}"))?;
     let raw = serde_json::to_string_pretty(&history)
         .map_err(|error| format!("Cannot serialize Atrium run history: {error}"))?;
-    fs::write(&path, raw).map_err(|error| format!("Cannot write Atrium run history: {error}"))
+    write_file_atomically(&path, &raw)
+        .map_err(|error| format!("Cannot write Atrium run history: {error}"))
 }
 
 pub fn with_history_lock<T, F>(lock: &Mutex<()>, task: F) -> Result<T, String>
@@ -82,6 +86,59 @@ fn history_path(app: &AppHandle) -> Result<PathBuf, String> {
         .join("run-history.json"))
 }
 
+fn write_file_atomically(path: &Path, content: &str) -> std::io::Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| std::io::Error::other("target has no parent directory"))?;
+    let temporary_path = parent.join(format!(".run-history-{}.tmp", Uuid::new_v4()));
+    let result = (|| {
+        let mut temporary = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&temporary_path)?;
+        temporary.write_all(content.as_bytes())?;
+        temporary.sync_all()?;
+        drop(temporary);
+        replace_file(&temporary_path, path)
+    })();
+
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary_path);
+    }
+    result
+}
+
+#[cfg(not(windows))]
+fn replace_file(source: &Path, target: &Path) -> std::io::Result<()> {
+    fs::rename(source, target)
+}
+
+#[cfg(windows)]
+fn replace_file(source: &Path, target: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
+
+    let source = source
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let target = target
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let flags = MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH;
+    let replaced = unsafe { MoveFileExW(source.as_ptr(), target.as_ptr(), flags) };
+    if replaced == 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
 fn render_log(record: &RunFinished) -> String {
     let mut output = format!(
         "Atrium run log\n\nProject: {}\nProject path: {}\nCommand: {}\nStatus: {:?}\nExit code: {:?}\nStarted: {}\nFinished: {}\nDuration: {} ms\n",
@@ -124,8 +181,9 @@ fn render_log(record: &RunFinished) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::merge_run_history;
+    use super::{merge_run_history, write_file_atomically};
     use crate::model::{RunFinished, RunStatus};
+    use std::fs;
 
     fn record(run_id: &str, finished_at: i64) -> RunFinished {
         RunFinished {
@@ -180,5 +238,23 @@ mod tests {
         assert_eq!(result.len(), 100);
         assert_eq!(result[0].run_id, "new");
         assert!(!result.iter().any(|record| record.run_id == "run-0"));
+    }
+
+    #[test]
+    fn replaces_history_file_without_exposing_partial_content() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-history-write-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create history fixture");
+        let path = root.join("run-history.json");
+        fs::write(&path, "old history").expect("write old history");
+
+        write_file_atomically(&path, "new history").expect("replace history atomically");
+
+        assert_eq!(
+            fs::read_to_string(&path).expect("read replaced history"),
+            "new history"
+        );
+        fs::remove_dir_all(root).expect("remove history fixture");
     }
 }
