@@ -6,6 +6,8 @@ use crate::model::{GitChangeSummary, GitCommit, GitFileChange};
 use super::command::run_git_required;
 use super::commit::parse_commit_records;
 
+const MAX_REVISION_LENGTH: usize = 256;
+
 pub fn read_git_change_summary(
     project_path: &Path,
     from: &str,
@@ -95,7 +97,7 @@ fn read_changed_files(
 
 fn validate_revision(value: &str) -> Result<String, String> {
     let value = value.trim();
-    if value.is_empty() || value.starts_with('-') || value.len() > 256 {
+    if value.is_empty() || value.starts_with('-') || value.len() > MAX_REVISION_LENGTH {
         return Err("Git revision must be a non-empty safe revision name".to_string());
     }
     if value
@@ -105,4 +107,28 @@ fn validate_revision(value: &str) -> Result<String, String> {
         return Err("Git revision cannot contain whitespace or control characters".to_string());
     }
     Ok(value.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_revision;
+
+    #[test]
+    fn accepts_revision_names_and_trims_outer_whitespace() {
+        assert_eq!(validate_revision(" HEAD ").unwrap(), "HEAD");
+        assert_eq!(validate_revision("feature/demo").unwrap(), "feature/demo");
+    }
+
+    #[test]
+    fn rejects_empty_option_like_and_oversized_revisions() {
+        assert!(validate_revision(" ").is_err());
+        assert!(validate_revision("--output").is_err());
+        assert!(validate_revision(&"a".repeat(257)).is_err());
+    }
+
+    #[test]
+    fn rejects_whitespace_and_control_characters_inside_revisions() {
+        assert!(validate_revision("feature branch").is_err());
+        assert!(validate_revision("feature\nbranch").is_err());
+    }
 }
