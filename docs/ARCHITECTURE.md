@@ -80,7 +80,12 @@ Rust native core
   │  ├─ artifact               声明产物打开
   │  ├─ project                项目目录和终端打开
   │  └─ external               远程仓库和 manifest 链接打开
-  ├─ model                   前后端共享的序列化领域 DTO
+  ├─ model                   前后端共享的序列化领域 DTO 门面
+  │  ├─ project               项目与工作区契约
+  │  ├─ protocol              协议状态与报告契约
+  │  ├─ storage               存储与清理契约
+  │  ├─ git                   Git 快照与变更契约
+  │  └─ run                   运行事件与结果契约
   ├─ scanner                 对外暴露扫描器边界
   ├─ workspace_scan          工作区遍历和项目候选发现
   ├─ project_scan            单项目快照组装和项目元数据读取
