@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+const MAX_METRICS_DEPTH: u16 = 128;
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PathMetrics {
     pub bytes: u64,
@@ -17,18 +19,28 @@ pub(crate) struct PathMetricsCache {
 
 impl PathMetricsCache {
     pub(crate) fn measure(&mut self, path: &Path) -> PathMetrics {
+        self.measure_at_depth(path, 0)
+    }
+
+    fn measure_at_depth(&mut self, path: &Path, depth: u16) -> PathMetrics {
+        if depth > MAX_METRICS_DEPTH {
+            return PathMetrics {
+                is_complete: false,
+                ..PathMetrics::default()
+            };
+        }
         if let Some(metrics) = self.metrics.get(path) {
             return *metrics;
         }
 
-        let (metrics, is_directory) = self.measure_uncached(path);
+        let (metrics, is_directory) = self.measure_uncached(path, depth);
         if is_directory {
             self.metrics.insert(path.to_path_buf(), metrics);
         }
         metrics
     }
 
-    fn measure_uncached(&mut self, path: &Path) -> (PathMetrics, bool) {
+    fn measure_uncached(&mut self, path: &Path, depth: u16) -> (PathMetrics, bool) {
         let Ok(metadata) = fs::symlink_metadata(path) else {
             return (PathMetrics::default(), false);
         };
@@ -64,7 +76,7 @@ impl PathMetricsCache {
                 total.is_complete = false;
                 continue;
             };
-            let child = self.measure(&entry.path());
+            let child = self.measure_at_depth(&entry.path(), depth + 1);
             let bytes_complete = add_metric(&mut total.bytes, child.bytes);
             let files_complete = add_metric(&mut total.file_count, child.file_count);
             total.modified_at = max_modified(total.modified_at, child.modified_at);
@@ -106,7 +118,7 @@ fn max_modified(left: Option<i64>, right: Option<i64>) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{add_metric, measure_path, PathMetrics, PathMetricsCache};
+    use super::{add_metric, measure_path, PathMetrics, PathMetricsCache, MAX_METRICS_DEPTH};
     use std::fs;
 
     #[test]
@@ -180,5 +192,24 @@ mod tests {
         assert_eq!(total.bytes, u64::MAX);
         assert_eq!(total.file_count, u64::MAX);
         assert!(!total.is_complete);
+    }
+
+    #[test]
+    fn stops_at_the_directory_depth_limit() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-filesystem-metrics-depth-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let mut deepest = root.clone();
+        for depth in 0..=MAX_METRICS_DEPTH {
+            deepest.push(format!("d{depth:03}"));
+        }
+        fs::create_dir_all(&deepest).expect("create deep metrics fixture");
+
+        let metrics = measure_path(&root);
+
+        assert!(!metrics.is_complete);
+        fs::remove_dir_all(root).expect("remove metrics fixture");
     }
 }
