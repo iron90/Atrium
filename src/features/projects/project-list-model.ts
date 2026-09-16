@@ -64,14 +64,14 @@ export const filterAndSortProjects = (
 ): ProjectSnapshot[] => {
   const query = filters.search.trim().toLowerCase();
   const fallbackOrders = new Map(
-    projects.map((project, index) => [project, index]),
+    projects.map((project, index) => [project.id, index]),
   );
   return projects
     .filter((project) => {
       const meta = metaForProject(
         projectMeta,
         project.id,
-        fallbackOrders.get(project) ?? 0,
+        fallbackOrders.get(project.id) ?? 0,
       );
       if (meta.hidden && !filters.showHidden) return false;
       if (
@@ -100,12 +100,12 @@ export const filterAndSortProjects = (
       const leftMeta = metaForProject(
         projectMeta,
         left.id,
-        fallbackOrders.get(left) ?? 0,
+        fallbackOrders.get(left.id) ?? 0,
       );
       const rightMeta = metaForProject(
         projectMeta,
         right.id,
-        fallbackOrders.get(right) ?? 0,
+        fallbackOrders.get(right.id) ?? 0,
       );
       if (filters.sort === "manual") {
         return (
@@ -149,14 +149,14 @@ export const reorderProjectMeta = (
 
   const visibleIds = new Set(orderedVisibleIds);
   const fallbackOrders = new Map(
-    projects.map((project, index) => [project, index]),
+    projects.map((project, index) => [project.id, index]),
   );
   const manualOrder = [...projects].sort(
     (left, right) =>
-      metaForProject(projectMeta, left.id, fallbackOrders.get(left) ?? 0)
+      metaForProject(projectMeta, left.id, fallbackOrders.get(left.id) ?? 0)
         .order -
-      metaForProject(projectMeta, right.id, fallbackOrders.get(right) ?? 0)
-        .order,
+        metaForProject(projectMeta, right.id, fallbackOrders.get(right.id) ?? 0)
+          .order || compareProjectIdentity(left, right),
   );
   let nextVisibleIndex = 0;
   const orderedIds = manualOrder.map((project) => {

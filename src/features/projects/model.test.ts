@@ -162,4 +162,35 @@ describe("project domain model", () => {
       expect(result.map(({ id }) => id)).toEqual(["alpha", "zeta"]);
     }
   });
+
+  it("keeps filtered manual reorders stable when metadata orders collide", () => {
+    const metadata: Record<string, ProjectMeta> = {
+      alpha: { favorite: false, hidden: false, order: 0 },
+      beta: { favorite: false, hidden: true, order: 0 },
+      zeta: { favorite: false, hidden: false, order: 0 },
+    };
+    const orderedVisibleIds = ["zeta", "alpha"];
+    const first = reorderProjectMeta(
+      [project("zeta"), project("beta"), project("alpha")],
+      metadata,
+      orderedVisibleIds,
+    );
+    const second = reorderProjectMeta(
+      [project("alpha"), project("beta"), project("zeta")],
+      metadata,
+      orderedVisibleIds,
+    );
+
+    expect(
+      first &&
+        Object.entries(first).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+    ).toEqual(
+      second &&
+        Object.entries(second).sort(([left], [right]) =>
+          left.localeCompare(right),
+        ),
+    );
+  });
 });
