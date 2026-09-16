@@ -7,7 +7,9 @@ pub(crate) fn normalize_declared_path(raw: &str, protected: &[&str]) -> Option<S
         || normalized
             .split('/')
             .any(|part| part.is_empty() || part == "..");
-    let is_protected = protected.iter().any(|path| *path == normalized);
+    let is_protected = normalized
+        .split('/')
+        .any(|part| protected.iter().any(|path| part.eq_ignore_ascii_case(path)));
 
     if invalid || is_protected {
         None
@@ -48,6 +50,21 @@ mod tests {
         assert_eq!(
             normalize_declared_path("dist", &[".atrium"]),
             Some("dist".to_string())
+        );
+    }
+
+    #[test]
+    fn rejects_protected_directory_components() {
+        for path in [".git/objects", "dist/.atrium/report", "node_modules/cache"] {
+            assert_eq!(
+                normalize_declared_path(path, &[".git", ".atrium", "node_modules"]),
+                None,
+                "{path}"
+            );
+        }
+        assert_eq!(
+            normalize_declared_path("dist/Node_Modules/cache", &["node_modules"]),
+            None
         );
     }
 }
