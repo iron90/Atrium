@@ -75,8 +75,7 @@ export function useProjectRunner({
   );
   const {
     activeRuns,
-    outputLines,
-    clearOutput,
+    outputLinesFor,
     registerRun,
     completeRun,
     replaceOutput,
@@ -94,6 +93,7 @@ export function useProjectRunner({
         : undefined,
     [activeRuns, selectedProject],
   );
+  const outputLines = activeRun ? outputLinesFor(activeRun.runId) : [];
 
   const runProjectCommand = useCallback(
     async (
@@ -105,7 +105,6 @@ export function useProjectRunner({
       const targetProject = projectOverride ?? selectedProject;
       if (!targetProject) return;
       onError(null);
-      clearOutput();
       onMessage({
         type: "command",
         commandKind: command.kind,
@@ -122,8 +121,10 @@ export function useProjectRunner({
         registerRun(started);
         if (!nativeRuntime) {
           window.setTimeout(() => {
+            replaceOutput(started.runId, [
+              translate(language, "demoCompleted"),
+            ]);
             completeRun(started.runId);
-            replaceOutput([translate(language, "demoCompleted")]);
             onMessage({
               type: "demo",
               displayCommand: command.displayCommand,
@@ -138,7 +139,6 @@ export function useProjectRunner({
       }
     },
     [
-      clearOutput,
       completeRun,
       language,
       nativeRuntime,

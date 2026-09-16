@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { subscribeToRunEvents } from "../../bridge/events";
-import type { RunError, RunFinished, RunStarted } from "../../bridge";
+import type {
+  RunError,
+  RunFinished,
+  RunOutput,
+  RunStarted,
+} from "../../bridge";
+import {
+  appendRunOutput,
+  outputForRun,
+  removeRunOutput,
+  replaceRunOutput,
+  type RunOutputBuffer,
+} from "./run-output-buffer";
 
 export interface RunEventStreamOptions {
   onError: (error: RunError) => void;
@@ -9,11 +21,10 @@ export interface RunEventStreamOptions {
 
 export interface RunEventStreamState {
   activeRuns: Record<string, RunStarted>;
-  outputLines: string[];
-  clearOutput: () => void;
+  outputLinesFor: (runId: string) => string[];
   registerRun: (run: RunStarted) => void;
   completeRun: (runId: string) => void;
-  replaceOutput: (lines: string[]) => void;
+  replaceOutput: (runId: string, lines: string[]) => void;
 }
 
 export function useRunEventStream({
@@ -21,7 +32,7 @@ export function useRunEventStream({
   onFinished,
 }: RunEventStreamOptions): RunEventStreamState {
   const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
-  const [outputLines, setOutputLines] = useState<string[]>([]);
+  const [outputBuffer, setOutputBuffer] = useState<RunOutputBuffer>({});
 
   const completeRun = useCallback((runId: string) => {
     setActiveRuns((runs) => {
@@ -29,15 +40,17 @@ export function useRunEventStream({
       delete next[runId];
       return next;
     });
+    setOutputBuffer((buffer) => removeRunOutput(buffer, runId));
   }, []);
 
   useEffect(() => {
     let disposed = false;
     let cleanup: (() => void) | undefined;
     void subscribeToRunEvents({
-      onOutput: (output) => {
-        setOutputLines((lines) => [...lines, output.line].slice(-180));
-      },
+      onOutput: (output: RunOutput) =>
+        setOutputBuffer((buffer) =>
+          appendRunOutput(buffer, output.runId, output.line),
+        ),
       onError,
       onFinished: (finished) => {
         completeRun(finished.runId);
@@ -57,19 +70,23 @@ export function useRunEventStream({
     };
   }, [completeRun, onError, onFinished]);
 
-  const clearOutput = useCallback(() => setOutputLines([]), []);
   const registerRun = useCallback((run: RunStarted) => {
     setActiveRuns((runs) => ({ ...runs, [run.runId]: run }));
+    setOutputBuffer((buffer) => replaceRunOutput(buffer, run.runId, []));
   }, []);
+  const outputLinesFor = useCallback(
+    (runId: string) => outputForRun(outputBuffer, runId),
+    [outputBuffer],
+  );
   const replaceOutput = useCallback(
-    (lines: string[]) => setOutputLines(lines),
+    (runId: string, lines: string[]) =>
+      setOutputBuffer((buffer) => replaceRunOutput(buffer, runId, lines)),
     [],
   );
 
   return {
     activeRuns,
-    outputLines,
-    clearOutput,
+    outputLinesFor,
     registerRun,
     completeRun,
     replaceOutput,

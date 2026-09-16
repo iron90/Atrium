@@ -81,7 +81,8 @@ React UI
   │  └─ GitCommitTimeline    跨项目提交时间线
   ├─ features/runs          项目命令执行状态与事件订阅
   │  ├─ use-project-runner   命令触发、预览运行和活动运行选择
-  │  └─ use-run-event-stream 运行事件订阅、输出缓冲和运行集合
+  │  ├─ use-run-event-stream 运行事件订阅和运行集合
+  │  └─ run-output-buffer    按运行 ID 隔离且有界的输出缓冲纯函数
   ├─ features/settings      主题、布局、工作区偏好
   ├─ shared                 格式化等无领域依赖的纯函数
   └─ bridge                 类型化 Tauri invoke/event 与预览适配
