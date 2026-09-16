@@ -33,7 +33,7 @@ export interface GitSnapshot {
   behind: number | null;
   lastCommit: GitCommit | null;
   recentCommits: GitCommit[];
-  references?: GitReference[];
+  references: GitReference[];
 }
 
 export type GitReferenceKind = "branch" | "tag";
@@ -166,19 +166,19 @@ export interface ProjectSnapshot {
   path: string;
   description: string | null;
   icon: ProjectIcon | null;
-  iconConformance?: IconConformance;
+  iconConformance: IconConformance;
   protocol: ProtocolStatus;
   repo: GitSnapshot | null;
-  tools?: ProjectTools;
-  links?: ProjectLink[];
+  tools: ProjectTools;
+  links: ProjectLink[];
   platforms: Facet[];
   channels: Facet[];
   buildProfiles: BuildProfile[];
   configuration: ProjectConfiguration;
   commands: ProjectCommand[];
-  cleanup?: CleanupDeclaration;
-  storage?: ProjectStorage;
-  artifacts?: BuildArtifact[];
+  cleanup: CleanupDeclaration;
+  storage: ProjectStorage | null;
+  artifacts: BuildArtifact[] | null;
   scannedAt: number;
 }
 

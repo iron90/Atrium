@@ -247,7 +247,7 @@ export function ProjectInspector({
             </button>
           ) : null}
         </div>
-        {inspectedProject.links?.length ? (
+        {inspectedProject.links.length ? (
           <div className="project-links">
             {inspectedProject.links.map((link) => (
               <button
@@ -323,11 +323,9 @@ export function ProjectInspector({
               ))}
             </div>
             <div className="protocol-path protocol-icon-path">
+              <span>{iconConformance.manifestPath}</span>
               <span>
-                {iconConformance?.manifestPath ?? protocol.manifestPath}
-              </span>
-              <span>
-                {iconConformance?.resolvedIcon ?? t("iconStatusMissing")}
+                {iconConformance.resolvedIcon ?? t("iconStatusMissing")}
               </span>
             </div>
           </div>

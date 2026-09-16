@@ -44,7 +44,7 @@ export const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
       path: project.path,
       description: project.description,
       iconSource: project.icon?.source ?? null,
-      iconStatus: project.iconConformance?.status ?? null,
+      iconStatus: project.iconConformance.status,
       protocol: project.protocol,
       repo: project.repo
         ? {
@@ -56,11 +56,11 @@ export const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
             behind: project.repo.behind,
             lastSha: project.repo.lastCommit?.sha ?? null,
             recentShas: project.repo.recentCommits.map((commit) => commit.sha),
-            references: project.repo.references ?? [],
+            references: project.repo.references,
           }
         : null,
-      tools: project.tools ?? null,
-      links: project.links ?? [],
+      tools: project.tools,
+      links: project.links,
       platforms: project.platforms.map((facet) => [
         facet.key,
         facet.label,

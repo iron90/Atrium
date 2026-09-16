@@ -6,6 +6,7 @@ import type {
   ProtocolCapabilityStatus,
   ProjectConfigurationStatus,
   ProjectCommand,
+  ProjectSnapshot,
   ProtocolStatus,
   RunStarted,
   WorkspaceSnapshot,
@@ -109,12 +110,24 @@ const demoIconConformance = (
   resolvedIcon: status === "compliant" ? "assets/icon.png" : null,
 });
 
+const demoProjectDefaults: Pick<
+  ProjectSnapshot,
+  "tools" | "links" | "cleanup" | "storage" | "artifacts"
+> = {
+  tools: { terminal: null },
+  links: [],
+  cleanup: { cache: [], build: [] },
+  storage: null,
+  artifacts: null,
+};
+
 export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
   rootPath,
   scannedAt: now,
   warnings: [],
   projects: [
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/SampleForge`,
       name: "SampleForge",
       path: `${rootPath}/SampleForge`,
@@ -219,6 +232,7 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
       scannedAt: now,
     },
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/TackNote`,
       name: "TackNote",
       path: `${rootPath}/TackNote`,
@@ -299,10 +313,12 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
             subject: "test: cover selection lifecycle",
           },
         ],
+        references: [],
       },
       scannedAt: now,
     },
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/SnapCutout`,
       name: "SnapCutout",
       path: `${rootPath}/SnapCutout`,
@@ -420,10 +436,12 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
             subject: "perf: reduce model startup time",
           },
         ],
+        references: [],
       },
       scannedAt: now,
     },
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/CalmCadence`,
       name: "Cognitive Rhythm",
       path: `${rootPath}/CalmCadence`,
@@ -463,6 +481,7 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
       scannedAt: now,
     },
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/WebDock`,
       name: "WebDock Desktop",
       path: `${rootPath}/WebDock`,
@@ -541,10 +560,12 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
             subject: "docs: align release evidence",
           },
         ],
+        references: [],
       },
       scannedAt: now,
     },
     {
+      ...demoProjectDefaults,
       id: `${rootPath}/WebsiteServer`,
       name: "Website Server",
       path: `${rootPath}/WebsiteServer`,
