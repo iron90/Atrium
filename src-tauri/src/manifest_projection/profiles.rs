@@ -31,34 +31,20 @@ pub(super) fn parse_build_profiles(
         }
 
         let mut profile_issues = Vec::new();
-        let platform = platform_map
-            .get(&manifest_profile.platform)
-            .cloned()
-            .unwrap_or_else(|| {
-                profile_issues.push(format!(
-                    "Platform {} is not declared in [[platforms]].",
-                    manifest_profile.platform
-                ));
-                configured_facet(
-                    &manifest_profile.platform,
-                    "platforms",
-                    &manifest_profile.platform,
-                )
-            });
-        let channel = channel_map
-            .get(&manifest_profile.channel)
-            .cloned()
-            .unwrap_or_else(|| {
-                profile_issues.push(format!(
-                    "Channel {} is not declared in [[channels]].",
-                    manifest_profile.channel
-                ));
-                configured_facet(
-                    &manifest_profile.channel,
-                    "channels",
-                    &manifest_profile.channel,
-                )
-            });
+        let platform = resolve_facet(
+            &manifest_profile.platform,
+            platform_map,
+            "Platform",
+            "platforms",
+            &mut profile_issues,
+        );
+        let channel = resolve_facet(
+            &manifest_profile.channel,
+            channel_map,
+            "Channel",
+            "channels",
+            &mut profile_issues,
+        );
         let bindings = manifest_profile.commands.unwrap_or_default();
         let check_command_id =
             resolve_command_reference(bindings.check.as_deref(), commands, &mut profile_issues);
@@ -92,6 +78,21 @@ pub(super) fn parse_build_profiles(
     }
 
     build_profiles
+}
+
+fn resolve_facet(
+    id: &str,
+    facets: &HashMap<String, Facet>,
+    kind: &str,
+    section: &str,
+    issues: &mut Vec<String>,
+) -> Facet {
+    if let Some(facet) = facets.get(id) {
+        return facet.clone();
+    }
+
+    issues.push(format!("{kind} {id} is not declared in [[{section}]]."));
+    configured_facet(id, section, id)
 }
 
 fn resolve_command_reference(
