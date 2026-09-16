@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  formatActivityMessage,
-  type ActivityMessage,
-} from "./app/activity-message";
+import type { ActivityMessage } from "./app/activity-message";
+import { AppSidebar } from "./app/AppSidebar";
+import { LocalActivityPanel } from "./app/LocalActivityPanel";
+import { type PageId } from "./app/navigation";
 import { bridge, isTauriRuntime } from "./bridge";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
@@ -34,28 +34,17 @@ import {
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import { fill, formatRelative, formatTime } from "./shared/format";
+import { fill, formatTime } from "./shared/format";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "./bridge";
 import "./app.css";
 
-type PageId = "projects" | "git" | "settings";
-
 const DEFAULT_ROOT = "~/projects";
 
-const navItems: Array<{
-  id: PageId;
-  labelKey: TranslationKey;
-  glyph: string;
-}> = [
-  { id: "projects", labelKey: "projects", glyph: "▦" },
-  { id: "git", labelKey: "gitHistory", glyph: "⌘" },
-  { id: "settings", labelKey: "settings", glyph: "⚙" },
-];
-
 export default function App() {
+  const nativeRuntime = isTauriRuntime();
   const [preferences] = useState<LocalPreferences>(readLocalPreferences);
   const initialRootPath =
-    preferences.rootPath?.trim() || (isTauriRuntime() ? "" : DEFAULT_ROOT);
+    preferences.rootPath?.trim() || (nativeRuntime ? "" : DEFAULT_ROOT);
   const initialWorkspacePaths = preferences.workspaces?.length
     ? preferences.workspaces
     : initialRootPath
@@ -82,7 +71,7 @@ export default function App() {
     moveProjectByKeyboard,
   } = useProjectMetaState(preferences.projectMeta ?? {});
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
-    isTauriRuntime()
+    nativeRuntime
       ? emptySnapshot(initialRootPath)
       : demoSnapshot(initialRootPath),
   );
@@ -122,7 +111,7 @@ export default function App() {
     scanWorkspace,
     refreshProject,
   } = useProjectWorkspace({
-    nativeRuntime: isTauriRuntime(),
+    nativeRuntime,
     preferences,
     initialRootPath,
     initialWorkspacePaths,
@@ -164,7 +153,7 @@ export default function App() {
     runProjectCommand: handleRun,
     stopActiveRun: handleStop,
   } = useProjectRunner({
-    nativeRuntime: isTauriRuntime(),
+    nativeRuntime,
     selectedProject,
     language,
     onError: handleWorkspaceError,
@@ -256,43 +245,11 @@ export default function App() {
   return (
     <I18nProvider value={i18nValue}>
       <div className="app-shell" data-theme={theme} data-layout={layout}>
-        <aside className="sidebar">
-          <div className="brand-block">
-            <div className="brand-mark">A</div>
-            <div>
-              <div className="brand-name">Atrium</div>
-              <div className="brand-subtitle">{t("localProjectBoard")}</div>
-            </div>
-          </div>
-
-          <nav className="primary-nav" aria-label={t("localProjectBoard")}>
-            {navItems.map((item) => (
-              <button
-                className={`nav-item ${activePage === item.id ? "is-active" : ""}`}
-                key={item.id}
-                type="button"
-                onClick={() => setActivePage(item.id)}
-              >
-                <span className="nav-glyph" aria-hidden="true">
-                  {item.glyph}
-                </span>
-                <span>{t(item.labelKey)}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="sidebar-note">
-            <span className="note-kicker">{t("localFirst")}</span>
-            <p>{t("localFirstBody")}</p>
-          </div>
-
-          <div className="sidebar-footer">
-            <span className="connection-dot" />
-            <span>
-              {isTauriRuntime() ? t("nativeSession") : t("previewSession")}
-            </span>
-          </div>
-        </aside>
+        <AppSidebar
+          activePage={activePage}
+          nativeRuntime={nativeRuntime}
+          onPageChange={setActivePage}
+        />
 
         <main className="main-column">
           <header className="topbar">
@@ -421,57 +378,12 @@ export default function App() {
                   />
                 )}
 
-                <div className="local-activity">
-                  <div className="activity-heading">
-                    <span className="eyebrow">{t("localActivity")}</span>
-                    <span>{formatActivityMessage(runMessage, language)}</span>
-                  </div>
-                  <div className="activity-cards">
-                    <div className="activity-card">
-                      <span
-                        className={`activity-pulse ${activeRun ? "is-running" : ""}`}
-                      />
-                      <div>
-                        <strong>
-                          {activeRun ? t("runningCommand") : t("ready")}
-                        </strong>
-                        <span>
-                          {activeRun?.displayCommand ?? t("noCommandRunning")}
-                        </span>
-                      </div>
-                      {activeRun ? (
-                        <button type="button" onClick={() => void handleStop()}>
-                          {t("stop")}
-                        </button>
-                      ) : null}
-                    </div>
-                    <div className="activity-card">
-                      <span className="activity-icon" aria-hidden="true">
-                        ◷
-                      </span>
-                      <div>
-                        <strong>{t("recentScan")}</strong>
-                        <span>
-                          {fill(
-                            t("projectsDiscovered"),
-                            "count",
-                            String(snapshot.projects.length),
-                          )}{" "}
-                          · {formatRelative(snapshot.scannedAt, language)}
-                        </span>
-                      </div>
-                      <span className="activity-result">
-                        {snapshot.warnings.length
-                          ? fill(
-                              t("notes"),
-                              "count",
-                              String(snapshot.warnings.length),
-                            )
-                          : t("noWarnings")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <LocalActivityPanel
+                  activeRun={activeRun}
+                  message={runMessage}
+                  onStop={handleStop}
+                  snapshot={snapshot}
+                />
               </div>
 
               <ProjectInspector
