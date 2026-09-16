@@ -70,6 +70,8 @@ React UI
   │  ├─ command-presentation      命令与配置映射纯函数
   │  ├─ storage-presentation      存储与产物标签纯函数
   │  ├─ scan-request-gate         最新扫描请求优先的并发闸门
+  │  ├─ ProjectListRow             列表行事件边界
+  │  ├─ ProjectListRowCells        项目、Git、上下文和操作单元
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
