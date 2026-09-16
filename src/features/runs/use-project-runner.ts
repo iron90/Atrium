@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { bridge } from "../../bridge";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
@@ -67,6 +67,25 @@ export function useProjectRunner({
     onError: handleRunError,
     onFinished: handleRunFinished,
   });
+  const demoTimers = useRef(new Map<string, number>());
+  const disposedRef = useRef(false);
+
+  useEffect(() => {
+    const timers = demoTimers.current;
+    disposedRef.current = false;
+    return () => {
+      disposedRef.current = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
+
+  const cancelDemoTimer = useCallback((runId: string) => {
+    const timer = demoTimers.current.get(runId);
+    if (timer === undefined) return;
+    window.clearTimeout(timer);
+    demoTimers.current.delete(runId);
+  }, []);
 
   const activeRun = useMemo(
     () =>
@@ -102,9 +121,11 @@ export function useProjectRunner({
           profileId,
           profileAction,
         );
+        if (disposedRef.current) return;
         registerRun(started);
         if (!nativeRuntime) {
-          window.setTimeout(() => {
+          const timer = window.setTimeout(() => {
+            demoTimers.current.delete(started.runId);
             replaceOutput(started.runId, [
               translate(language, "demoCompleted"),
             ]);
@@ -114,6 +135,7 @@ export function useProjectRunner({
               displayCommand: command.displayCommand,
             });
           }, 700);
+          demoTimers.current.set(started.runId, timer);
         }
       } catch (runError) {
         onError(errorMessage(runError));
@@ -136,12 +158,13 @@ export function useProjectRunner({
     if (!activeRun) return;
     try {
       await bridge.stopProjectCommand(activeRun.runId);
+      cancelDemoTimer(activeRun.runId);
       completeRun(activeRun.runId);
       onMessage({ type: "cancelled" });
     } catch (stopError) {
       onError(errorMessage(stopError));
     }
-  }, [activeRun, completeRun, onError, onMessage]);
+  }, [activeRun, cancelDemoTimer, completeRun, onError, onMessage]);
 
   return { activeRun, outputLines, runProjectCommand, stopActiveRun };
 }
