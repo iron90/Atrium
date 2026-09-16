@@ -10,14 +10,9 @@ import { createConfigurationAgentPrompt } from "./features/projects/guidance-pro
 import { ProjectInspector } from "./features/projects/ProjectInspector";
 import { PlatformMatrix } from "./features/projects/PlatformMatrix";
 import { ProjectList } from "./features/projects/ProjectList";
-import {
-  collectFilterOptions,
-  emptySnapshot,
-  filterAndSortProjects,
-  metaForProject,
-  type ProjectSort,
-} from "./features/projects/model";
+import { emptySnapshot, metaForProject } from "./features/projects/model";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
+import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
 import {
   useProjectWorkspace,
   type WorkspaceMessage,
@@ -82,11 +77,6 @@ export default function App() {
     reorderProjects,
     moveProjectByKeyboard,
   } = useProjectMetaState(preferences.projectMeta ?? {});
-  const [projectSearch, setProjectSearch] = useState("");
-  const [platformFilter, setPlatformFilter] = useState("all");
-  const [channelFilter, setChannelFilter] = useState("all");
-  const [projectSort, setProjectSort] = useState<ProjectSort>("manual");
-  const [showHiddenProjects, setShowHiddenProjects] = useState(false);
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
     isTauriRuntime()
       ? emptySnapshot(initialRootPath)
@@ -198,30 +188,20 @@ export default function App() {
     [language],
   );
 
-  const filterOptions = useMemo(
-    () => collectFilterOptions(snapshot.projects),
-    [snapshot.projects],
-  );
-
-  const visibleProjects = useMemo(
-    () =>
-      filterAndSortProjects(snapshot.projects, projectMeta, {
-        search: projectSearch,
-        platform: platformFilter,
-        channel: channelFilter,
-        sort: projectSort,
-        showHidden: showHiddenProjects,
-      }),
-    [
-      channelFilter,
-      platformFilter,
-      projectMeta,
-      projectSearch,
-      projectSort,
-      showHiddenProjects,
-      snapshot.projects,
-    ],
-  );
+  const {
+    search: projectSearch,
+    setSearch: setProjectSearch,
+    platformFilter,
+    setPlatformFilter,
+    channelFilter,
+    setChannelFilter,
+    projectSort,
+    setProjectSort,
+    showHiddenProjects,
+    setShowHiddenProjects,
+    filterOptions,
+    visibleProjects,
+  } = useProjectListViewState(snapshot.projects, projectMeta);
 
   const handleGenerateGuidance = async (project: ProjectSnapshot) => {
     setIsWritingGuidance(true);
