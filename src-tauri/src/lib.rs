@@ -4,6 +4,7 @@ mod conformance;
 mod git;
 mod history;
 mod manifest;
+mod manifest_schema;
 mod model;
 mod runner;
 mod scanner;

@@ -2,9 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use serde::Deserialize;
-
 use crate::conformance::{write_icon_conformance_report, MANIFEST_PATH};
+use crate::manifest_schema::{self, ManifestCleanup, ManifestFacet, ManifestLink, ManifestTools};
 use crate::model::{
     BuildProfile, CleanupDeclaration, Facet, FacetSource, IconConformance, IconConformanceStatus,
     ProjectCommand, ProjectConfiguration, ProjectConfigurationReport, ProjectConfigurationStatus,
@@ -28,61 +27,6 @@ pub struct ProjectConfigurationInspection {
     pub configuration: ProjectConfiguration,
 }
 
-#[derive(Debug, Deserialize)]
-struct ManifestDocument {
-    schema: u32,
-    platforms: Option<Vec<ManifestFacet>>,
-    channels: Option<Vec<ManifestFacet>>,
-    build_profiles: Option<Vec<ManifestBuildProfile>>,
-    cleanup: Option<ManifestCleanup>,
-    tools: Option<ManifestTools>,
-    links: Option<Vec<ManifestLink>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ManifestFacet {
-    id: String,
-    label: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ManifestBuildProfile {
-    id: String,
-    label: Option<String>,
-    platform: String,
-    channel: String,
-    commands: Option<ManifestCommands>,
-    region: Option<String>,
-    payment: Option<String>,
-    artifacts: Option<Vec<String>>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ManifestCommands {
-    run: Option<String>,
-    check: Option<String>,
-    build: Option<String>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ManifestCleanup {
-    cache: Option<Vec<String>>,
-    build: Option<Vec<String>>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct ManifestTools {
-    terminal: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ManifestLink {
-    id: String,
-    label: Option<String>,
-    url: String,
-    kind: Option<String>,
-}
-
 pub fn scan_project_configuration(
     project_path: &Path,
     commands: &[ProjectCommand],
@@ -101,7 +45,7 @@ pub fn scan_project_configuration(
         }
     };
 
-    let document = match toml::from_str::<ManifestDocument>(&raw) {
+    let document = match manifest_schema::parse(&raw) {
         Ok(document) => document,
         Err(error) => {
             return invalid_configuration(
