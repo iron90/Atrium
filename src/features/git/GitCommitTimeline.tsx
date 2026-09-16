@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import type { ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { formatTime } from "../../shared/format";
+import { collectTimelineCommits } from "./git-history-model";
 
 export function GitCommitTimeline({
   projects,
@@ -12,14 +14,7 @@ export function GitCommitTimeline({
   onSelect: (projectId: string) => void;
 }) {
   const { language, t } = useI18n();
-  const commits = projects
-    .flatMap((project) =>
-      (project.repo?.recentCommits ?? []).map((commit) => ({
-        project,
-        commit,
-      })),
-    )
-    .sort((left, right) => right.commit.timestamp - left.commit.timestamp);
+  const commits = useMemo(() => collectTimelineCommits(projects), [projects]);
 
   return commits.length ? (
     <div className="git-history-list">
