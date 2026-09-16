@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use crate::manifest_schema::{ManifestLink, ManifestTools};
 use crate::model::{ProjectLink, ProjectTools};
+use crate::url_policy::validate_browsable_url;
 
 pub(super) fn parse_tools(declaration: Option<ManifestTools>) -> ProjectTools {
     let Some(declaration) = declaration else {
@@ -36,13 +37,8 @@ pub(super) fn parse_links(
                 issues.push(format!("Duplicate project link id: {id}."));
                 return None;
             }
-            if !(url.starts_with("http://")
-                || url.starts_with("https://")
-                || url.starts_with("file://"))
-            {
-                issues.push(format!(
-                    "Project link {id} must use http://, https://, or file://."
-                ));
+            if let Err(error) = validate_browsable_url(&url) {
+                issues.push(format!("Project link {id} {error}."));
                 return None;
             }
             Some(ProjectLink {

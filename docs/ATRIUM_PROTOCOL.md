@@ -174,10 +174,11 @@ kind = "preview"
 `terminal` is a single executable value, not a shell pipeline or argument
 string. Atrium passes the project path as the current directory. An empty or
 missing declaration uses the operating-system default terminal; Atrium does not
-ask users to enter a terminal command. Links accept only `http://`, `https://`, and
-`file://`; duplicate IDs and unsupported schemes are invalid manifest entries.
-These declarations are convenience actions and do not become platform,
-channel, payment, or build facts.
+ask users to enter a terminal command. Links must be absolute `http://`,
+`https://`, or `file://` URLs with a host/path as appropriate; embedded
+credentials, malformed URLs, duplicate IDs, and unsupported schemes are invalid
+manifest entries. These declarations are convenience actions and do not become
+platform, channel, payment, or build facts.
 
 Only a valid build profile can execute a target-specific action. The repository
 command browser is a separate execution path: it deterministically discovers

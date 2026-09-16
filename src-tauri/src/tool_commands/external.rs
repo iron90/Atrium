@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::command_boundary::run_blocking;
 use crate::os_open;
 use crate::scanner::scan_project;
+use crate::url_policy::validate_browsable_url;
 
 #[tauri::command]
 pub async fn open_project_remote_command(remote: String) -> Result<(), String> {
@@ -29,23 +30,26 @@ pub async fn open_project_link_command(
 }
 
 fn open_external(url: &str) -> Result<(), String> {
-    if !(url.starts_with("http://") || url.starts_with("https://") || url.starts_with("file://")) {
-        return Err("Only http://, https://, and file:// links can be opened".to_string());
-    }
+    validate_browsable_url(url).map_err(|error| format!("Cannot open link: {error}"))?;
     os_open::open_url(url).map_err(|error| format!("Cannot open link: {error}"))
 }
 
 fn normalize_remote(remote: &str) -> Result<String, String> {
     let value = remote.trim();
-    if value.starts_with("http://") || value.starts_with("https://") || value.starts_with("file://")
-    {
+    if value.contains("://") {
+        validate_browsable_url(value)
+            .map_err(|error| format!("The Git remote is not a supported browsable URL: {error}"))?;
         return Ok(value.to_string());
     }
     if let Some(rest) = value.strip_prefix("git@") {
         if let Some((host, path)) = rest.split_once(':') {
-            return Ok(format!("https://{host}/{path}")
+            let normalized = format!("https://{host}/{path}")
                 .trim_end_matches(".git")
-                .to_string());
+                .to_string();
+            validate_browsable_url(&normalized).map_err(|error| {
+                format!("The Git remote is not a supported browsable URL: {error}")
+            })?;
+            return Ok(normalized);
         }
     }
     Err("The Git remote is not a supported browsable URL".to_string())
