@@ -51,7 +51,7 @@ fn parse_cleanup_paths(
                 ));
                 return None;
             };
-            if !seen.insert(normalized.clone()) {
+            if !seen.insert(path_comparison_key(&normalized)) {
                 issues.push(format!("Duplicate cleanup directory: {normalized}."));
                 return None;
             }
@@ -84,7 +84,13 @@ fn parse_cleanup_paths(
 }
 
 fn is_nested_path(parent: &str, candidate: &str) -> bool {
+    let parent = path_comparison_key(parent);
+    let candidate = path_comparison_key(candidate);
     candidate.starts_with(&format!("{parent}/"))
+}
+
+fn path_comparison_key(path: &str) -> String {
+    path.to_lowercase()
 }
 
 #[cfg(test)]
@@ -127,5 +133,25 @@ mod tests {
         assert_eq!(cleanup.cache, vec!["dist"]);
         assert!(cleanup.build.is_empty());
         assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn treats_case_variants_as_the_same_portable_path() {
+        let mut issues = Vec::new();
+        let cleanup = parse_cleanup(
+            Some(ManifestCleanup {
+                cache: Some(vec!["Dist".to_string(), "dist/cache".to_string()]),
+                build: Some(vec!["DIST".to_string()]),
+            }),
+            &mut issues,
+        );
+
+        assert_eq!(cleanup.cache, vec!["Dist"]);
+        assert!(cleanup.build.is_empty());
+        assert_eq!(issues.len(), 2);
+        assert!(issues.iter().any(|issue| issue.contains("nested under")));
+        assert!(issues
+            .iter()
+            .any(|issue| issue.contains("Duplicate cleanup directory")));
     }
 }
