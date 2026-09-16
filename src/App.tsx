@@ -7,7 +7,6 @@ import type {
 import { FaDesktop, FaGlobe, FaWindows } from "react-icons/fa6";
 import { SiAndroid, SiApple, SiIos, SiLinux, SiMacos } from "react-icons/si";
 import { bridge, isTauriRuntime } from "./bridge";
-import { subscribeToRunEvents } from "./bridge/events";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import {
   collectFilterOptions,
@@ -22,6 +21,11 @@ import {
   useProjectWorkspace,
   type WorkspaceMessage,
 } from "./features/projects/use-project-workspace";
+import {
+  useProjectRunner,
+  type ProfileAction,
+  type RunMessage as ProjectRunMessage,
+} from "./features/runs/use-project-runner";
 import { I18nProvider, localizedFacetLabel, translate, useI18n } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import type {
@@ -34,7 +38,6 @@ import type {
   ProjectCommand,
   ProjectSnapshot,
   ProjectStorage,
-  RunFinished,
   RunStarted,
   StorageEntry,
   WorkspaceSnapshot,
@@ -252,8 +255,6 @@ const commandLabel = (command: ProjectCommand, language: Language): string => {
   return command.label;
 };
 
-type ProfileAction = "run" | "check" | "build";
-
 const profileCommandId = (
   profile: BuildProfile,
   action: ProfileAction,
@@ -386,26 +387,7 @@ const navItems: Array<{
   { id: "settings", labelKey: "settings", glyph: "⚙" },
 ];
 
-type RunMessage =
-  | { type: "ready" }
-  | WorkspaceMessage
-  | {
-      type: "localized";
-      key: "commandStartFailed";
-    }
-  | { type: "cancelled" }
-  | {
-      type: "command";
-      commandKind: ProjectCommand["kind"];
-      label: string;
-      displayCommand: string;
-    }
-  | { type: "demo"; displayCommand: string }
-  | {
-      type: "finished";
-      displayCommand: string;
-      status: RunFinished["status"];
-    };
+type RunMessage = ProjectRunMessage | WorkspaceMessage;
 
 const formatRunMessage = (message: RunMessage, language: Language): string => {
   switch (message.type) {
@@ -497,8 +479,6 @@ export default function App() {
   } | null>(null);
   const [cleanupSelection, setCleanupSelection] = useState<string[]>([]);
   const [isCleaningArtifacts, setIsCleaningArtifacts] = useState(false);
-  const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
-  const [outputLines, setOutputLines] = useState<string[]>([]);
   const [runMessage, setRunMessage] = useState<RunMessage>({ type: "ready" });
 
   const handleWorkspaceError = useCallback(
@@ -507,6 +487,10 @@ export default function App() {
   );
   const handleWorkspaceMessage = useCallback(
     (message: WorkspaceMessage) => setRunMessage(message),
+    [],
+  );
+  const handleRunMessage = useCallback(
+    (message: ProjectRunMessage) => setRunMessage(message),
     [],
   );
   const resetProjectInspection = useCallback(() => {
@@ -561,6 +545,19 @@ export default function App() {
     onSnapshotApplied: ensureProjectMeta,
   });
 
+  const {
+    activeRun,
+    outputLines,
+    runProjectCommand: handleRun,
+    stopActiveRun: handleStop,
+  } = useProjectRunner({
+    nativeRuntime: isTauriRuntime(),
+    selectedProject,
+    language,
+    onError: handleWorkspaceError,
+    onMessage: handleRunMessage,
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -598,12 +595,6 @@ export default function App() {
     }),
     [language],
   );
-
-  const activeRun = selectedProject
-    ? Object.values(activeRuns).find(
-        (run) => run.projectId === selectedProject.id,
-      )
-    : undefined;
 
   const filterOptions = useMemo(
     () => collectFilterOptions(snapshot.projects),
@@ -672,83 +663,6 @@ export default function App() {
     },
     [reorderProjects, visibleProjects],
   );
-
-  useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => void) | undefined;
-    void subscribeToRunEvents({
-      onOutput: (output) => {
-        setOutputLines((lines) => [...lines, output.line].slice(-180));
-      },
-      onFinished: (finished) => {
-        setActiveRuns((runs) => {
-          const next = { ...runs };
-          delete next[finished.runId];
-          return next;
-        });
-        setRunMessage({
-          type: "finished",
-          displayCommand: finished.displayCommand,
-          status: finished.status,
-        });
-      },
-    }).then((unsubscribe) => {
-      if (disposed) {
-        unsubscribe();
-      } else {
-        cleanup = unsubscribe;
-      }
-    });
-
-    return () => {
-      disposed = true;
-      cleanup?.();
-    };
-  }, []);
-
-  const handleRun = async (
-    command: ProjectCommand,
-    projectOverride?: ProjectSnapshot,
-    profileId?: string,
-    profileAction?: ProfileAction,
-  ) => {
-    const targetProject = projectOverride ?? selectedProject;
-    if (!targetProject) return;
-    setError(null);
-    setOutputLines([]);
-    setRunMessage({
-      type: "command",
-      commandKind: command.kind,
-      label: command.label,
-      displayCommand: command.displayCommand,
-    });
-    try {
-      const started = await bridge.runProjectCommand(
-        targetProject.path,
-        command.id,
-        profileId,
-        profileAction,
-      );
-      setActiveRuns((runs) => ({ ...runs, [started.runId]: started }));
-      if (!isTauriRuntime()) {
-        window.setTimeout(() => {
-          setActiveRuns((runs) => {
-            const next = { ...runs };
-            delete next[started.runId];
-            return next;
-          });
-          setOutputLines([t("demoCompleted")]);
-          setRunMessage({
-            type: "demo",
-            displayCommand: command.displayCommand,
-          });
-        }, 700);
-      }
-    } catch (runError) {
-      setError(runError instanceof Error ? runError.message : String(runError));
-      setRunMessage({ type: "localized", key: "commandStartFailed" });
-    }
-  };
 
   const handleGenerateGuidance = async (project: ProjectSnapshot) => {
     setIsWritingGuidance(true);
@@ -854,23 +768,6 @@ export default function App() {
     } catch (openError) {
       setError(
         openError instanceof Error ? openError.message : String(openError),
-      );
-    }
-  };
-
-  const handleStop = async () => {
-    if (!activeRun) return;
-    try {
-      await bridge.stopProjectCommand(activeRun.runId);
-      setActiveRuns((runs) => {
-        const next = { ...runs };
-        delete next[activeRun.runId];
-        return next;
-      });
-      setRunMessage({ type: "cancelled" });
-    } catch (stopError) {
-      setError(
-        stopError instanceof Error ? stopError.message : String(stopError),
       );
     }
   };
