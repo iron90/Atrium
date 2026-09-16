@@ -57,12 +57,15 @@ export const filterAndSortProjects = (
   filters: ProjectListFilters,
 ): ProjectSnapshot[] => {
   const query = filters.search.trim().toLowerCase();
+  const fallbackOrders = new Map(
+    projects.map((project, index) => [project, index]),
+  );
   return projects
     .filter((project) => {
       const meta = metaForProject(
         projectMeta,
         project.id,
-        projects.indexOf(project),
+        fallbackOrders.get(project) ?? 0,
       );
       if (meta.hidden && !filters.showHidden) return false;
       if (
@@ -91,12 +94,12 @@ export const filterAndSortProjects = (
       const leftMeta = metaForProject(
         projectMeta,
         left.id,
-        projects.indexOf(left),
+        fallbackOrders.get(left) ?? 0,
       );
       const rightMeta = metaForProject(
         projectMeta,
         right.id,
-        projects.indexOf(right),
+        fallbackOrders.get(right) ?? 0,
       );
       if (filters.sort === "manual") {
         return (
@@ -137,10 +140,15 @@ export const reorderProjectMeta = (
   }
 
   const visibleIds = new Set(orderedVisibleIds);
+  const fallbackOrders = new Map(
+    projects.map((project, index) => [project, index]),
+  );
   const manualOrder = [...projects].sort(
     (left, right) =>
-      metaForProject(projectMeta, left.id, projects.indexOf(left)).order -
-      metaForProject(projectMeta, right.id, projects.indexOf(right)).order,
+      metaForProject(projectMeta, left.id, fallbackOrders.get(left) ?? 0)
+        .order -
+      metaForProject(projectMeta, right.id, fallbackOrders.get(right) ?? 0)
+        .order,
   );
   let nextVisibleIndex = 0;
   const orderedIds = manualOrder.map((project) => {
