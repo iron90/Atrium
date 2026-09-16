@@ -1,4 +1,4 @@
-use crate::model::{Facet, RunFinished, RunStarted, RunStatus};
+use crate::model::{Facet, GitSnapshot, RunFinished, RunStarted, RunStatus};
 use crate::run_validation::ValidatedRun;
 use crate::time::now_millis;
 
@@ -40,7 +40,7 @@ impl RunContext {
                 .as_ref()
                 .and_then(|repo| repo.last_commit.as_ref())
                 .map(|commit| commit.sha.clone()),
-            worktree_clean: request.project.repo.as_ref().map(|repo| repo.is_clean),
+            worktree_clean: reported_worktree_clean(request.project.repo.as_ref()),
             display_command: request.command.display_command.clone(),
             started_at: now_millis(),
         }
@@ -91,5 +91,41 @@ impl RunContext {
             stdout,
             stderr,
         }
+    }
+}
+
+fn reported_worktree_clean(repo: Option<&GitSnapshot>) -> Option<bool> {
+    repo.filter(|repo| repo.worktree_status_available)
+        .map(|repo| repo.is_clean)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::reported_worktree_clean;
+    use crate::model::GitSnapshot;
+
+    fn snapshot(worktree_status_available: bool, is_clean: bool) -> GitSnapshot {
+        GitSnapshot {
+            branch: Some("main".to_string()),
+            is_clean,
+            worktree_changes: 0,
+            worktree_status_available,
+            remote: None,
+            ahead: None,
+            behind: None,
+            last_commit: None,
+            recent_commits: Vec::new(),
+            references: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn omits_worktree_state_when_git_status_is_unavailable() {
+        assert_eq!(reported_worktree_clean(None), None);
+        assert_eq!(reported_worktree_clean(Some(&snapshot(false, false))), None);
+        assert_eq!(
+            reported_worktree_clean(Some(&snapshot(true, true))),
+            Some(true)
+        );
     }
 }
