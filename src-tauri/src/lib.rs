@@ -2,6 +2,7 @@ mod artifacts;
 mod command_boundary;
 mod command_discovery;
 mod conformance;
+mod filesystem_metrics;
 mod git;
 mod git_commands;
 mod guidance;

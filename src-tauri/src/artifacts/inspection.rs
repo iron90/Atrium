@@ -1,15 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::filesystem_metrics::measure_path;
 use crate::manifest_projection::normalize_declared_path;
 use crate::model::{BuildArtifact, BuildArtifactKind, BuildProfile};
-
-#[derive(Default)]
-struct ArtifactMetrics {
-    bytes: u64,
-    file_count: u64,
-    modified_at: Option<i64>,
-}
 
 pub fn inspect_project_artifacts(
     project_path: &Path,
@@ -52,18 +46,11 @@ fn inspect_artifact(
     }
 
     let (kind, metrics) = if metadata.is_file() {
-        (
-            BuildArtifactKind::File,
-            ArtifactMetrics {
-                bytes: metadata.len(),
-                file_count: 1,
-                modified_at: modified_millis(&metadata),
-            },
-        )
+        (BuildArtifactKind::File, measure_path(&target))
     } else if metadata.is_dir() {
-        (BuildArtifactKind::Directory, measure_directory(&target))
+        (BuildArtifactKind::Directory, measure_path(&target))
     } else {
-        (BuildArtifactKind::Invalid, ArtifactMetrics::default())
+        (BuildArtifactKind::Invalid, Default::default())
     };
 
     BuildArtifact {
@@ -93,55 +80,4 @@ pub(super) fn safe_declared_path(root: &Path, relative_path: &str) -> Result<Pat
     let normalized = normalize_declared_path(relative_path, &[".git", ".atrium"])
         .ok_or_else(|| "Artifact path is not a safe relative path".to_string())?;
     Ok(root.join(normalized))
-}
-
-fn measure_directory(path: &Path) -> ArtifactMetrics {
-    let Ok(metadata) = fs::symlink_metadata(path) else {
-        return ArtifactMetrics::default();
-    };
-    if metadata.file_type().is_symlink() {
-        return ArtifactMetrics::default();
-    }
-    if metadata.is_file() {
-        return ArtifactMetrics {
-            bytes: metadata.len(),
-            file_count: 1,
-            modified_at: modified_millis(&metadata),
-        };
-    }
-    if !metadata.is_dir() {
-        return ArtifactMetrics::default();
-    }
-
-    let mut total = ArtifactMetrics {
-        modified_at: modified_millis(&metadata),
-        ..ArtifactMetrics::default()
-    };
-    let Ok(entries) = fs::read_dir(path) else {
-        return total;
-    };
-    for entry in entries.flatten() {
-        let child = measure_directory(&entry.path());
-        total.bytes += child.bytes;
-        total.file_count += child.file_count;
-        total.modified_at = max_modified(total.modified_at, child.modified_at);
-    }
-    total
-}
-
-fn modified_millis(metadata: &fs::Metadata) -> Option<i64> {
-    metadata
-        .modified()
-        .ok()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
-}
-
-fn max_modified(left: Option<i64>, right: Option<i64>) -> Option<i64> {
-    match (left, right) {
-        (Some(left), Some(right)) => Some(left.max(right)),
-        (Some(value), None) | (None, Some(value)) => Some(value),
-        (None, None) => None,
-    }
 }
