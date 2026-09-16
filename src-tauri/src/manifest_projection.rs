@@ -4,6 +4,8 @@ mod links;
 mod path_policy;
 mod profiles;
 
+pub(crate) use path_policy::normalize_declared_path;
+
 use crate::conformance::MANIFEST_PATH;
 use crate::manifest::ProjectConfigurationInspection;
 use crate::manifest_schema::ManifestDocument;

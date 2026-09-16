@@ -1,4 +1,4 @@
-pub(super) fn normalize_declared_path(raw: &str, protected: &[&str]) -> Option<String> {
+pub(crate) fn normalize_declared_path(raw: &str, protected: &[&str]) -> Option<String> {
     let normalized = raw.trim().replace('\\', "/");
     let invalid = normalized.is_empty()
         || normalized == "."

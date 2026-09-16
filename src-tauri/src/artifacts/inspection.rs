@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::manifest_projection::normalize_declared_path;
 use crate::model::{BuildArtifact, BuildArtifactKind, BuildProfile};
 
 #[derive(Default)]
@@ -89,18 +90,8 @@ fn invalid_artifact(profile: &BuildProfile, relative_path: &str) -> BuildArtifac
 }
 
 pub(super) fn safe_declared_path(root: &Path, relative_path: &str) -> Result<PathBuf, String> {
-    let normalized = relative_path.replace('\\', "/");
-    if normalized.is_empty()
-        || normalized == "."
-        || normalized.starts_with('/')
-        || normalized.get(1..2) == Some(":")
-        || normalized
-            .split('/')
-            .any(|part| part.is_empty() || part == "..")
-        || matches!(normalized.as_str(), ".git" | ".atrium")
-    {
-        return Err("Artifact path is not a safe relative path".to_string());
-    }
+    let normalized = normalize_declared_path(relative_path, &[".git", ".atrium"])
+        .ok_or_else(|| "Artifact path is not a safe relative path".to_string())?;
     Ok(root.join(normalized))
 }
 

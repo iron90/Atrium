@@ -7,8 +7,10 @@ pub use opening::open_declared_artifact;
 #[cfg(test)]
 mod tests {
     use super::inspect_project_artifacts;
+    use super::inspection::safe_declared_path;
     use crate::model::{BuildArtifactKind, BuildProfile, Facet, FacetSource};
     use std::fs;
+    use std::path::Path;
 
     fn profile() -> BuildProfile {
         let facet = Facet {
@@ -47,5 +49,18 @@ mod tests {
         assert!(matches!(artifacts[1].kind, BuildArtifactKind::Missing));
 
         fs::remove_dir_all(root).expect("remove artifact fixture");
+    }
+
+    #[test]
+    fn uses_shared_manifest_path_rules_for_artifacts() {
+        let root = Path::new("project");
+
+        assert_eq!(
+            safe_declared_path(root, " dist\\windows ").expect("normalize artifact path"),
+            root.join("dist/windows")
+        );
+        for path in ["", ".", "../dist", "/tmp/dist", ".atrium"] {
+            assert!(safe_declared_path(root, path).is_err(), "{path}");
+        }
     }
 }
