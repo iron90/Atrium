@@ -8,6 +8,8 @@ import { FaDesktop, FaGlobe, FaWindows } from "react-icons/fa6";
 import { SiAndroid, SiApple, SiIos, SiLinux, SiMacos } from "react-icons/si";
 import { bridge, isTauriRuntime } from "./bridge";
 import { demoSnapshot } from "./bridge/fake-bridge";
+import { CommitList } from "./features/git/CommitList";
+import { GitHistoryView } from "./features/git/GitHistoryView";
 import {
   collectFilterOptions,
   emptySnapshot,
@@ -35,12 +37,11 @@ import {
 } from "./features/settings/model";
 import { I18nProvider, localizedFacetLabel, translate, useI18n } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
+import { fill, formatBytes, formatRelative, formatTime } from "./shared/format";
 import type {
   BuildArtifact,
   BuildProfile,
   Facet,
-  GitChangeSummary,
-  GitCommit,
   ProtocolCapabilityStatus,
   ProjectCommand,
   ProjectSnapshot,
@@ -127,42 +128,6 @@ const readLocalPreferences = (): LocalPreferences => {
   } catch {
     return {};
   }
-};
-
-const formatTime = (timestamp: number, language: Language): string =>
-  new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(timestamp));
-
-const formatRelative = (timestamp: number, language: Language): string => {
-  const minutes = Math.max(1, Math.round((Date.now() - timestamp) / 60_000));
-  if (minutes < 60) {
-    return language === "zh" ? `${minutes} 分钟前` : `${minutes} min ago`;
-  }
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) {
-    return language === "zh" ? `${hours} 小时前` : `${hours} hr ago`;
-  }
-  const days = Math.round(hours / 24);
-  return language === "zh" ? `${days} 天前` : `${days} days ago`;
-};
-
-const formatBytes = (bytes: number): string => {
-  if (bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const unitIndex = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  );
-  const value = bytes / 1024 ** unitIndex;
-  const formatted =
-    unitIndex === 0 || value >= 100
-      ? Math.round(value).toString()
-      : value.toFixed(1);
-  return `${formatted} ${units[unitIndex]}`;
 };
 
 const storageKindLabel = (
@@ -323,9 +288,6 @@ const protocolManifestLabel = (
       return t("protocolManifestInvalid");
   }
 };
-
-const fill = (value: string, key: string, replacement: string): string =>
-  value.replace(`{${key}}`, replacement);
 
 const createConfigurationAgentPrompt = (
   project: ProjectSnapshot,
@@ -2562,26 +2524,6 @@ function FacetDetail({
   );
 }
 
-function CommitList({ commits }: { commits: GitCommit[] }) {
-  const { language } = useI18n();
-  return (
-    <div className="commit-list">
-      {commits.map((commit) => (
-        <div className="commit-row" key={commit.sha}>
-          <span className="commit-dot" />
-          <span className="commit-copy">
-            <strong>{commit.subject}</strong>
-            <span>
-              {commit.shortSha} · {commit.author}
-            </span>
-          </span>
-          <time>{formatRelative(commit.timestamp, language)}</time>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function PlatformMatrix({
   projects,
   onSelect,
@@ -2635,195 +2577,6 @@ function PlatformMatrix({
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-function GitHistoryView({
-  projects,
-  selectedId,
-  onSelect,
-}: {
-  projects: ProjectSnapshot[];
-  selectedId?: string;
-  onSelect: (projectId: string) => void;
-}) {
-  const { language, t } = useI18n();
-  const selectedProject = projects.find((project) => project.id === selectedId);
-  const revisionOptions = Array.from(
-    new Set([
-      "HEAD",
-      "HEAD~1",
-      ...(selectedProject?.repo?.references ?? []).map(
-        (reference) => reference.name,
-      ),
-      ...(selectedProject?.repo?.recentCommits ?? []).map(
-        (commit) => commit.sha,
-      ),
-    ]),
-  );
-  const [fromRevision, setFromRevision] = useState(
-    selectedProject?.repo?.recentCommits[1]?.sha ?? "HEAD~1",
-  );
-  const [toRevision, setToRevision] = useState("HEAD");
-  const [changeSummary, setChangeSummary] = useState<GitChangeSummary | null>(
-    null,
-  );
-  const [isLoadingChanges, setIsLoadingChanges] = useState(false);
-  const [changeError, setChangeError] = useState<string | null>(null);
-  const commits = projects
-    .flatMap((project) =>
-      (project.repo?.recentCommits ?? []).map((commit) => ({
-        project,
-        commit,
-      })),
-    )
-    .sort((left, right) => right.commit.timestamp - left.commit.timestamp);
-
-  return (
-    <div className="git-history-view">
-      <section className="git-change-panel">
-        <div className="section-heading">
-          <h3>{t("versionChanges")}</h3>
-          <span>{selectedProject?.name ?? t("selectProject")}</span>
-        </div>
-        {selectedProject?.repo ? (
-          <>
-            <div className="git-revision-controls">
-              <label>
-                <span>{t("fromRevision")}</span>
-                <input
-                  className="form-control"
-                  list="git-revisions-from"
-                  value={fromRevision}
-                  onChange={(event) => setFromRevision(event.target.value)}
-                />
-                <datalist id="git-revisions-from">
-                  {revisionOptions.map((revision) => (
-                    <option value={revision} key={revision} />
-                  ))}
-                </datalist>
-              </label>
-              <label>
-                <span>{t("toRevision")}</span>
-                <input
-                  className="form-control"
-                  list="git-revisions-to"
-                  value={toRevision}
-                  onChange={(event) => setToRevision(event.target.value)}
-                />
-                <datalist id="git-revisions-to">
-                  {revisionOptions.map((revision) => (
-                    <option value={revision} key={revision} />
-                  ))}
-                </datalist>
-              </label>
-              <button
-                type="button"
-                disabled={isLoadingChanges || !fromRevision.trim()}
-                onClick={() => {
-                  setIsLoadingChanges(true);
-                  setChangeError(null);
-                  void bridge
-                    .readGitChangeSummary(
-                      selectedProject.path,
-                      fromRevision.trim(),
-                      toRevision.trim() || undefined,
-                    )
-                    .then(setChangeSummary)
-                    .catch((error) =>
-                      setChangeError(
-                        error instanceof Error ? error.message : String(error),
-                      ),
-                    )
-                    .finally(() => setIsLoadingChanges(false));
-                }}
-              >
-                {isLoadingChanges ? t("loadingChanges") : t("loadChanges")}
-              </button>
-            </div>
-            {changeError ? <p className="inline-error">{changeError}</p> : null}
-            {changeSummary ? (
-              <div className="git-change-summary">
-                <div className="change-totals">
-                  <span>
-                    {fill(
-                      t("changedFiles"),
-                      "count",
-                      String(changeSummary.files.length),
-                    )}
-                  </span>
-                  <span className="change-additions">
-                    +{changeSummary.insertions} {t("insertions")}
-                  </span>
-                  <span className="change-deletions">
-                    −{changeSummary.deletions} {t("deletions")}
-                  </span>
-                </div>
-                {changeSummary.commits.length ? (
-                  <CommitList commits={changeSummary.commits} />
-                ) : (
-                  <p className="empty-copy">{t("noChanges")}</p>
-                )}
-                {changeSummary.files.length ? (
-                  <div className="changed-file-list">
-                    {changeSummary.files.map((file) => (
-                      <div key={file.path}>
-                        <span>
-                          <strong>{file.status}</strong> {file.path}
-                        </span>
-                        <small>
-                          {file.additions ?? "—"} / {file.deletions ?? "—"}
-                        </small>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() =>
-                    void navigator.clipboard?.writeText(
-                      JSON.stringify(changeSummary, null, 2),
-                    )
-                  }
-                >
-                  {t("copyChanges")}
-                </button>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <p className="empty-copy">{t("gitHistoryUnavailable")}</p>
-        )}
-      </section>
-      {commits.length ? (
-        <div className="git-history-list">
-          {commits.map(({ project, commit }) => (
-            <button
-              type="button"
-              className={`git-history-row ${project.id === selectedId ? "is-selected" : ""}`}
-              key={`${project.id}:${commit.sha}`}
-              onClick={() => onSelect(project.id)}
-            >
-              <span className="commit-dot" />
-              <span className="git-history-project">
-                <strong>{project.name}</strong>
-                <span>{commit.subject}</span>
-              </span>
-              <span className="git-history-meta">
-                <span>{commit.shortSha}</span>
-                <time>{formatTime(commit.timestamp, language)}</time>
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          <span>⌘</span>
-          <h3>{t("noCommits")}</h3>
-          <p>{t("gitHistoryDescription")}</p>
-        </div>
-      )}
     </div>
   );
 }
