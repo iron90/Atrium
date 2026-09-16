@@ -1,7 +1,4 @@
-use std::fs;
 use std::path::Path;
-
-use serde_json::Value;
 
 use crate::artifacts::inspect_project_artifacts;
 use crate::command_discovery::discover_commands;
@@ -9,6 +6,7 @@ use crate::conformance::inspect_icon;
 use crate::git::read_git_snapshot;
 use crate::manifest::scan_project_configuration;
 use crate::model::ProjectSnapshot;
+use crate::project_metadata::{read_project_description, read_project_name};
 use crate::protocol::build_protocol_status;
 use crate::storage::inspect_project_storage;
 use crate::time::now_millis;
@@ -64,46 +62,6 @@ pub fn scan_project_with_storage(
         artifacts,
         scanned_at: now_millis(),
     })
-}
-
-fn read_project_name(path: &Path) -> Option<String> {
-    if let Some(package) = read_json(path, "package.json") {
-        if let Some(name) = package.get("name").and_then(Value::as_str) {
-            return Some(name.to_string());
-        }
-    }
-    for file in ["Cargo.toml", "pubspec.yaml", "pyproject.toml"] {
-        if let Ok(content) = fs::read_to_string(path.join(file)) {
-            for line in content.lines() {
-                let value = line
-                    .strip_prefix("name:")
-                    .or_else(|| line.strip_prefix("name ="));
-                if let Some(value) = value {
-                    let value = value
-                        .trim()
-                        .trim_matches(|character| character == '"' || character == '\'');
-                    if !value.is_empty() {
-                        return Some(value.to_string());
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-fn read_project_description(path: &Path) -> Option<String> {
-    if let Some(package) = read_json(path, "package.json") {
-        if let Some(description) = package.get("description").and_then(Value::as_str) {
-            return Some(description.to_string());
-        }
-    }
-    None
-}
-
-fn read_json(path: &Path, file: &str) -> Option<Value> {
-    let content = fs::read_to_string(path.join(file)).ok()?;
-    serde_json::from_str(&content).ok()
 }
 
 #[cfg(test)]
