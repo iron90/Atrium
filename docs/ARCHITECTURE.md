@@ -126,6 +126,7 @@ Rust native core
   ├─ project_metadata        项目名称和描述读取
   ├─ workspace_scan          工作区遍历和项目候选发现
   ├─ workspace_policy        确定性的排除目录与项目标记规则
+  ├─ filesystem_metrics      文件/目录指标与符号链接安全策略
   ├─ project_scan            单项目快照组装和项目元数据读取
   ├─ command_discovery       确定性原生命令发现门面
   │  ├─ package               package.json scripts 适配
