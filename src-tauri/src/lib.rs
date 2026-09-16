@@ -8,12 +8,14 @@ mod history;
 mod manifest;
 mod manifest_schema;
 mod model;
+mod project_scan;
 mod protocol;
 mod runner;
 mod scanner;
 mod state;
 mod storage;
 mod time;
+mod workspace_scan;
 
 pub fn run() {
     tauri::Builder::default()

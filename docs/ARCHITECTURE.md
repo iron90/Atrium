@@ -59,7 +59,9 @@ Tauri command boundary
 Rust native core
   ├─ commands                窄 Tauri command 适配器和线程边界
   ├─ model                   前后端共享的序列化领域 DTO
-  ├─ scanner                 工作区和项目候选发现、项目快照组装
+  ├─ scanner                 对外暴露扫描器边界
+  ├─ workspace_scan          工作区遍历和项目候选发现
+  ├─ project_scan            单项目快照组装和项目元数据读取
   ├─ command_discovery       确定性原生命令发现适配器
   ├─ manifest_schema         manifest DTO 与 TOML 解析
   ├─ manifest                结构化配置解析与投影
