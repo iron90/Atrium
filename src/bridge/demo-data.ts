@@ -59,7 +59,7 @@ const command = (
   label,
   program: displayCommand.split(" ")[0],
   args: displayCommand.split(" ").slice(1),
-  workingDirectory: "~/projects",
+  workingDirectory: "",
   displayCommand,
   source,
 });
@@ -119,6 +119,16 @@ const demoProjectDefaults: Pick<
   storage: null,
   artifacts: null,
 };
+
+const withProjectWorkingDirectory = (
+  project: ProjectSnapshot,
+): ProjectSnapshot => ({
+  ...project,
+  commands: project.commands.map((projectCommand) => ({
+    ...projectCommand,
+    workingDirectory: project.path,
+  })),
+});
 
 export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
   rootPath,
@@ -592,5 +602,5 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
       repo: null,
       scannedAt: now,
     },
-  ],
+  ].map((project) => withProjectWorkingDirectory(project as ProjectSnapshot)),
 });

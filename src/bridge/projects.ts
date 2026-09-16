@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { demoSnapshot } from "./fake-bridge";
+import { DEMO_WORKSPACE_ROOT, demoSnapshot } from "./fake-bridge";
 import { isTauriRuntime } from "./runtime";
 import type {
   CleanupResult,
@@ -12,7 +12,7 @@ import type {
 
 export const defaultWorkspacePath = async (): Promise<string> => {
   if (!isTauriRuntime()) {
-    return "~/projects";
+    return DEMO_WORKSPACE_ROOT;
   }
   return invoke<string>("default_workspace_path_command");
 };

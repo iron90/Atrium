@@ -3,7 +3,7 @@ import { AppSidebar } from "./app/AppSidebar";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
 import { bridge, isTauriRuntime } from "./bridge";
-import { demoSnapshot } from "./bridge/fake-bridge";
+import { DEMO_WORKSPACE_ROOT, demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
 import type { ProjectInspectorProps } from "./features/projects/ProjectInspector";
 import type { ProjectListProps } from "./features/projects/ProjectList";
@@ -36,13 +36,11 @@ import {
 import type { ProjectSnapshot, WorkspaceSnapshot } from "./bridge";
 import "./app.css";
 
-const DEFAULT_ROOT = "~/projects";
-
 export default function App() {
   const nativeRuntime = isTauriRuntime();
   const [preferences] = useState<LocalPreferences>(readLocalPreferences);
   const initialRootPath =
-    preferences.rootPath?.trim() || (nativeRuntime ? "" : DEFAULT_ROOT);
+    preferences.rootPath?.trim() || (nativeRuntime ? "" : DEMO_WORKSPACE_ROOT);
   const initialWorkspacePaths = preferences.workspaces?.length
     ? preferences.workspaces
     : initialRootPath
