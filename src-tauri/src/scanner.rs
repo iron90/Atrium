@@ -7,8 +7,9 @@ use crate::artifacts::inspect_project_artifacts;
 use crate::command_discovery::discover_commands;
 use crate::conformance::inspect_icon;
 use crate::git::read_git_snapshot;
-use crate::manifest::{build_protocol_status, scan_project_configuration};
+use crate::manifest::scan_project_configuration;
 use crate::model::{ProjectSnapshot, WorkspaceSnapshot};
+use crate::protocol::build_protocol_status;
 use crate::storage::inspect_project_storage;
 use crate::time::now_millis;
 

@@ -7,6 +7,7 @@ mod history;
 mod manifest;
 mod manifest_schema;
 mod model;
+mod protocol;
 mod runner;
 mod scanner;
 mod state;
