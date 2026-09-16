@@ -196,6 +196,9 @@ build = ["dist", "src-tauri/target"]
 
 Paths must be relative to the repository, must not contain `..`, and must not
 declare protected roots such as `.git`, `.atrium`, `node_modules`, or `vendor`.
+Cleanup declarations must also not overlap: do not declare both a directory and
+one of its descendants. Atrium marks overlapping declarations invalid so size
+metrics cannot double-count and cleanup cannot process the same files twice.
 Atrium only displays and removes declared directories that currently exist and
 are real directories, never symlinks. Missing declarations produce no cleanup
 targets; the configuration guidance tells the project development Agent how to
