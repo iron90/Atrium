@@ -9,6 +9,8 @@ import { CommitList } from "../git/CommitList";
 import { useI18n } from "../../i18n";
 import { ProjectIconView } from "./ProjectIconView";
 import { BuildProfileCard } from "./BuildProfileCard";
+import { ProjectCommandsSection } from "./ProjectCommandsSection";
+import { ProjectProtocolSection } from "./ProjectProtocolSection";
 import type { ProjectAction } from "./project-actions";
 import {
   DetailLoading,
@@ -17,10 +19,6 @@ import {
 } from "./InspectorPrimitives";
 import { StoragePanel, type CleanupFeedback } from "./StoragePanel";
 import {
-  capabilityLabel,
-  capabilityStatusLabel,
-  commandLabel,
-  protocolManifestLabel,
   statusClass,
   statusLabel,
   syncStatusAriaLabel,
@@ -107,7 +105,6 @@ export function ProjectInspector({
   const inspectedProject = details ?? project;
   const rawCommandsRevealed = rawCommandsRevealedFor === project.id;
   const buildProfiles = inspectedProject.buildProfiles;
-  const iconConformance = inspectedProject.iconConformance;
   const protocol = inspectedProject.protocol;
   const coreCapabilities = protocol.capabilities.filter(
     (capability) => capability.id !== "cleanup",
@@ -116,36 +113,10 @@ export function ProjectInspector({
     protocol.manifestStatus === "configured" &&
     coreCapabilities.length > 0 &&
     coreCapabilities.every((capability) => capability.status === "configured");
-  const protocolCardStatus =
-    protocol.manifestStatus !== "configured"
-      ? protocol.manifestStatus
-      : protocol.capabilities.some(
-            (capability) => capability.status !== "configured",
-          )
-        ? "partial"
-        : "configured";
-  const protocolDetailsSummary = fill(
-    t("protocolDetailsSummary"),
-    "count",
-    String(protocol.capabilities.length),
-  );
   const canExecuteProfiles =
     inspectedProject.configuration.status === "configured";
   const showConfigurationGuidance =
     !canExecuteProfiles || buildProfiles.length === 0;
-  const cleanupCapability = protocol.capabilities.find(
-    (capability) => capability.id === "cleanup",
-  );
-  const showProtocolGuidance =
-    !protocolReady ||
-    showConfigurationGuidance ||
-    cleanupCapability?.status === "invalid";
-  const primaryCommands = inspectedProject.commands.filter(
-    (command) => command.kind !== "other",
-  );
-  const otherCommands = inspectedProject.commands.filter(
-    (command) => command.kind === "other",
-  );
   const repo = inspectedProject.repo;
   const storage = inspectedProject.storage;
 
@@ -257,102 +228,16 @@ export function ProjectInspector({
         ) : null}
       </InspectorSection>
 
-      <InspectorSection title={t("atriumProtocol")}>
-        <div className={`protocol-card protocol-status-${protocolCardStatus}`}>
-          <div>
-            <strong>{protocolManifestLabel(protocol.manifestStatus, t)}</strong>
-            <span>{t("iconConformanceDescription")}</span>
-          </div>
-          {showProtocolGuidance ? (
-            <button
-              className="protocol-action"
-              type="button"
-              onClick={() => onGenerateGuidance(project)}
-              disabled={isWritingGuidance}
-            >
-              {isWritingGuidance
-                ? t("generatingGuidance")
-                : t("generateGuidance")}
-            </button>
-          ) : null}
-        </div>
-        <details className="protocol-details" key={project.id}>
-          <summary>
-            <span>{t("protocolDetails")}</span>
-            <span>{protocolDetailsSummary}</span>
-          </summary>
-          <div className="protocol-details-body">
-            <div className="protocol-path">
-              <span>{protocol.manifestPath}</span>
-              <span>
-                {protocol.schema
-                  ? fill(
-                      t("protocolSchema"),
-                      "version",
-                      String(protocol.schema),
-                    )
-                  : t("protocolSchemaUnavailable")}
-              </span>
-            </div>
-            <div
-              className="protocol-capabilities"
-              aria-label={t("protocolCapabilities")}
-            >
-              {protocol.capabilities.map((capability) => (
-                <div
-                  className={`protocol-capability capability-${capability.status}`}
-                  key={capability.id}
-                  title={
-                    capability.issues.join(" ") ||
-                    capability.evidence.join(", ")
-                  }
-                >
-                  <span className="capability-dot" />
-                  <span>
-                    <strong>{capabilityLabel(capability.id, t)}</strong>
-                    <small>{capabilityStatusLabel(capability.status, t)}</small>
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="protocol-path protocol-icon-path">
-              <span>{iconConformance.manifestPath}</span>
-              <span>
-                {iconConformance.resolvedIcon ?? t("iconStatusMissing")}
-              </span>
-            </div>
-          </div>
-        </details>
-        {guidanceMessage ? (
-          <p className="protocol-message">{guidanceMessage}</p>
-        ) : null}
-        {agentPrompt ? (
-          <div className="agent-prompt-card">
-            <div className="agent-prompt-heading">
-              <div>
-                <strong>{t("agentPromptTitle")}</strong>
-                <span>{t("agentPromptDescription")}</span>
-              </div>
-              <button
-                className="protocol-action"
-                type="button"
-                onClick={onCopyAgentPrompt}
-              >
-                {isAgentPromptCopied
-                  ? t("agentPromptCopied")
-                  : t("copyAgentPrompt")}
-              </button>
-            </div>
-            <textarea
-              className="agent-prompt"
-              readOnly
-              value={agentPrompt}
-              aria-label={t("agentPromptTitle")}
-              rows={10}
-            />
-          </div>
-        ) : null}
-      </InspectorSection>
+      <ProjectProtocolSection
+        project={project}
+        inspectedProject={inspectedProject}
+        guidanceMessage={guidanceMessage}
+        agentPrompt={agentPrompt}
+        isAgentPromptCopied={isAgentPromptCopied}
+        onCopyAgentPrompt={onCopyAgentPrompt}
+        isWritingGuidance={isWritingGuidance}
+        onGenerateGuidance={onGenerateGuidance}
+      />
 
       <InspectorSection
         title={t("storage")}
@@ -447,104 +332,14 @@ export function ProjectInspector({
         ) : null}
       </InspectorSection>
 
-      <InspectorSection
-        title={t("rawRepositoryCommands")}
-        trailing={
-          isLoading
-            ? t("waitingForOutput")
-            : inspectedProject.commands.length
-              ? fill(
-                  t("source"),
-                  "value",
-                  inspectedProject.commands[0].source.split("#")[0],
-                )
-              : undefined
-        }
-      >
-        {isLoading ? (
-          <DetailLoading />
-        ) : (
-          <>
-            <p className="entrypoint-note">{t("rawCommandDescription")}</p>
-            {!inspectedProject.commands.length ? (
-              <p className="empty-copy">{t("noKnownEntrypoint")}</p>
-            ) : !rawCommandsRevealed ? (
-              <div className="command-disclosure">
-                <strong>
-                  {fill(
-                    t("discoveredCommandsCount"),
-                    "count",
-                    String(inspectedProject.commands.length),
-                  )}
-                </strong>
-                <span>{t("discoveredCommandsWarning")}</span>
-                <button
-                  className="command-disclosure-button"
-                  type="button"
-                  onClick={() => setRawCommandsRevealedFor(project.id)}
-                >
-                  {t("revealDiscoveredCommands")}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="entrypoint-list">
-                  {primaryCommands.length ? (
-                    primaryCommands.map((command) => (
-                      <button
-                        className={`entrypoint-button command-${command.kind}`}
-                        type="button"
-                        key={command.id}
-                        onClick={() => onRun(command)}
-                        disabled={Boolean(activeRun)}
-                        title={command.displayCommand}
-                      >
-                        <span className="entrypoint-icon" aria-hidden="true">
-                          {command.kind === "run"
-                            ? "▷"
-                            : command.kind === "check"
-                              ? "✓"
-                              : "↗"}
-                        </span>
-                        <span>
-                          <strong>{commandLabel(command, language)}</strong>
-                          <small>{command.displayCommand}</small>
-                        </span>
-                        <span className="entrypoint-arrow" aria-hidden="true">
-                          →
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="empty-copy">{t("noKnownEntrypoint")}</p>
-                  )}
-                </div>
-                {otherCommands.length ? (
-                  <details className="other-commands">
-                    <summary>
-                      {fill(
-                        t("otherCommands"),
-                        "count",
-                        String(otherCommands.length),
-                      )}
-                    </summary>
-                    {otherCommands.map((command) => (
-                      <button
-                        type="button"
-                        key={command.id}
-                        onClick={() => onRun(command)}
-                        disabled={Boolean(activeRun)}
-                      >
-                        {command.displayCommand}
-                      </button>
-                    ))}
-                  </details>
-                ) : null}
-              </>
-            )}
-          </>
-        )}
-      </InspectorSection>
+      <ProjectCommandsSection
+        project={inspectedProject}
+        isLoading={isLoading}
+        activeRun={activeRun}
+        onRun={onRun}
+        rawCommandsRevealed={rawCommandsRevealed}
+        onRevealRawCommands={() => setRawCommandsRevealedFor(project.id)}
+      />
 
       {activeRun ? (
         <InspectorSection
