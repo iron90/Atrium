@@ -4,20 +4,7 @@ use std::path::Path;
 use crate::model::WorkspaceSnapshot;
 use crate::project_scan::scan_project;
 use crate::time::now_millis;
-
-const IGNORED_DIRECTORIES: &[&str] = &[
-    ".git",
-    ".idea",
-    ".vscode",
-    "node_modules",
-    "target",
-    "dist",
-    "build",
-    "Library",
-    "Temp",
-    ".venv",
-    "vendor",
-];
+use crate::workspace_policy::{is_ignored_name, is_project_candidate};
 
 #[allow(dead_code)]
 pub fn scan_workspace(root_path: &Path) -> Result<WorkspaceSnapshot, String> {
@@ -62,38 +49,4 @@ pub fn scan_workspace_with_exclusions(
         projects,
         warnings,
     })
-}
-
-fn is_project_candidate(path: &Path) -> bool {
-    [
-        ".git",
-        "package.json",
-        "Cargo.toml",
-        "pubspec.yaml",
-        "pyproject.toml",
-        "ProjectSettings",
-        "Assets",
-    ]
-    .iter()
-    .any(|marker| path.join(marker).exists())
-        || has_extension(path, "sln")
-        || has_extension(path, "csproj")
-        || has_extension(path, "xcodeproj")
-        || has_extension(path, "xcworkspace")
-}
-
-fn is_ignored_name(name: &str, excluded_names: &[String]) -> bool {
-    IGNORED_DIRECTORIES.contains(&name)
-        || excluded_names
-            .iter()
-            .any(|excluded| excluded.trim() == name)
-}
-
-fn has_extension(path: &Path, extension: &str) -> bool {
-    fs::read_dir(path)
-        .ok()
-        .into_iter()
-        .flatten()
-        .filter_map(Result::ok)
-        .any(|entry| entry.path().extension().and_then(|value| value.to_str()) == Some(extension))
 }

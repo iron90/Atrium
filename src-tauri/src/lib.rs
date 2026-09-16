@@ -25,6 +25,7 @@ mod storage;
 mod time;
 mod tool_commands;
 mod workspace_commands;
+mod workspace_policy;
 mod workspace_scan;
 
 pub fn run() {
