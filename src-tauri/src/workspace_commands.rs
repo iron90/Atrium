@@ -26,11 +26,15 @@ pub fn default_workspace_path_command() -> String {
 }
 
 #[tauri::command]
-pub fn scan_workspace_command(
+pub async fn scan_workspace_command(
     root_path: String,
     excluded_names: Option<Vec<String>>,
 ) -> Result<WorkspaceSnapshot, String> {
-    scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names.unwrap_or_default())
+    let excluded_names = excluded_names.unwrap_or_default();
+    run_blocking("Workspace scan", move || {
+        scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names)
+    })
+    .await
 }
 
 #[tauri::command]
