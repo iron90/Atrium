@@ -62,7 +62,9 @@ Rust native core
   ├─ scanner                 工作区和项目候选发现、项目快照组装
   ├─ command_discovery       确定性原生命令发现适配器
   ├─ manifest_schema         manifest DTO 与 TOML 解析
-  ├─ manifest                协议能力评估和引导报告编排
+  ├─ manifest                结构化配置解析与投影
+  ├─ protocol                协议能力状态评估
+  ├─ guidance                Agent 引导文件和报告生成
   ├─ conformance              图标协议检查和报告写入
   ├─ git                     Git CLI 只读适配器
   ├─ artifacts/storage       声明产物检查、存储统计和清理

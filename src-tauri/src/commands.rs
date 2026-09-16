@@ -6,8 +6,8 @@ use tauri::{AppHandle, State};
 use crate::artifacts::open_declared_artifact;
 use crate::conformance::write_icon_conformance_report;
 use crate::git::read_git_change_summary;
+use crate::guidance::{write_project_configuration_report, write_project_guidance_reports};
 use crate::history::{load_run_history, open_run_log};
-use crate::manifest::{write_project_configuration_report, write_project_guidance_reports};
 use crate::model::{
     CleanupResult, CommandKind, GitChangeSummary, IconConformanceReport,
     ProjectConfigurationReport, ProjectGuidanceReport, ProjectSnapshot, RunStarted,

@@ -3,6 +3,7 @@ mod command_discovery;
 mod commands;
 mod conformance;
 mod git;
+mod guidance;
 mod history;
 mod manifest;
 mod manifest_schema;
