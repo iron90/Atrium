@@ -9,6 +9,10 @@ import { GitHistoryView } from "./features/git/GitHistoryView";
 import { ProjectInspector } from "./features/projects/ProjectInspector";
 import { PlatformMatrix } from "./features/projects/PlatformMatrix";
 import { ProjectList } from "./features/projects/ProjectList";
+import {
+  openProjectAction,
+  type ProjectAction,
+} from "./features/projects/project-actions";
 import { useProjectInspectorActions } from "./features/projects/use-project-inspector-actions";
 import { emptySnapshot, metaForProject } from "./features/projects/model";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
@@ -213,22 +217,12 @@ export default function App() {
   } = useProjectListViewState(snapshot.projects, projectMeta);
 
   const handleOpenProjectAction = async (
-    action: "directory" | "terminal" | "remote" | "link",
+    action: ProjectAction,
     project: ProjectSnapshot,
     linkId?: string,
   ) => {
     try {
-      if (action === "directory")
-        await bridge.openProjectDirectory(project.path);
-      if (action === "terminal") {
-        await bridge.openProjectTerminal(project.path, project.tools?.terminal);
-      }
-      if (action === "remote" && project.repo?.remote) {
-        await bridge.openProjectRemote(project.repo.remote);
-      }
-      if (action === "link" && linkId) {
-        await bridge.openProjectLink(project.path, linkId);
-      }
+      await openProjectAction(action, project, linkId);
     } catch (openError) {
       setError(
         openError instanceof Error ? openError.message : String(openError),

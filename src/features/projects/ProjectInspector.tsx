@@ -9,6 +9,7 @@ import { CommitList } from "../git/CommitList";
 import { useI18n } from "../../i18n";
 import { ProjectIconView } from "./ProjectIconView";
 import { BuildProfileCard } from "./BuildProfileCard";
+import type { ProjectAction } from "./project-actions";
 import {
   DetailLoading,
   FacetDetail,
@@ -59,7 +60,7 @@ export interface ProjectInspectorProps {
     relativePath: string,
   ) => void;
   onOpenProjectAction: (
-    action: "directory" | "terminal" | "remote" | "link",
+    action: ProjectAction,
     project: ProjectSnapshot,
     linkId?: string,
   ) => void;
