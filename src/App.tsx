@@ -9,6 +9,17 @@ import { SiAndroid, SiApple, SiIos, SiLinux, SiMacos } from "react-icons/si";
 import { bridge, isTauriRuntime } from "./bridge";
 import { subscribeToRunEvents } from "./bridge/events";
 import { demoSnapshot } from "./bridge/fake-bridge";
+import {
+  collectFilterOptions,
+  emptySnapshot,
+  filterAndSortProjects,
+  mergeWorkspaceSnapshots,
+  metaForProject,
+  reorderProjectMeta,
+  snapshotFingerprint,
+  type ProjectMeta,
+  type ProjectSort,
+} from "./features/projects/model";
 import { I18nProvider, localizedFacetLabel, translate, useI18n } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import type {
@@ -31,7 +42,6 @@ import "./app.css";
 type ThemeId = "deep-ocean" | "mist-silver" | "warm-ink";
 type LayoutId = "overview" | "matrix";
 type PageId = "projects" | "git" | "settings";
-type ProjectSort = "manual" | "modified" | "storage" | "name";
 type DropPosition = "before" | "after";
 
 const DEFAULT_ROOT = "~/projects";
@@ -45,12 +55,6 @@ interface LocalPreferences {
   workspaces?: string[];
   excludeNames?: string[];
   projectMeta?: Record<string, ProjectMeta>;
-}
-
-interface ProjectMeta {
-  favorite: boolean;
-  hidden: boolean;
-  order: number;
 }
 
 const isThemeId = (value: unknown): value is ThemeId =>
@@ -119,102 +123,6 @@ const readLocalPreferences = (): LocalPreferences => {
   } catch {
     return {};
   }
-};
-
-const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
-  JSON.stringify(
-    snapshot.projects.map((project) => ({
-      id: project.id,
-      name: project.name,
-      path: project.path,
-      description: project.description,
-      iconSource: project.icon?.source ?? null,
-      iconStatus: project.iconConformance?.status ?? null,
-      protocol: project.protocol,
-      repo: project.repo
-        ? {
-            branch: project.repo.branch,
-            isClean: project.repo.isClean,
-            worktreeChanges: project.repo.worktreeChanges,
-            remote: project.repo.remote,
-            ahead: project.repo.ahead,
-            behind: project.repo.behind,
-            lastSha: project.repo.lastCommit?.sha ?? null,
-            recentShas: project.repo.recentCommits.map((commit) => commit.sha),
-            references: project.repo.references ?? [],
-          }
-        : null,
-      tools: project.tools ?? null,
-      links: project.links ?? [],
-      platforms: project.platforms.map((facet) => [
-        facet.key,
-        facet.label,
-        facet.source,
-      ]),
-      channels: project.channels.map((facet) => [
-        facet.key,
-        facet.label,
-        facet.source,
-      ]),
-      buildProfiles: project.buildProfiles.map((profile) => ({
-        id: profile.id,
-        platform: profile.platform.key,
-        channel: profile.channel.key,
-        run: profile.runCommandId,
-        check: profile.checkCommandId,
-        build: profile.buildCommandId,
-        artifacts: profile.artifacts,
-        issues: profile.issues,
-      })),
-      configuration: project.configuration,
-      commands: project.commands.map((command) => ({
-        id: command.id,
-        kind: command.kind,
-        displayCommand: command.displayCommand,
-        source: command.source,
-      })),
-      cleanup: project.cleanup,
-    })),
-  );
-
-const emptySnapshot = (rootPath: string): WorkspaceSnapshot => ({
-  rootPath,
-  scannedAt: Date.now(),
-  projects: [],
-  warnings: [],
-});
-
-const metaForProject = (
-  projectMeta: Record<string, ProjectMeta>,
-  projectId: string,
-  fallbackOrder: number,
-): ProjectMeta =>
-  projectMeta[projectId] ?? {
-    favorite: false,
-    hidden: false,
-    order: fallbackOrder,
-  };
-
-const mergeWorkspaceSnapshots = (
-  snapshots: WorkspaceSnapshot[],
-  fallbackRoot: string,
-): WorkspaceSnapshot => {
-  const projects = new Map<string, ProjectSnapshot>();
-  const warnings: string[] = [];
-  for (const item of snapshots) {
-    for (const project of item.projects) projects.set(project.id, project);
-    warnings.push(...item.warnings);
-  }
-  return {
-    rootPath:
-      snapshots.map((item) => item.rootPath).join(" · ") || fallbackRoot,
-    scannedAt: snapshots.reduce(
-      (latest, item) => Math.max(latest, item.scannedAt),
-      Date.now(),
-    ),
-    projects: Array.from(projects.values()),
-    warnings,
-  };
 };
 
 const formatTime = (timestamp: number, language: Language): string =>
@@ -666,98 +574,30 @@ export default function App() {
       )
     : undefined;
 
-  const filterOptions = useMemo(() => {
-    const platforms = new Map<string, Facet>();
-    const channels = new Map<string, Facet>();
-    snapshot.projects.forEach((project) => {
-      project.platforms.forEach((facet) => platforms.set(facet.key, facet));
-      project.channels.forEach((facet) => channels.set(facet.key, facet));
-    });
-    return {
-      platforms: Array.from(platforms.values()).sort((a, b) =>
-        a.label.localeCompare(b.label),
-      ),
-      channels: Array.from(channels.values()).sort((a, b) =>
-        a.label.localeCompare(b.label),
-      ),
-    };
-  }, [snapshot.projects]);
+  const filterOptions = useMemo(
+    () => collectFilterOptions(snapshot.projects),
+    [snapshot.projects],
+  );
 
-  const visibleProjects = useMemo(() => {
-    const query = projectSearch.trim().toLowerCase();
-    return snapshot.projects
-      .filter((project) => {
-        const meta = metaForProject(
-          projectMeta,
-          project.id,
-          snapshot.projects.indexOf(project),
-        );
-        if (meta.hidden && !showHiddenProjects) return false;
-        if (
-          query &&
-          ![project.name, project.path, project.description ?? ""].some(
-            (value) => value.toLowerCase().includes(query),
-          )
-        ) {
-          return false;
-        }
-        if (
-          platformFilter !== "all" &&
-          !project.platforms.some((facet) => facet.key === platformFilter)
-        ) {
-          return false;
-        }
-        if (
-          channelFilter !== "all" &&
-          !project.channels.some((facet) => facet.key === channelFilter)
-        ) {
-          return false;
-        }
-        return true;
-      })
-      .sort((left, right) => {
-        const leftMeta = metaForProject(
-          projectMeta,
-          left.id,
-          snapshot.projects.indexOf(left),
-        );
-        const rightMeta = metaForProject(
-          projectMeta,
-          right.id,
-          snapshot.projects.indexOf(right),
-        );
-        if (projectSort === "manual") {
-          return (
-            leftMeta.order - rightMeta.order ||
-            left.name.localeCompare(right.name)
-          );
-        }
-        if (leftMeta.favorite !== rightMeta.favorite) {
-          return leftMeta.favorite ? -1 : 1;
-        }
-        if (projectSort === "modified") {
-          return (
-            (right.repo?.lastCommit?.timestamp ?? 0) -
-            (left.repo?.lastCommit?.timestamp ?? 0)
-          );
-        }
-        if (projectSort === "storage") {
-          return (
-            (right.storage?.totalBytes ?? 0) - (left.storage?.totalBytes ?? 0)
-          );
-        }
-        if (projectSort === "name") return left.name.localeCompare(right.name);
-        return left.name.localeCompare(right.name);
-      });
-  }, [
-    channelFilter,
-    platformFilter,
-    projectMeta,
-    projectSearch,
-    projectSort,
-    showHiddenProjects,
-    snapshot.projects,
-  ]);
+  const visibleProjects = useMemo(
+    () =>
+      filterAndSortProjects(snapshot.projects, projectMeta, {
+        search: projectSearch,
+        platform: platformFilter,
+        channel: channelFilter,
+        sort: projectSort,
+        showHidden: showHiddenProjects,
+      }),
+    [
+      channelFilter,
+      platformFilter,
+      projectMeta,
+      projectSearch,
+      projectSort,
+      showHiddenProjects,
+      snapshot.projects,
+    ],
+  );
 
   const updateProjectMeta = useCallback(
     (projectId: string, change: Partial<ProjectMeta>) => {
@@ -774,43 +614,11 @@ export default function App() {
 
   const reorderProjects = useCallback(
     (orderedVisibleIds: string[]) => {
-      const projectById = new Map(
-        snapshot.projects.map((project) => [project.id, project]),
-      );
-      if (
-        orderedVisibleIds.length < 2 ||
-        new Set(orderedVisibleIds).size !== orderedVisibleIds.length ||
-        orderedVisibleIds.some((projectId) => !projectById.has(projectId))
-      ) {
-        return;
-      }
-
-      const visibleIds = new Set(orderedVisibleIds);
       setProjectMeta((current) => {
-        const manualOrder = [...snapshot.projects].sort(
-          (left, right) =>
-            metaForProject(current, left.id, snapshot.projects.indexOf(left))
-              .order -
-            metaForProject(current, right.id, snapshot.projects.indexOf(right))
-              .order,
+        return (
+          reorderProjectMeta(snapshot.projects, current, orderedVisibleIds) ??
+          current
         );
-        let nextVisibleIndex = 0;
-        const orderedIds = manualOrder.map((project) => {
-          if (!visibleIds.has(project.id)) return project.id;
-          const nextId = orderedVisibleIds[nextVisibleIndex];
-          nextVisibleIndex += 1;
-          return nextId;
-        });
-        if (nextVisibleIndex !== orderedVisibleIds.length) return current;
-
-        const next = { ...current };
-        orderedIds.forEach((projectId, index) => {
-          next[projectId] = {
-            ...metaForProject(current, projectId, index),
-            order: index,
-          };
-        });
-        return next;
       });
     },
     [snapshot.projects],
