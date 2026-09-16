@@ -2,6 +2,8 @@ use std::path::Path;
 
 use crate::model::{CommandKind, ProjectCommand};
 
+pub(super) const MAX_COMMAND_NAME_BYTES: usize = 128;
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn command(
     id: &str,
@@ -40,4 +42,13 @@ pub(super) fn executable(name: &str) -> String {
     } else {
         name.to_string()
     }
+}
+
+pub(super) fn is_safe_command_name(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= MAX_COMMAND_NAME_BYTES
+        && !value.starts_with('-')
+        && value
+            .chars()
+            .all(|character| !character.is_whitespace() && !character.is_control())
 }

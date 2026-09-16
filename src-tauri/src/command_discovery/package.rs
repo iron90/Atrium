@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::common::{command, command_label, executable};
+use super::common::{command, command_label, executable, is_safe_command_name};
 use crate::model::{CommandKind, ProjectCommand};
 
 pub(super) fn read_package(path: &Path) -> Option<Value> {
@@ -43,6 +43,9 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
         }
     }
     for name in names {
+        if !is_safe_command_name(&name) {
+            continue;
+        }
         if !selected.contains(&name) && commands.len() < 18 {
             commands.push(package_command(path, manager, &name, CommandKind::Other));
         }

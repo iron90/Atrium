@@ -60,4 +60,43 @@ mod tests {
 
         fs::remove_dir_all(root).expect("remove command fixture");
     }
+
+    #[test]
+    fn ignores_script_names_that_cannot_be_represented_safely() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-command-name-safety-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create command fixture");
+        fs::write(
+            root.join("package.json"),
+            "{\"scripts\":{\"dev\":\"vite\",\"bad\\nname\":\"echo bad\",\"-unsafe\":\"echo unsafe\"}}",
+        )
+        .expect("write package manifest");
+
+        let commands = discover_commands(&root);
+
+        assert_eq!(commands.len(), 1);
+        assert_eq!(commands[0].id, "npm:dev");
+        assert!(commands
+            .iter()
+            .all(|command| !command.display_command.contains(['\n', '\r'])));
+
+        fs::remove_dir_all(root).expect("remove command fixture");
+    }
+
+    #[test]
+    fn ignores_make_targets_that_can_be_parsed_as_options() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-make-name-safety-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create command fixture");
+        fs::write(root.join("Makefile"), "-unsafe:\nvalid-target:\n").expect("write makefile");
+
+        let commands = discover_commands(&root);
+
+        assert_eq!(commands.len(), 1);
+        assert_eq!(commands[0].id, "make:valid-target");
+
+        fs::remove_dir_all(root).expect("remove command fixture");
+    }
 }

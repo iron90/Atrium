@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use super::common::{command, command_label, executable};
+use super::common::{command, command_label, executable, is_safe_command_name};
 use crate::model::{CommandKind, ProjectCommand};
 
 pub(super) fn detect_commands(path: &Path, commands: &mut Vec<ProjectCommand>) {
@@ -16,7 +16,7 @@ pub(super) fn detect_commands(path: &Path, commands: &mut Vec<ProjectCommand>) {
             continue;
         }
         let target = trimmed.trim_end_matches(':').trim();
-        if target.is_empty() || target.contains(' ') || target.contains('%') {
+        if !is_safe_command_name(target) || target.contains('%') {
             continue;
         }
         targets.push(target.to_string());

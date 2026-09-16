@@ -361,6 +361,8 @@ path 会再次去重。
 - Rust：从 `Cargo.toml` 提供 Cargo 入口；
 - Flutter：从 `pubspec.yaml` 提供 Flutter 入口；
 - Make：从 `Makefile` 读取明确 target；
+- 脚本名和 Make target 只接受不含空白/控制字符、不以 `-` 开头且不超过 128 字节的
+  标识符；异常键会被忽略，避免污染 UI、source 引用或 argv；
 - 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
 - Schema 1 的 manifest 结构严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，
   不会被静默忽略。
