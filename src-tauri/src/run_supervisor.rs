@@ -6,11 +6,13 @@ use tauri::AppHandle;
 use tokio::process::Child;
 use tokio::sync::oneshot;
 
-use crate::model::{RunFinished, RunStatus};
+use crate::model::RunFinished;
 use crate::run_context::RunContext;
 
+mod outcome;
 mod output;
 
+use self::outcome::{status_for, ProcessOutcome};
 use self::output::{collect_output, record_error, spawn_output_readers};
 
 pub(crate) async fn supervise_process(
@@ -91,19 +93,16 @@ pub(crate) async fn supervise_process(
         }
         None => stderr_text,
     };
-    let run_status = if cancelled {
-        RunStatus::Cancelled
-    } else if supervision_error.is_some() {
-        RunStatus::Failed
-    } else if status.as_ref().is_some_and(ExitStatus::success) {
-        RunStatus::Succeeded
-    } else {
-        RunStatus::Failed
+    let process_outcome = ProcessOutcome {
+        cancelled,
+        succeeded: status.as_ref().is_some_and(ExitStatus::success),
+        exit_code: status.as_ref().and_then(ExitStatus::code),
     };
+    let run_status = status_for(process_outcome, supervision_error.is_some());
 
     context.finished(
         run_status,
-        status.and_then(|status| status.code()),
+        process_outcome.exit_code,
         stdout_text,
         stderr_text,
     )
