@@ -12,6 +12,7 @@ mod model;
 mod project_scan;
 mod protocol;
 mod run_commands;
+mod run_supervisor;
 mod runner;
 mod scanner;
 mod state;

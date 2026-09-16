@@ -75,7 +75,9 @@ Rust native core
   ├─ conformance              图标协议检查和事实读取
   ├─ git                     Git CLI 只读适配器
   ├─ artifacts/storage       声明产物检查、存储统计和清理
-  ├─ runner/state             参数化进程执行和并发运行控制
+  ├─ runner                   运行编排、配置校验和运行上下文
+  ├─ run_supervisor           子进程生命周期、输出转发和取消监督
+  ├─ state                    并发运行控制和应用状态
   └─ history                  应用数据目录中的运行记录和日志
 ```
 
