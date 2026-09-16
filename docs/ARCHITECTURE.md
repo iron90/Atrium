@@ -66,7 +66,10 @@ Rust native core
   ├─ workspace_commands      工作区、项目扫描和协议报告的 Tauri 适配器
   ├─ run_commands             运行控制和运行记录的 Tauri 适配器
   ├─ git_commands             Git 变更查询的 Tauri 适配器
-  ├─ tool_commands            项目目录、终端、链接和产物打开适配器
+  ├─ tool_commands            项目工具命令适配门面
+  │  ├─ artifact               声明产物打开
+  │  ├─ project                项目目录和终端打开
+  │  └─ external               远程仓库和 manifest 链接打开
   ├─ model                   前后端共享的序列化领域 DTO
   ├─ scanner                 对外暴露扫描器边界
   ├─ workspace_scan          工作区遍历和项目候选发现

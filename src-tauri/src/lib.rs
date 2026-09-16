@@ -37,12 +37,12 @@ pub fn run() {
             run_commands::stop_project_command,
             run_commands::list_run_history_command,
             run_commands::open_run_log_command,
-            tool_commands::open_declared_artifact_command,
+            tool_commands::artifact::open_declared_artifact_command,
             git_commands::read_git_change_summary_command,
-            tool_commands::open_project_directory_command,
-            tool_commands::open_project_terminal_command,
-            tool_commands::open_project_remote_command,
-            tool_commands::open_project_link_command
+            tool_commands::project::open_project_directory_command,
+            tool_commands::project::open_project_terminal_command,
+            tool_commands::external::open_project_remote_command,
+            tool_commands::external::open_project_link_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running Atrium");
