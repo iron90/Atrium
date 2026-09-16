@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { subscribeToRunEvents } from "./events";
-import type { RunError, RunFinished, RunOutput } from "./types";
+import type { RunError, RunFinished, RunOutput, RunStarted } from "./types";
 
 const listenMock = vi.hoisted(() => vi.fn());
 
@@ -26,6 +26,7 @@ describe("run event bridge", () => {
 
   it("does not access Tauri events in the browser runtime", async () => {
     const unsubscribe = await subscribeToRunEvents({
+      onStarted: vi.fn(),
       onOutput: vi.fn(),
       onFinished: vi.fn(),
       onError: vi.fn(),
@@ -43,6 +44,7 @@ describe("run event bridge", () => {
     });
 
     const unlistenOutput = vi.fn();
+    const unlistenStarted = vi.fn();
     const unlistenFinished = vi.fn();
     const unlistenError = vi.fn();
     const handlers = new Map<string, (event: { payload: unknown }) => void>();
@@ -50,19 +52,23 @@ describe("run event bridge", () => {
       (eventName: string, handler: (event: { payload: unknown }) => void) => {
         handlers.set(eventName, handler);
         return Promise.resolve(
-          eventName === "run-output"
-            ? unlistenOutput
-            : eventName === "run-finished"
-              ? unlistenFinished
-              : unlistenError,
+          eventName === "run-started"
+            ? unlistenStarted
+            : eventName === "run-output"
+              ? unlistenOutput
+              : eventName === "run-finished"
+                ? unlistenFinished
+                : unlistenError,
         );
       },
     );
 
+    const onStarted = vi.fn();
     const onOutput = vi.fn();
     const onFinished = vi.fn();
     const onError = vi.fn();
     const unsubscribe = await subscribeToRunEvents({
+      onStarted,
       onOutput,
       onFinished,
       onError,
@@ -72,6 +78,15 @@ describe("run event bridge", () => {
       stream: "stdout",
       line: "ready",
     };
+    const started = {
+      runId: "run-1",
+      projectId: "project-1",
+      commandId: "command-1",
+      profileId: null,
+      displayCommand: "echo ready",
+      startedAt: 1,
+      status: "running",
+    } satisfies RunStarted;
     const finished = {
       runId: "run-1",
       projectId: "project-1",
@@ -98,14 +113,17 @@ describe("run event bridge", () => {
       message: "Could not persist run history",
     };
 
+    handlers.get("run-started")?.({ payload: started });
     handlers.get("run-output")?.({ payload: output });
     handlers.get("run-finished")?.({ payload: finished });
     handlers.get("run-error")?.({ payload: runError });
     unsubscribe();
 
+    expect(onStarted).toHaveBeenCalledWith(started);
     expect(onOutput).toHaveBeenCalledWith(output);
     expect(onFinished).toHaveBeenCalledWith(finished);
     expect(onError).toHaveBeenCalledWith(runError);
+    expect(unlistenStarted).toHaveBeenCalledOnce();
     expect(unlistenOutput).toHaveBeenCalledOnce();
     expect(unlistenFinished).toHaveBeenCalledOnce();
     expect(unlistenError).toHaveBeenCalledOnce();
