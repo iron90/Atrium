@@ -57,7 +57,10 @@ Tauri command boundary
        │
        ▼
 Rust native core
-  ├─ commands                窄 Tauri command 适配器和线程边界
+  ├─ workspace_commands      工作区、项目扫描和协议报告的 Tauri 适配器
+  ├─ run_commands             运行控制和运行记录的 Tauri 适配器
+  ├─ git_commands             Git 变更查询的 Tauri 适配器
+  ├─ tool_commands            项目目录、终端、链接和产物打开适配器
   ├─ model                   前后端共享的序列化领域 DTO
   ├─ scanner                 对外暴露扫描器边界
   ├─ workspace_scan          工作区遍历和项目候选发现

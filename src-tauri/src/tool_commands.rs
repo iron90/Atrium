@@ -1,149 +1,10 @@
 use std::path::Path;
 use std::process::Command;
 
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
 
 use crate::artifacts::open_declared_artifact;
-use crate::conformance::write_icon_conformance_report;
-use crate::git::read_git_change_summary;
-use crate::guidance::{write_project_configuration_report, write_project_guidance_reports};
-use crate::history::{load_run_history, open_run_log};
-use crate::model::{
-    CleanupResult, CommandKind, GitChangeSummary, IconConformanceReport,
-    ProjectConfigurationReport, ProjectGuidanceReport, ProjectSnapshot, RunStarted,
-    WorkspaceSnapshot,
-};
-use crate::runner::{start_project_command, stop_project_run};
-use crate::scanner::{scan_project, scan_project_with_storage, scan_workspace_with_exclusions};
-use crate::state::AppState;
-use crate::storage::clean_project_artifacts_selected;
-
-#[tauri::command]
-pub fn default_workspace_path_command() -> String {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    let preferred = Path::new(&home).join("Z-Project");
-    if preferred.is_dir() {
-        preferred.to_string_lossy().to_string()
-    } else {
-        home
-    }
-}
-
-#[tauri::command]
-pub fn scan_workspace_command(
-    root_path: String,
-    excluded_names: Option<Vec<String>>,
-) -> Result<WorkspaceSnapshot, String> {
-    scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names.unwrap_or_default())
-}
-
-#[tauri::command]
-pub async fn inspect_project_command(project_path: String) -> Result<ProjectSnapshot, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        scan_project_with_storage(Path::new(&project_path), true)
-            .ok_or_else(|| "Project path cannot be scanned".to_string())
-    })
-    .await
-    .map_err(|error| format!("Project inspection task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn clean_project_artifacts_command(
-    project_path: String,
-    selected_paths: Option<Vec<String>>,
-) -> Result<CleanupResult, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let project = scan_project(Path::new(&project_path))
-            .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        clean_project_artifacts_selected(
-            Path::new(&project_path),
-            &project.cleanup,
-            selected_paths.as_deref(),
-        )
-    })
-    .await
-    .map_err(|error| format!("Project cleanup task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn generate_icon_conformance_report_command(
-    project_path: String,
-) -> Result<IconConformanceReport, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        write_icon_conformance_report(Path::new(&project_path))
-    })
-    .await
-    .map_err(|error| format!("Icon conformance report task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn generate_project_configuration_report_command(
-    project_path: String,
-) -> Result<ProjectConfigurationReport, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let project = scan_project(Path::new(&project_path))
-            .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        write_project_configuration_report(Path::new(&project_path), &project)
-    })
-    .await
-    .map_err(|error| format!("Project configuration report task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn generate_project_guidance_command(
-    project_path: String,
-) -> Result<ProjectGuidanceReport, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let project = scan_project(Path::new(&project_path))
-            .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        write_project_guidance_reports(Path::new(&project_path), &project)
-    })
-    .await
-    .map_err(|error| format!("Project guidance task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn run_project_command(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    project_path: String,
-    command_id: String,
-    profile_id: Option<String>,
-    profile_action: Option<CommandKind>,
-) -> Result<RunStarted, String> {
-    start_project_command(
-        app,
-        state.inner().clone(),
-        project_path,
-        command_id,
-        profile_id,
-        profile_action,
-    )
-    .await
-}
-
-#[tauri::command]
-pub fn stop_project_command(state: State<'_, AppState>, run_id: String) -> Result<(), String> {
-    stop_project_run(state.inner(), &run_id)
-}
-
-#[tauri::command]
-pub async fn list_run_history_command(
-    app: AppHandle,
-) -> Result<Vec<crate::model::RunFinished>, String> {
-    tauri::async_runtime::spawn_blocking(move || load_run_history(&app))
-        .await
-        .map_err(|error| format!("Run history task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn open_run_log_command(app: AppHandle, run_id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || open_run_log(&app, &run_id))
-        .await
-        .map_err(|error| format!("Open run log task failed: {error}"))?
-}
+use crate::scanner::scan_project;
 
 #[tauri::command]
 pub async fn open_declared_artifact_command(
@@ -157,19 +18,6 @@ pub async fn open_declared_artifact_command(
     })
     .await
     .map_err(|error| format!("Open artifact task failed: {error}"))?
-}
-
-#[tauri::command]
-pub async fn read_git_change_summary_command(
-    project_path: String,
-    from: String,
-    to: Option<String>,
-) -> Result<GitChangeSummary, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        read_git_change_summary(Path::new(&project_path), &from, to.as_deref())
-    })
-    .await
-    .map_err(|error| format!("Git change summary task failed: {error}"))?
 }
 
 #[tauri::command]
