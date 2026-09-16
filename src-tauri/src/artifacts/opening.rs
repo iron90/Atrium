@@ -1,14 +1,11 @@
 use std::path::Path;
-use std::process::Command;
 
-use tauri::AppHandle;
-
+use crate::os_open;
 use crate::scanner::scan_project;
 
 use super::inspection::safe_declared_path;
 
 pub fn open_declared_artifact(
-    app: &AppHandle,
     project_path: &Path,
     profile_id: &str,
     relative_path: &str,
@@ -34,20 +31,5 @@ pub fn open_declared_artifact(
     if !canonical_target.starts_with(&root) {
         return Err("Artifact path resolves outside the project".to_string());
     }
-    open_path(app, &canonical_target)
-}
-
-fn open_path(_app: &AppHandle, path: &Path) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    let (program, argument) = ("open", path.to_string_lossy().to_string());
-    #[cfg(target_os = "windows")]
-    let (program, argument) = ("explorer", path.to_string_lossy().to_string());
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let (program, argument) = ("xdg-open", path.to_string_lossy().to_string());
-
-    Command::new(program)
-        .arg(argument)
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Cannot open artifact: {error}"))
+    os_open::open_path(&canonical_target).map_err(|error| format!("Cannot open artifact: {error}"))
 }

@@ -1,6 +1,6 @@
 use std::path::Path;
-use std::process::Command;
 
+use crate::os_open;
 use crate::scanner::scan_project;
 
 #[tauri::command]
@@ -34,28 +34,7 @@ fn open_external(url: &str) -> Result<(), String> {
     if !(url.starts_with("http://") || url.starts_with("https://") || url.starts_with("file://")) {
         return Err("Only http://, https://, and file:// links can be opened".to_string());
     }
-    #[cfg(target_os = "macos")]
-    let mut command = {
-        let mut command = Command::new("open");
-        command.arg(url);
-        command
-    };
-    #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut command = Command::new("rundll32");
-        command.args(["url.dll,FileProtocolHandler", url]);
-        command
-    };
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = {
-        let mut command = Command::new("xdg-open");
-        command.arg(url);
-        command
-    };
-    command
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Cannot open link: {error}"))
+    os_open::open_url(url).map_err(|error| format!("Cannot open link: {error}"))
 }
 
 fn normalize_remote(remote: &str) -> Result<String, String> {

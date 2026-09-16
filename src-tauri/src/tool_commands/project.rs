@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::process::Command;
 
+use crate::os_open;
+
 #[tauri::command]
 pub async fn open_project_directory_command(project_path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || open_path(Path::new(&project_path)))
@@ -58,26 +60,7 @@ fn open_path(path: &Path) -> Result<(), String> {
     if !path.is_dir() {
         return Err("Project path is not a directory".to_string());
     }
-    #[cfg(target_os = "macos")]
-    let mut command = {
-        let mut command = Command::new("open");
-        command.arg(path);
-        command
-    };
-    #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut command = Command::new("explorer");
-        command.arg(path);
-        command
-    };
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let mut command = {
-        let mut command = Command::new("xdg-open");
-        command.arg(path);
-        command
-    };
-    command
-        .spawn()
+    os_open::open_path(path)
         .map(|_| ())
         .map_err(|error| format!("Cannot open project directory: {error}"))
 }

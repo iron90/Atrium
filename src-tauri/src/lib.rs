@@ -9,6 +9,7 @@ mod manifest;
 mod manifest_projection;
 mod manifest_schema;
 mod model;
+mod os_open;
 mod project_metadata;
 mod project_scan;
 mod protocol;

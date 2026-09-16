@@ -1,11 +1,11 @@
 use std::cmp::Reverse;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager};
 
 use crate::model::RunFinished;
+use crate::os_open;
 
 const MAX_RUN_HISTORY: usize = 100;
 
@@ -55,7 +55,7 @@ pub fn open_run_log(app: &AppHandle, run_id: &str) -> Result<(), String> {
     let log_path = logs_directory.join(format!("{run_id}.log"));
     fs::write(&log_path, render_log(&record))
         .map_err(|error| format!("Cannot write run log: {error}"))?;
-    open_path(&log_path)
+    os_open::open_path(&log_path).map_err(|error| format!("Cannot open run log: {error}"))
 }
 
 fn history_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -104,19 +104,4 @@ fn render_log(record: &RunFinished) -> String {
     output.push_str("\n--- stderr ---\n");
     output.push_str(&record.stderr);
     output
-}
-
-fn open_path(path: &Path) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    let (program, argument) = ("open", path.to_string_lossy().to_string());
-    #[cfg(target_os = "windows")]
-    let (program, argument) = ("explorer", path.to_string_lossy().to_string());
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let (program, argument) = ("xdg-open", path.to_string_lossy().to_string());
-
-    Command::new(program)
-        .arg(argument)
-        .spawn()
-        .map(|_| ())
-        .map_err(|error| format!("Cannot open run log: {error}"))
 }
