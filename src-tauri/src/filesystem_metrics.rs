@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PathMetrics {
@@ -9,46 +10,67 @@ pub(crate) struct PathMetrics {
     pub is_complete: bool,
 }
 
-pub(crate) fn measure_path(path: &Path) -> PathMetrics {
-    let Ok(metadata) = fs::symlink_metadata(path) else {
-        return PathMetrics::default();
-    };
-    if metadata.file_type().is_symlink() {
-        return PathMetrics::default();
-    }
-    if metadata.is_file() {
-        return PathMetrics {
-            bytes: metadata.len(),
-            file_count: 1,
-            modified_at: modified_millis(&metadata),
-            is_complete: true,
-        };
-    }
-    if !metadata.is_dir() {
-        return PathMetrics::default();
+#[derive(Default)]
+pub(crate) struct PathMetricsCache {
+    metrics: HashMap<PathBuf, PathMetrics>,
+}
+
+impl PathMetricsCache {
+    pub(crate) fn measure(&mut self, path: &Path) -> PathMetrics {
+        if let Some(metrics) = self.metrics.get(path) {
+            return *metrics;
+        }
+
+        let metrics = self.measure_uncached(path);
+        self.metrics.insert(path.to_path_buf(), metrics);
+        metrics
     }
 
-    let mut total = PathMetrics {
-        modified_at: modified_millis(&metadata),
-        is_complete: true,
-        ..PathMetrics::default()
-    };
-    let Ok(entries) = fs::read_dir(path) else {
-        total.is_complete = false;
-        return total;
-    };
-    for entry in entries {
-        let Ok(entry) = entry else {
-            total.is_complete = false;
-            continue;
+    fn measure_uncached(&mut self, path: &Path) -> PathMetrics {
+        let Ok(metadata) = fs::symlink_metadata(path) else {
+            return PathMetrics::default();
         };
-        let child = measure_path(&entry.path());
-        total.bytes += child.bytes;
-        total.file_count += child.file_count;
-        total.modified_at = max_modified(total.modified_at, child.modified_at);
-        total.is_complete &= child.is_complete;
+        if metadata.file_type().is_symlink() {
+            return PathMetrics::default();
+        }
+        if metadata.is_file() {
+            return PathMetrics {
+                bytes: metadata.len(),
+                file_count: 1,
+                modified_at: modified_millis(&metadata),
+                is_complete: true,
+            };
+        }
+        if !metadata.is_dir() {
+            return PathMetrics::default();
+        }
+
+        let mut total = PathMetrics {
+            modified_at: modified_millis(&metadata),
+            is_complete: true,
+            ..PathMetrics::default()
+        };
+        let Ok(entries) = fs::read_dir(path) else {
+            total.is_complete = false;
+            return total;
+        };
+        for entry in entries {
+            let Ok(entry) = entry else {
+                total.is_complete = false;
+                continue;
+            };
+            let child = self.measure(&entry.path());
+            total.bytes += child.bytes;
+            total.file_count += child.file_count;
+            total.modified_at = max_modified(total.modified_at, child.modified_at);
+            total.is_complete &= child.is_complete;
+        }
+        total
     }
-    total
+}
+
+pub(crate) fn measure_path(path: &Path) -> PathMetrics {
+    PathMetricsCache::default().measure(path)
 }
 
 fn modified_millis(metadata: &fs::Metadata) -> Option<i64> {
@@ -70,7 +92,7 @@ fn max_modified(left: Option<i64>, right: Option<i64>) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{measure_path, PathMetrics};
+    use super::{measure_path, PathMetrics, PathMetricsCache};
     use std::fs;
 
     #[test]
@@ -102,5 +124,28 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         assert!(!measure_path(&path).is_complete);
+    }
+
+    #[test]
+    fn reuses_metrics_for_paths_seen_during_a_parent_scan() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-filesystem-metrics-cache-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("nested")).expect("create metrics fixture");
+        fs::write(root.join("nested/item"), b"metrics").expect("write metrics fixture");
+
+        let mut cache = PathMetricsCache::default();
+        let total = cache.measure(&root);
+        let cached_path_count = cache.metrics.len();
+        let nested = cache.measure(&root.join("nested"));
+
+        assert_eq!(nested.bytes, 7);
+        assert_eq!(nested.file_count, 1);
+        assert_eq!(total.bytes, nested.bytes);
+        assert_eq!(cache.metrics.len(), cached_path_count);
+
+        fs::remove_dir_all(root).expect("remove metrics fixture");
     }
 }

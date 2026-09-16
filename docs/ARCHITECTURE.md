@@ -316,6 +316,10 @@ receive a deterministic truncation marker.
 Run IDs are validated as bounded, separator-free, non-control identifiers before
 the stop registry or persisted history is accessed.
 
+项目存储统计在一次遍历中缓存各级路径指标，清理目录的已声明大小直接复用该缓存，
+避免对大型缓存或构建目录再次递归扫描；缓存只存在于本次检查，不改变下一次扫描的
+实时性。
+
 当前不提供脱离项目上下文的独立运行记录页面。运行记录仍由执行核心持久化，记录中
 始终包含项目、命令、平台/渠道和 Git 上下文；后续应在项目详情中按项目重新设计查看
 入口，而不是复用全局选中项目状态。

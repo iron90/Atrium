@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::filesystem_metrics::measure_path;
+use crate::filesystem_metrics::PathMetricsCache;
 use crate::model::{CleanupDeclaration, ProjectStorage, StorageEntry, StorageEntryKind};
 use crate::project_path::resolve_existing_path_inside_project;
 
@@ -11,8 +11,9 @@ pub fn inspect_project_storage(
     project_path: &Path,
     cleanup: &CleanupDeclaration,
 ) -> ProjectStorage {
-    let total = measure_path(project_path);
-    let entries = discover_cleanable_entries(project_path, cleanup);
+    let mut metrics = PathMetricsCache::default();
+    let total = metrics.measure(project_path);
+    let entries = discover_cleanable_entries(project_path, cleanup, &mut metrics);
     let cleanable_bytes = entries.iter().map(|entry| entry.bytes).sum();
 
     ProjectStorage {
@@ -26,6 +27,7 @@ pub fn inspect_project_storage(
 pub(super) fn discover_cleanable_entries(
     project_path: &Path,
     cleanup: &CleanupDeclaration,
+    metrics: &mut PathMetricsCache,
 ) -> Vec<StorageEntry> {
     let mut entries = Vec::new();
     let mut seen_targets = HashSet::<PathBuf>::new();
@@ -50,7 +52,7 @@ pub(super) fn discover_cleanable_entries(
             continue;
         }
 
-        let count = measure_path(&canonical_target);
+        let count = metrics.measure(&canonical_target);
         entries.push(StorageEntry {
             relative_path: relative_path.clone(),
             kind,
