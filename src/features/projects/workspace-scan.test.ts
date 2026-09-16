@@ -57,6 +57,8 @@ describe("workspace scanning service", () => {
       "/two",
     ]);
     expect(hasWorkspaceOverlap(["/one", "/one/nested"])).toBe(true);
+    expect(hasWorkspaceOverlap(["C:\\Work", "C:\\Work\\nested"])).toBe(true);
+    expect(hasWorkspaceOverlap(["/one/", "/one/nested"])).toBe(true);
     expect(hasWorkspaceOverlap(["/one", "/two"])).toBe(false);
   });
 

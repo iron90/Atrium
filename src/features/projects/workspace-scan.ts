@@ -9,16 +9,30 @@ export type WorkspaceScanner = (
 ) => Promise<WorkspaceSnapshot>;
 
 export const normalizeWorkspacePaths = (paths: string[]): string[] =>
-  Array.from(new Set(paths.map((path) => path.trim()).filter(Boolean)));
-
-export const hasWorkspaceOverlap = (paths: string[]): boolean =>
-  paths.some((left, index) =>
-    paths.some(
-      (right, rightIndex) =>
-        index !== rightIndex &&
-        (right.startsWith(`${left}/`) || left.startsWith(`${right}/`)),
+  Array.from(
+    new Set(
+      paths.map((path) => path.trim().replace(/\\/g, "/")).filter(Boolean),
     ),
   );
+
+export const hasWorkspaceOverlap = (paths: string[]): boolean => {
+  const normalized = normalizeWorkspacePaths(paths).map(pathForComparison);
+  return normalized.some((left, index) =>
+    normalized.some(
+      (right, rightIndex) =>
+        index !== rightIndex &&
+        (isNestedPath(left, right) || isNestedPath(right, left)),
+    ),
+  );
+};
+
+const pathForComparison = (path: string): string => {
+  const withoutTrailingSeparators = path.replace(/\/+$/, "");
+  return withoutTrailingSeparators || (path.startsWith("/") ? "/" : "");
+};
+
+const isNestedPath = (parent: string, candidate: string): boolean =>
+  candidate.startsWith(parent === "/" ? "/" : `${parent}/`);
 
 export async function scanWorkspaces({
   paths,
