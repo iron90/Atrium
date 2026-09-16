@@ -5,6 +5,19 @@ use crate::model::{
 };
 use crate::scanner::scan_project;
 
+const MAX_RUN_ID_LENGTH: usize = 128;
+
+pub(crate) fn validate_run_id(run_id: &str) -> Result<(), String> {
+    if run_id.is_empty()
+        || run_id.len() > MAX_RUN_ID_LENGTH
+        || run_id.contains(['/', '\\'])
+        || run_id.chars().any(char::is_control)
+    {
+        return Err("Invalid run id".to_string());
+    }
+    Ok(())
+}
+
 pub(crate) struct ValidatedRun {
     pub(crate) project: ProjectSnapshot,
     pub(crate) command: ProjectCommand,
@@ -93,5 +106,24 @@ fn format_command_kind(kind: &CommandKind) -> &'static str {
         CommandKind::Check => "check",
         CommandKind::Build => "build",
         CommandKind::Other => "other",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_run_id;
+
+    #[test]
+    fn accepts_generated_run_id_shapes() {
+        assert!(validate_run_id("demo-123").is_ok());
+        assert!(validate_run_id("550e8400-e29b-41d4-a716-446655440000").is_ok());
+    }
+
+    #[test]
+    fn rejects_run_ids_that_cannot_be_used_as_log_names() {
+        assert!(validate_run_id("").is_err());
+        assert!(validate_run_id("run/../log").is_err());
+        assert!(validate_run_id("run\n1").is_err());
+        assert!(validate_run_id(&"x".repeat(129)).is_err());
     }
 }

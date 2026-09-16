@@ -8,7 +8,7 @@ use crate::history::{append_run_history, with_history_lock};
 use crate::model::{CommandKind, ProjectCommand, RunError, RunStarted};
 use crate::run_context::RunContext;
 use crate::run_supervisor::supervise_process;
-use crate::run_validation::resolve_run_request;
+use crate::run_validation::{resolve_run_request, validate_run_id};
 use crate::state::{AppState, RunControl};
 
 pub async fn start_project_command(
@@ -95,6 +95,7 @@ pub async fn start_project_command(
 }
 
 pub fn stop_project_run(state: &AppState, run_id: &str) -> Result<(), String> {
+    validate_run_id(run_id)?;
     let control = state
         .runs
         .lock()

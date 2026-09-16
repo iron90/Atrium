@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::model::RunFinished;
 use crate::os_open;
+use crate::run_validation::validate_run_id;
 
 const MAX_RUN_HISTORY: usize = 100;
 const MAX_RUN_HISTORY_BYTES: u64 = 64 * 1024 * 1024;
@@ -71,13 +72,11 @@ fn merge_run_history(mut history: Vec<RunFinished>, finished: &RunFinished) -> V
 }
 
 pub fn open_run_log(app: &AppHandle, run_id: &str) -> Result<(), String> {
+    validate_run_id(run_id)?;
     let record = load_run_history(app)?
         .into_iter()
         .find(|record| record.run_id == run_id)
         .ok_or_else(|| "Run record is no longer available".to_string())?;
-    if run_id.is_empty() || run_id.contains(['/', '\\']) {
-        return Err("Invalid run id".to_string());
-    }
 
     let logs_directory = history_path(app)?
         .parent()
