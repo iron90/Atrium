@@ -52,7 +52,18 @@ pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf,
 }
 
 pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<ProjectIcon, String> {
-    let metadata = fs::metadata(path).map_err(|error| format!("cannot read metadata: {error}"))?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve project root: {error}"))?;
+    let resolved_path = path
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve icon path: {error}"))?;
+    if !resolved_path.starts_with(&canonical_root) {
+        return Err("icon path resolves outside the project".to_string());
+    }
+
+    let metadata =
+        fs::metadata(&resolved_path).map_err(|error| format!("cannot read metadata: {error}"))?;
     if !metadata.is_file() {
         return Err("path is not a regular file".to_string());
     }
@@ -68,9 +79,9 @@ pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<Pro
     }
 
     let mime = if canonical {
-        canonical_icon_mime(path)
+        canonical_icon_mime(&resolved_path)
     } else {
-        icon_mime(path)
+        icon_mime(&resolved_path)
     }
     .ok_or_else(|| {
         if canonical {
@@ -79,12 +90,12 @@ pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<Pro
             "file extension is not a supported image format".to_string()
         }
     })?;
-    let bytes = fs::read(path).map_err(|error| format!("cannot read file: {error}"))?;
+    let bytes = fs::read(&resolved_path).map_err(|error| format!("cannot read file: {error}"))?;
     validate_icon_bytes(mime, &bytes)?;
 
     Ok(ProjectIcon {
         data_url: format!("data:{mime};base64,{}", STANDARD.encode(bytes)),
-        source: relative_path(root, path),
+        source: relative_path(&canonical_root, &resolved_path),
     })
 }
 
@@ -143,7 +154,13 @@ pub(super) fn legacy_icon_candidates(root: &Path) -> Vec<PathBuf> {
 }
 
 fn push_icon_candidate(candidates: &mut Vec<PathBuf>, candidate: PathBuf) {
-    if candidate.is_file() && !candidates.iter().any(|item| item == &candidate) {
+    let Ok(metadata) = fs::symlink_metadata(&candidate) else {
+        return;
+    };
+    if metadata.is_file()
+        && !metadata.file_type().is_symlink()
+        && !candidates.iter().any(|item| item == &candidate)
+    {
         candidates.push(candidate);
     }
 }
@@ -164,14 +181,20 @@ fn collect_icon_candidates(root: &Path, depth: u8, candidates: &mut Vec<PathBuf>
         if is_ignored_name(&entry_name) {
             continue;
         }
-        if entry_path.is_file() {
+        let Ok(metadata) = fs::symlink_metadata(&entry_path) else {
+            continue;
+        };
+        if metadata.file_type().is_symlink() {
+            continue;
+        }
+        if metadata.is_file() {
             let lower_name = entry_name.to_lowercase();
             if (lower_name.contains("icon") || lower_name.contains("logo"))
                 && icon_mime(&entry_path).is_some()
             {
                 push_icon_candidate(candidates, entry_path);
             }
-        } else if entry_path.is_dir() {
+        } else if metadata.is_dir() {
             collect_icon_candidates(&entry_path, depth + 1, candidates);
         }
     }
@@ -207,4 +230,59 @@ pub(super) fn relative_path(root: &Path, path: &Path) -> String {
         .unwrap_or(path)
         .to_string_lossy()
         .replace('\\', "/")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{legacy_icon_candidates, load_icon};
+    use std::fs;
+
+    #[test]
+    fn rejects_icon_paths_that_resolve_outside_the_project() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-icon-assets-root-{}", std::process::id()));
+        let outside =
+            std::env::temp_dir().join(format!("atrium-icon-assets-outside-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(&root).expect("create root fixture");
+        fs::create_dir_all(&outside).expect("create outside fixture");
+        let icon = outside.join("icon.png");
+        fs::write(&icon, b"\x89PNG\r\n\x1a\npng fixture").expect("write outside icon");
+
+        assert!(load_icon(&root, &icon, false).is_err());
+
+        fs::remove_dir_all(root).expect("remove root fixture");
+        fs::remove_dir_all(outside).expect("remove outside fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn legacy_candidates_do_not_follow_symlinked_files_or_directories() {
+        use std::os::unix::fs::symlink;
+
+        let root = std::env::temp_dir().join(format!(
+            "atrium-icon-assets-symlink-root-{}",
+            std::process::id()
+        ));
+        let outside = std::env::temp_dir().join(format!(
+            "atrium-icon-assets-symlink-outside-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(&root).expect("create root fixture");
+        fs::create_dir_all(outside.join("nested")).expect("create outside fixture");
+        fs::write(outside.join("outside-icon.png"), b"icon").expect("write outside icon");
+        symlink(outside.join("outside-icon.png"), root.join("icon.png"))
+            .expect("link outside icon");
+        symlink(outside.join("nested"), root.join("assets")).expect("link outside directory");
+
+        let candidates = legacy_icon_candidates(&root);
+
+        assert!(candidates.is_empty());
+
+        fs::remove_dir_all(root).expect("remove root fixture");
+        fs::remove_dir_all(outside).expect("remove outside fixture");
+    }
 }
