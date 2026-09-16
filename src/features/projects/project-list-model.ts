@@ -1,4 +1,5 @@
 import type { Facet, ProjectSnapshot } from "../../bridge";
+import { hasTrustedContext } from "./protocol-presentation";
 
 export type ProjectSort = "manual" | "modified" | "storage" | "name";
 
@@ -37,7 +38,7 @@ export const collectFilterOptions = (
 ): ProjectFilterOptions => {
   const platforms = new Map<string, Facet>();
   const channels = new Map<string, Facet>();
-  projects.forEach((project) => {
+  projects.filter(hasTrustedContext).forEach((project) => {
     project.platforms.forEach((facet) => platforms.set(facet.key, facet));
     project.channels.forEach((facet) => channels.set(facet.key, facet));
   });
@@ -84,13 +85,15 @@ export const filterAndSortProjects = (
       }
       if (
         filters.platform !== "all" &&
-        !project.platforms.some((facet) => facet.key === filters.platform)
+        (!hasTrustedContext(project) ||
+          !project.platforms.some((facet) => facet.key === filters.platform))
       ) {
         return false;
       }
       if (
         filters.channel !== "all" &&
-        !project.channels.some((facet) => facet.key === filters.channel)
+        (!hasTrustedContext(project) ||
+          !project.channels.some((facet) => facet.key === filters.channel))
       ) {
         return false;
       }

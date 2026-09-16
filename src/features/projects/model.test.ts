@@ -46,6 +46,26 @@ const facet = (key: string, label = key): Facet => ({
   evidence: [".atrium/manifest.toml"],
 });
 
+const trustedContext = {
+  manifestPath: ".atrium/manifest.toml",
+  schema: 1,
+  manifestStatus: "configured" as const,
+  capabilities: [
+    {
+      id: "identity",
+      status: "configured" as const,
+      evidence: [".atrium/manifest.toml#identity"],
+      issues: [],
+    },
+    {
+      id: "context",
+      status: "configured" as const,
+      evidence: [".atrium/manifest.toml#context"],
+      issues: [],
+    },
+  ],
+};
+
 describe("project domain model", () => {
   it("merges workspace snapshots by stable project id", () => {
     const first = project("shared", { name: "old" });
@@ -79,10 +99,12 @@ describe("project domain model", () => {
   it("collects unique and sorted platform and channel facets", () => {
     const projects = [
       project("one", {
+        protocol: trustedContext,
         platforms: [facet("windows", "Windows"), facet("macos", "macOS")],
         channels: [facet("store", "Store")],
       }),
       project("two", {
+        protocol: trustedContext,
         platforms: [facet("windows", "Windows")],
         channels: [facet("local", "Local")],
       }),
@@ -95,6 +117,37 @@ describe("project domain model", () => {
       "windows",
     ]);
     expect(result.channels.map(({ key }) => key)).toEqual(["local", "store"]);
+  });
+
+  it("does not expose untrusted context to filters", () => {
+    const projects = [
+      project("trusted", {
+        protocol: trustedContext,
+        platforms: [facet("windows", "Windows")],
+        channels: [facet("store", "Store")],
+      }),
+      project("untrusted", {
+        platforms: [facet("ios", "iOS")],
+        channels: [facet("testflight", "TestFlight")],
+      }),
+    ];
+
+    const options = collectFilterOptions(projects);
+    expect(options.platforms.map(({ key }) => key)).toEqual(["windows"]);
+    expect(options.channels.map(({ key }) => key)).toEqual(["store"]);
+
+    const visible = filterAndSortProjects(
+      projects,
+      {},
+      {
+        search: "",
+        platform: "ios",
+        channel: "all",
+        sort: "manual",
+        showHidden: false,
+      },
+    );
+    expect(visible).toEqual([]);
   });
 
   it("filters hidden projects and applies manual metadata ordering", () => {
