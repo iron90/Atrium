@@ -2,37 +2,26 @@ use std::process::ExitStatus;
 
 use futures_util::future::{select, Either};
 use futures_util::pin_mut;
-use tauri::{AppHandle, Emitter};
-use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
-use tokio::process::{Child, ChildStderr, ChildStdout};
+use tauri::AppHandle;
+use tokio::process::Child;
 use tokio::sync::oneshot;
 
-use crate::model::{OutputStream, RunFinished, RunOutput, RunStatus};
+use crate::model::{RunFinished, RunStatus};
 use crate::run_context::RunContext;
 
-struct StreamOutput {
-    text: String,
-    error: Option<String>,
-}
+mod output;
+
+use self::output::{collect_output, record_error, spawn_output_readers};
 
 pub(crate) async fn supervise_process(
     app: AppHandle,
     context: RunContext,
     child: &mut Child,
-    stdout: Option<ChildStdout>,
-    stderr: Option<ChildStderr>,
+    stdout: Option<tokio::process::ChildStdout>,
+    stderr: Option<tokio::process::ChildStderr>,
     stop_rx: oneshot::Receiver<()>,
 ) -> RunFinished {
-    let stdout_task = stdout.map(|stream| {
-        let app = app.clone();
-        let run_id = context.run_id().to_string();
-        tauri::async_runtime::spawn(consume_stream(app, run_id, OutputStream::Stdout, stream))
-    });
-    let stderr_task = stderr.map(|stream| {
-        let app = app.clone();
-        let run_id = context.run_id().to_string();
-        tauri::async_runtime::spawn(consume_stream(app, run_id, OutputStream::Stderr, stream))
-    });
+    let (stdout_task, stderr_task) = spawn_output_readers(&app, context.run_id(), stdout, stderr);
 
     let mut supervision_error = None;
     let (wait_result, cancellation_requested) = {
@@ -118,84 +107,4 @@ pub(crate) async fn supervise_process(
         stdout_text,
         stderr_text,
     )
-}
-
-async fn consume_stream<R>(
-    app: AppHandle,
-    run_id: String,
-    stream: OutputStream,
-    reader: R,
-) -> StreamOutput
-where
-    R: AsyncRead + Unpin,
-{
-    let stream_name = match stream {
-        OutputStream::Stdout => "stdout",
-        OutputStream::Stderr => "stderr",
-    };
-    let mut lines = BufReader::new(reader).lines();
-    let mut output = String::new();
-    let mut stream_error = None;
-    loop {
-        match lines.next_line().await {
-            Ok(Some(line)) => {
-                output.push_str(&line);
-                output.push('\n');
-                if let Err(error) = app.emit(
-                    "run-output",
-                    RunOutput {
-                        run_id: run_id.clone(),
-                        stream: stream.clone(),
-                        line,
-                    },
-                ) {
-                    if stream_error.is_none() {
-                        stream_error = Some(format!("Cannot emit {stream_name} output: {error}"));
-                    }
-                }
-            }
-            Ok(None) => break,
-            Err(error) => {
-                stream_error = Some(format!("Cannot read {stream_name} output: {error}"));
-                break;
-            }
-        }
-    }
-    StreamOutput {
-        text: output,
-        error: stream_error,
-    }
-}
-
-async fn collect_output(
-    task: Option<tauri::async_runtime::JoinHandle<StreamOutput>>,
-    supervision_error: &mut Option<String>,
-) -> String {
-    match task {
-        Some(task) => match task.await {
-            Ok(output) => {
-                if let Some(error) = output.error {
-                    record_error(supervision_error, error);
-                }
-                output.text
-            }
-            Err(error) => {
-                record_error(
-                    supervision_error,
-                    format!("Output reader task failed: {error}"),
-                );
-                String::new()
-            }
-        },
-        None => String::new(),
-    }
-}
-
-fn record_error(target: &mut Option<String>, message: String) {
-    if let Some(existing) = target {
-        existing.push_str("; ");
-        existing.push_str(&message);
-    } else {
-        *target = Some(message);
-    }
 }

@@ -105,7 +105,8 @@ Rust native core
   │  ├─ inspection            项目大小和 manifest 清理候选统计
   │  └─ cleanup               用户确认后的清理执行和结果
   ├─ runner                   运行编排、配置校验和运行上下文
-  ├─ run_supervisor           子进程生命周期、输出转发和取消监督
+  ├─ run_supervisor           子进程生命周期和取消监督
+  │  └─ output                stdout/stderr 读取、事件转发和输出汇总
   ├─ state                    并发运行控制和应用状态
   └─ history                  应用数据目录中的运行记录和日志
 ```
