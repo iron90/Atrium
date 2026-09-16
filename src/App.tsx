@@ -23,14 +23,14 @@ import {
   type RunMessage as ProjectRunMessage,
 } from "./features/runs/use-project-runner";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
-import {
-  isLayoutId,
-  isThemeId,
-  type LayoutId,
-  type ThemeId,
-} from "./features/settings/model";
+import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
+import {
+  persistLocalPreferences,
+  readLocalPreferences,
+  type LocalPreferences,
+} from "./app/preferences";
 import { fill, formatRelative, formatTime } from "./shared/format";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "./bridge";
 import "./app.css";
@@ -38,79 +38,6 @@ import "./app.css";
 type PageId = "projects" | "git" | "settings";
 
 const DEFAULT_ROOT = "~/projects";
-const PREFERENCES_STORAGE_KEY = "atrium.preferences.v1";
-
-interface LocalPreferences {
-  theme?: ThemeId;
-  layout?: LayoutId;
-  language?: Language;
-  rootPath?: string;
-  workspaces?: string[];
-  excludeNames?: string[];
-  projectMeta?: Record<string, ProjectMeta>;
-}
-
-const isLanguage = (value: unknown): value is Language =>
-  value === "en" || value === "zh";
-
-const readProjectMeta = (
-  value: unknown,
-): Record<string, ProjectMeta> | undefined => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
-  }
-
-  const result: Record<string, ProjectMeta> = {};
-  Object.entries(value).forEach(([projectId, rawMeta], index) => {
-    if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
-      return;
-    }
-    const meta = rawMeta as Record<string, unknown>;
-    result[projectId] = {
-      favorite: meta.favorite === true,
-      hidden: meta.hidden === true,
-      order:
-        typeof meta.order === "number" && Number.isFinite(meta.order)
-          ? meta.order
-          : index,
-    };
-  });
-  return result;
-};
-
-const readLocalPreferences = (): LocalPreferences => {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
-    if (!raw) return {};
-    const value = JSON.parse(raw) as Record<string, unknown>;
-    if (!value || typeof value !== "object") return {};
-    return {
-      theme: isThemeId(value.theme) ? value.theme : undefined,
-      layout: isLayoutId(value.layout) ? value.layout : undefined,
-      language: isLanguage(value.language) ? value.language : undefined,
-      rootPath:
-        typeof value.rootPath === "string" && value.rootPath.trim()
-          ? value.rootPath
-          : undefined,
-      workspaces: Array.isArray(value.workspaces)
-        ? value.workspaces.filter(
-            (path): path is string =>
-              typeof path === "string" && Boolean(path.trim()),
-          )
-        : undefined,
-      excludeNames: Array.isArray(value.excludeNames)
-        ? value.excludeNames.filter(
-            (name): name is string =>
-              typeof name === "string" && Boolean(name.trim()),
-          )
-        : undefined,
-      projectMeta: readProjectMeta(value.projectMeta),
-    };
-  } catch {
-    return {};
-  }
-};
 
 const createConfigurationAgentPrompt = (
   project: ProjectSnapshot,
@@ -343,23 +270,15 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(
-        PREFERENCES_STORAGE_KEY,
-        JSON.stringify({
-          theme,
-          layout,
-          language,
-          rootPath,
-          workspaces: workspacePaths,
-          excludeNames,
-          projectMeta,
-        }),
-      );
-    } catch {
-      // Preferences are best effort; repository facts never depend on them.
-    }
+    persistLocalPreferences({
+      theme,
+      layout,
+      language,
+      rootPath,
+      workspaces: workspacePaths,
+      excludeNames,
+      projectMeta,
+    });
   }, [
     excludeNames,
     language,
