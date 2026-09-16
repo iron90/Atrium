@@ -297,6 +297,11 @@ Atrium's application data directory. This is intentionally separate from the
 project repository and can later migrate to SQLite without changing the
 project-side protocol. Opening a log materializes a text file in the same
 application data area; a project-scoped viewing surface remains a follow-up.
+Each stdout/stderr stream is read through a fixed-size byte buffer, keeps at most
+256 KiB for durable capture, and truncates individual lines at 16 KiB. The reader
+continues draining the child pipe after a limit is reached, so noisy commands do
+not grow memory without bound or deadlock the supervised process; the UI and log
+receive a deterministic truncation marker.
 
 当前不提供脱离项目上下文的独立运行记录页面。运行记录仍由执行核心持久化，记录中
 始终包含项目、命令、平台/渠道和 Git 上下文；后续应在项目详情中按项目重新设计查看
