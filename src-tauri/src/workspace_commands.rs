@@ -1,7 +1,9 @@
 use std::path::Path;
 
-use crate::conformance::write_icon_conformance_report;
-use crate::guidance::{write_project_configuration_report, write_project_guidance_reports};
+use crate::guidance::{
+    write_icon_conformance_report, write_project_configuration_report,
+    write_project_guidance_reports,
+};
 use crate::model::{
     CleanupResult, IconConformanceReport, ProjectConfigurationReport, ProjectGuidanceReport,
     ProjectSnapshot, WorkspaceSnapshot,

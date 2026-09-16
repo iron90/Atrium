@@ -70,7 +70,7 @@ Rust native core
   ├─ manifest                结构化配置解析与投影
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成
-  ├─ conformance              图标协议检查和报告写入
+  ├─ conformance              图标协议检查和事实读取
   ├─ git                     Git CLI 只读适配器
   ├─ artifacts/storage       声明产物检查、存储统计和清理
   ├─ runner/state             参数化进程执行和并发运行控制
