@@ -53,7 +53,10 @@ React UI
   ├─ features/runs          项目命令执行状态与事件订阅
   ├─ features/settings      主题、布局、工作区偏好
   ├─ shared                 格式化等无领域依赖的纯函数
-  └─ bridge                 类型化 Tauri invoke/event 适配
+  └─ bridge                 类型化 Tauri invoke/event 与预览适配
+       ├─ fake-bridge       预览适配兼容门面
+       ├─ demo-data         确定性预览项目快照
+       └─ demo-run          预览运行结果
        │
        ▼
 Tauri command boundary
