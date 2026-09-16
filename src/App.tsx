@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formatActivityMessage,
   type ActivityMessage,
@@ -6,10 +6,10 @@ import {
 import { bridge, isTauriRuntime } from "./bridge";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
-import { createConfigurationAgentPrompt } from "./features/projects/guidance-prompt";
 import { ProjectInspector } from "./features/projects/ProjectInspector";
 import { PlatformMatrix } from "./features/projects/PlatformMatrix";
 import { ProjectList } from "./features/projects/ProjectList";
+import { useProjectInspectorActions } from "./features/projects/use-project-inspector-actions";
 import { emptySnapshot, metaForProject } from "./features/projects/model";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
@@ -83,19 +83,10 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
-  const [guidanceMessage, setGuidanceMessage] = useState<string | null>(null);
-  const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
-  const [isAgentPromptCopied, setIsAgentPromptCopied] = useState(false);
-  const [isWritingGuidance, setIsWritingGuidance] = useState(false);
-  const [cleanupFeedback, setCleanupFeedback] = useState<{
-    removedBytes: number;
-    failedCount: number;
-  } | null>(null);
-  const [cleanupSelection, setCleanupSelection] = useState<string[]>([]);
-  const [isCleaningArtifacts, setIsCleaningArtifacts] = useState(false);
   const [runMessage, setRunMessage] = useState<ActivityMessage>({
     type: "ready",
   });
+  const inspectorResetRef = useRef<() => void>(() => undefined);
 
   const handleWorkspaceError = useCallback(
     (message: string | null) => setError(message),
@@ -110,12 +101,7 @@ export default function App() {
     [],
   );
   const resetProjectInspection = useCallback(() => {
-    setGuidanceMessage(null);
-    setAgentPrompt(null);
-    setIsAgentPromptCopied(false);
-    setCleanupFeedback(null);
-    setCleanupSelection([]);
-    setIsCleaningArtifacts(false);
+    inspectorResetRef.current();
   }, []);
   const {
     rootPath,
@@ -144,6 +130,29 @@ export default function App() {
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
   });
+
+  const {
+    reset: resetProjectInspectionState,
+    guidanceMessage,
+    agentPrompt,
+    isAgentPromptCopied,
+    isWritingGuidance,
+    cleanupFeedback,
+    cleanupSelection,
+    setCleanupSelection,
+    isCleaningArtifacts,
+    generateGuidance: handleGenerateGuidance,
+    cleanArtifacts: handleCleanArtifacts,
+    copyAgentPrompt: handleCopyAgentPrompt,
+  } = useProjectInspectorActions({
+    language,
+    inspectorProject,
+    onError: handleWorkspaceError,
+    updateInspectorProject,
+  });
+  useEffect(() => {
+    inspectorResetRef.current = resetProjectInspectionState;
+  }, [resetProjectInspectionState]);
 
   const {
     activeRun,
@@ -202,90 +211,6 @@ export default function App() {
     filterOptions,
     visibleProjects,
   } = useProjectListViewState(snapshot.projects, projectMeta);
-
-  const handleGenerateGuidance = async (project: ProjectSnapshot) => {
-    setIsWritingGuidance(true);
-    setGuidanceMessage(null);
-    setError(null);
-    try {
-      const report = await bridge.generateProjectGuidance(project.path);
-      setGuidanceMessage(
-        fill(t("guidanceGenerated"), "path", report.paths.join(" · ")),
-      );
-      setAgentPrompt(
-        createConfigurationAgentPrompt(project, report.paths, language),
-      );
-      setIsAgentPromptCopied(false);
-    } catch (reportError) {
-      setError(
-        reportError instanceof Error
-          ? reportError.message
-          : String(reportError),
-      );
-    } finally {
-      setIsWritingGuidance(false);
-    }
-  };
-
-  const handleCleanArtifacts = async (project: ProjectSnapshot) => {
-    const storage =
-      inspectorProject?.id === project.id
-        ? inspectorProject.storage
-        : undefined;
-    const selectedPaths = cleanupSelection.length
-      ? cleanupSelection
-      : (storage?.entries.map((entry) => entry.relativePath) ?? []);
-    if (
-      !storage?.entries.length ||
-      !selectedPaths.length ||
-      isCleaningArtifacts
-    )
-      return;
-    if (!window.confirm(t("confirmCleanArtifacts"))) return;
-
-    setIsCleaningArtifacts(true);
-    setCleanupFeedback(null);
-    setError(null);
-    try {
-      const result = await bridge.cleanProjectArtifacts(
-        project.path,
-        selectedPaths,
-      );
-      updateInspectorProject((current) =>
-        current?.id === project.id
-          ? { ...current, storage: result.storage }
-          : current,
-      );
-      setCleanupFeedback({
-        removedBytes: result.removedBytes,
-        failedCount: result.failedEntries.length,
-      });
-      setCleanupSelection([]);
-    } catch (cleanupError) {
-      setError(
-        cleanupError instanceof Error
-          ? cleanupError.message
-          : String(cleanupError),
-      );
-    } finally {
-      setIsCleaningArtifacts(false);
-    }
-  };
-
-  const handleCopyAgentPrompt = async () => {
-    if (!agentPrompt) return;
-    try {
-      if (!navigator.clipboard) {
-        throw new Error("Clipboard is unavailable in this session.");
-      }
-      await navigator.clipboard.writeText(agentPrompt);
-      setIsAgentPromptCopied(true);
-    } catch (copyError) {
-      setError(
-        copyError instanceof Error ? copyError.message : String(copyError),
-      );
-    }
-  };
 
   const handleOpenProjectAction = async (
     action: "directory" | "terminal" | "remote" | "link",
