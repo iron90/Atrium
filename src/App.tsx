@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActivityMessage } from "./app/activity-message";
 import { AppSidebar } from "./app/AppSidebar";
-import { LocalActivityPanel } from "./app/LocalActivityPanel";
 import { type PageId } from "./app/navigation";
+import { ProjectsPage } from "./app/ProjectsPage";
 import { bridge, isTauriRuntime } from "./bridge";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
-import { ProjectInspector } from "./features/projects/ProjectInspector";
-import { PlatformMatrix } from "./features/projects/PlatformMatrix";
-import { ProjectList } from "./features/projects/ProjectList";
+import type { ProjectInspectorProps } from "./features/projects/ProjectInspector";
+import type { ProjectListProps } from "./features/projects/ProjectList";
 import {
   openProjectAction,
   type ProjectAction,
@@ -34,7 +33,6 @@ import {
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import { fill, formatTime } from "./shared/format";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "./bridge";
 import "./app.css";
 
@@ -205,19 +203,35 @@ export default function App() {
     visibleProjects,
   } = useProjectListViewState(snapshot.projects, projectMeta);
 
-  const handleOpenProjectAction = async (
-    action: ProjectAction,
-    project: ProjectSnapshot,
-    linkId?: string,
-  ) => {
-    try {
-      await openProjectAction(action, project, linkId);
-    } catch (openError) {
-      setError(
-        openError instanceof Error ? openError.message : String(openError),
-      );
-    }
-  };
+  const handleOpenProjectAction = useCallback(
+    async (
+      action: ProjectAction,
+      project: ProjectSnapshot,
+      linkId?: string,
+    ) => {
+      try {
+        await openProjectAction(action, project, linkId);
+      } catch (openError) {
+        setError(
+          openError instanceof Error ? openError.message : String(openError),
+        );
+      }
+    },
+    [],
+  );
+
+  const handleOpenArtifact = useCallback(
+    (projectPath: string, profileId: string, relativePath: string) => {
+      void bridge
+        .openArtifact(projectPath, profileId, relativePath)
+        .catch((openError) => {
+          setError(
+            openError instanceof Error ? openError.message : String(openError),
+          );
+        });
+    },
+    [],
+  );
 
   const handleLayoutChange = (nextLayout: LayoutId) => {
     setLayout(nextLayout);
@@ -241,6 +255,79 @@ export default function App() {
             title: t("projectsInView"),
             body: t("factsSubtitle"),
           };
+
+  const projectList: ProjectListProps = {
+    projects: visibleProjects,
+    selectedId: selectedProject?.id,
+    onSelect: selectProject,
+    search: projectSearch,
+    setSearch: setProjectSearch,
+    platformFilter,
+    setPlatformFilter,
+    channelFilter,
+    setChannelFilter,
+    projectSort,
+    setProjectSort,
+    showHidden: showHiddenProjects,
+    setShowHidden: setShowHiddenProjects,
+    filterOptions,
+    projectMeta,
+    onToggleFavorite: (id) =>
+      updateProjectMeta(
+        id,
+        {
+          favorite: !metaForProject(projectMeta, id, 0).favorite,
+        },
+        snapshot.projects.length,
+      ),
+    onToggleHidden: (id) =>
+      updateProjectMeta(
+        id,
+        {
+          hidden: !metaForProject(projectMeta, id, 0).hidden,
+        },
+        snapshot.projects.length,
+      ),
+    onReorder: (orderedVisibleIds) =>
+      reorderProjects(snapshot.projects, orderedVisibleIds),
+    onKeyboardMove: (projectId, direction) =>
+      moveProjectByKeyboard(
+        snapshot.projects,
+        visibleProjects,
+        projectId,
+        direction,
+      ),
+  };
+
+  const inspector: ProjectInspectorProps = {
+    project: selectedProject,
+    details:
+      inspectorProject?.id === selectedProject?.id
+        ? inspectorProject
+        : undefined,
+    isLoading: isLoadingDetails,
+    activeRun,
+    outputLines,
+    onRun: (command, profileId, profileAction) =>
+      void handleRun(command, undefined, profileId, profileAction),
+    onRefreshProject: (project) => void refreshProject(project),
+    isRefreshing: refreshingProjectId === selectedProject?.id,
+    onStop: () => void handleStop(),
+    onGenerateGuidance: (project) => void handleGenerateGuidance(project),
+    guidanceMessage,
+    agentPrompt,
+    isAgentPromptCopied,
+    onCopyAgentPrompt: () => void handleCopyAgentPrompt(),
+    isWritingGuidance,
+    cleanupFeedback,
+    cleanupSelection,
+    onCleanupSelectionChange: setCleanupSelection,
+    isCleaningArtifacts,
+    onCleanArtifacts: (project) => void handleCleanArtifacts(project),
+    onOpenArtifact: handleOpenArtifact,
+    onOpenProjectAction: (action, project, linkId) =>
+      void handleOpenProjectAction(action, project, linkId),
+  };
 
   return (
     <I18nProvider value={i18nValue}>
@@ -288,151 +375,18 @@ export default function App() {
               onSelect={selectProject}
             />
           ) : (
-            <section className="content-grid">
-              <div className="board-pane">
-                <div className="board-summary">
-                  <div>
-                    <span className="eyebrow">{t("projectIndex")}</span>
-                    <h2>
-                      {fill(
-                        t("projectsDiscovered"),
-                        "count",
-                        String(visibleProjects.length),
-                      )}
-                    </h2>
-                  </div>
-                  <div className="summary-meta">
-                    <span>
-                      {fill(
-                        t("cleanRepositories"),
-                        "count",
-                        String(
-                          snapshot.projects.filter(
-                            (project) => project.repo?.isClean,
-                          ).length,
-                        ),
-                      )}
-                    </span>
-                    <span>
-                      {fill(
-                        t("lastScan"),
-                        "time",
-                        formatTime(snapshot.scannedAt, language),
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                {layout === "matrix" ? (
-                  <PlatformMatrix
-                    projects={visibleProjects}
-                    onSelect={selectProject}
-                  />
-                ) : (
-                  <ProjectList
-                    projects={visibleProjects}
-                    selectedId={selectedProject?.id}
-                    onSelect={selectProject}
-                    search={projectSearch}
-                    setSearch={setProjectSearch}
-                    platformFilter={platformFilter}
-                    setPlatformFilter={setPlatformFilter}
-                    channelFilter={channelFilter}
-                    setChannelFilter={setChannelFilter}
-                    projectSort={projectSort}
-                    setProjectSort={setProjectSort}
-                    showHidden={showHiddenProjects}
-                    setShowHidden={setShowHiddenProjects}
-                    filterOptions={filterOptions}
-                    projectMeta={projectMeta}
-                    onToggleFavorite={(id) =>
-                      updateProjectMeta(
-                        id,
-                        {
-                          favorite: !metaForProject(projectMeta, id, 0)
-                            .favorite,
-                        },
-                        snapshot.projects.length,
-                      )
-                    }
-                    onToggleHidden={(id) =>
-                      updateProjectMeta(
-                        id,
-                        {
-                          hidden: !metaForProject(projectMeta, id, 0).hidden,
-                        },
-                        snapshot.projects.length,
-                      )
-                    }
-                    onReorder={(orderedVisibleIds) =>
-                      reorderProjects(snapshot.projects, orderedVisibleIds)
-                    }
-                    onKeyboardMove={(projectId, direction) =>
-                      moveProjectByKeyboard(
-                        snapshot.projects,
-                        visibleProjects,
-                        projectId,
-                        direction,
-                      )
-                    }
-                  />
-                )}
-
-                <LocalActivityPanel
-                  activeRun={activeRun}
-                  message={runMessage}
-                  onStop={handleStop}
-                  snapshot={snapshot}
-                />
-              </div>
-
-              <ProjectInspector
-                project={selectedProject}
-                details={
-                  inspectorProject?.id === selectedProject?.id
-                    ? inspectorProject
-                    : undefined
-                }
-                isLoading={isLoadingDetails}
-                activeRun={activeRun}
-                outputLines={outputLines}
-                onRun={(command, profileId, profileAction) =>
-                  void handleRun(command, undefined, profileId, profileAction)
-                }
-                onRefreshProject={(project) => void refreshProject(project)}
-                isRefreshing={refreshingProjectId === selectedProject?.id}
-                onStop={() => void handleStop()}
-                onGenerateGuidance={(project) =>
-                  void handleGenerateGuidance(project)
-                }
-                guidanceMessage={guidanceMessage}
-                agentPrompt={agentPrompt}
-                isAgentPromptCopied={isAgentPromptCopied}
-                onCopyAgentPrompt={() => void handleCopyAgentPrompt()}
-                isWritingGuidance={isWritingGuidance}
-                cleanupFeedback={cleanupFeedback}
-                cleanupSelection={cleanupSelection}
-                onCleanupSelectionChange={setCleanupSelection}
-                isCleaningArtifacts={isCleaningArtifacts}
-                onCleanArtifacts={(project) =>
-                  void handleCleanArtifacts(project)
-                }
-                onOpenArtifact={(projectPath, profileId, relativePath) =>
-                  void bridge
-                    .openArtifact(projectPath, profileId, relativePath)
-                    .catch((openError) => {
-                      setError(
-                        openError instanceof Error
-                          ? openError.message
-                          : String(openError),
-                      );
-                    })
-                }
-                onOpenProjectAction={(action, project, linkId) =>
-                  void handleOpenProjectAction(action, project, linkId)
-                }
-              />
-            </section>
+            <ProjectsPage
+              layout={layout}
+              snapshot={snapshot}
+              visibleProjects={visibleProjects}
+              projectList={projectList}
+              activity={{
+                activeRun,
+                message: runMessage,
+                onStop: handleStop,
+              }}
+              inspector={inspector}
+            />
           )}
         </main>
       </div>

@@ -45,7 +45,10 @@ Tauri 2 + React/TypeScript + Rust 已作为 Atrium 的实现方案确定。候�
 ```text
 React UI
   ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
-  ├─ app                   应用层持久化、消息格式化和外壳视图
+  ├─ app                   应用层持久化、消息格式化、外壳和页面组合
+  │  ├─ AppSidebar          应用导航
+  │  ├─ LocalActivityPanel  本地活动摘要
+  │  └─ ProjectsPage        项目页布局组合
   ├─ features/projects      项目列表、详情、工作区扫描和项目交互
   │  ├─ use-project-workspace 工作区与项目选择组合根
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度

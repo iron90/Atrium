@@ -5,6 +5,28 @@ import { ProjectListRow } from "./ProjectListRow";
 import { metaForProject, type ProjectMeta, type ProjectSort } from "./model";
 import { useProjectReorder } from "./use-project-reorder";
 
+export interface ProjectListProps {
+  projects: ProjectSnapshot[];
+  selectedId?: string;
+  onSelect: (projectId: string) => void;
+  search: string;
+  setSearch: (value: string) => void;
+  platformFilter: string;
+  setPlatformFilter: (value: string) => void;
+  channelFilter: string;
+  setChannelFilter: (value: string) => void;
+  projectSort: ProjectSort;
+  setProjectSort: (value: ProjectSort) => void;
+  showHidden: boolean;
+  setShowHidden: (value: boolean) => void;
+  filterOptions: { platforms: Facet[]; channels: Facet[] };
+  projectMeta: Record<string, ProjectMeta>;
+  onToggleFavorite: (projectId: string) => void;
+  onToggleHidden: (projectId: string) => void;
+  onReorder: (orderedProjectIds: string[]) => void;
+  onKeyboardMove: (projectId: string, direction: "up" | "down") => boolean;
+}
+
 export function ProjectList({
   projects,
   selectedId,
@@ -25,27 +47,7 @@ export function ProjectList({
   onToggleHidden,
   onReorder,
   onKeyboardMove,
-}: {
-  projects: ProjectSnapshot[];
-  selectedId?: string;
-  onSelect: (projectId: string) => void;
-  search: string;
-  setSearch: (value: string) => void;
-  platformFilter: string;
-  setPlatformFilter: (value: string) => void;
-  channelFilter: string;
-  setChannelFilter: (value: string) => void;
-  projectSort: ProjectSort;
-  setProjectSort: (value: ProjectSort) => void;
-  showHidden: boolean;
-  setShowHidden: (value: boolean) => void;
-  filterOptions: { platforms: Facet[]; channels: Facet[] };
-  projectMeta: Record<string, ProjectMeta>;
-  onToggleFavorite: (projectId: string) => void;
-  onToggleHidden: (projectId: string) => void;
-  onReorder: (orderedProjectIds: string[]) => void;
-  onKeyboardMove: (projectId: string, direction: "up" | "down") => boolean;
-}) {
+}: ProjectListProps) {
   const { t } = useI18n();
   const reorder = useProjectReorder({
     projects,
