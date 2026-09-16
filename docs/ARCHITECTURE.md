@@ -63,6 +63,8 @@ React UI
   │  ├─ use-project-workspace 工作区与项目选择组合根
   │  ├─ use-project-selection 选中项目状态与选择操作
   │  ├─ use-project-detail-lifecycle 详情异步读取、刷新和过期请求保护
+  │  ├─ use-project-guidance-actions 协议引导与 Agent 提示词
+  │  ├─ use-project-cleanup-actions 产物清理选择与执行
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
