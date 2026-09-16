@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge/types";
+import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge";
 import type { Language } from "../../i18n";
 import type { WorkspaceMessage } from "../../shared/activity";
 import { useProjectSelection } from "./use-project-selection";

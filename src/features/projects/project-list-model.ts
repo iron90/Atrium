@@ -1,4 +1,4 @@
-import type { Facet, ProjectSnapshot } from "../../bridge/types";
+import type { Facet, ProjectSnapshot } from "../../bridge";
 
 export type ProjectSort = "manual" | "modified" | "storage" | "name";
 

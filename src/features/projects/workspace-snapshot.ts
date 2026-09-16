@@ -1,4 +1,4 @@
-import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge/types";
+import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge";
 
 export const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
   JSON.stringify(

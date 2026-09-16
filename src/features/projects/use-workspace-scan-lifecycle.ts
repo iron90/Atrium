@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
+import type { WorkspaceSnapshot } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { WorkspaceMessage } from "../../shared/activity";
 import { errorMessage } from "../../shared/errors";
-import type { WorkspaceSnapshot } from "../../bridge/types";
 import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
 import { LatestRequestGate } from "./scan-request-gate";

@@ -6,7 +6,7 @@ import {
   type ProjectMeta,
 } from "./project-list-model";
 import { mergeWorkspaceSnapshots } from "./workspace-snapshot";
-import type { Facet, ProjectSnapshot } from "../../bridge/types";
+import type { Facet, ProjectSnapshot } from "../../bridge";
 
 const project = (
   id: string,
