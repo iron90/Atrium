@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge/types";
 import { snapshotFingerprint } from "./model";
+import { useProjectSelection } from "./use-project-selection";
 import { scanWorkspaces } from "./workspace-scan";
 
 export type WorkspaceMessage =
@@ -72,37 +73,46 @@ export function useProjectWorkspace({
   const [rootPath, setRootPath] = useState(initialRootPath);
   const [workspacePaths, setWorkspacePaths] = useState(initialWorkspacePaths);
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot>(initialSnapshot);
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    initialSnapshot.projects[0]?.id ?? "",
-  );
-  const [inspectorProject, setInspectorProject] = useState<
-    ProjectSnapshot | undefined
-  >(() => (nativeRuntime ? undefined : initialSnapshot.projects[0]));
-  const [isLoadingDetails, setIsLoadingDetails] = useState(nativeRuntime);
   const [isScanning, setIsScanning] = useState(false);
-  const [refreshingProjectId, setRefreshingProjectId] = useState<string | null>(
-    null,
-  );
-  const detailRequest = useRef(0);
-  const selectedProjectIdRef = useRef(selectedProjectId);
   const workspaceFingerprintRef = useRef(snapshotFingerprint(initialSnapshot));
   const workspaceScanInFlight = useRef(false);
-  const skipNextDetailRequest = useRef<string | null>(null);
 
-  const selectProject = useCallback(
-    (projectId: string) => {
-      selectedProjectIdRef.current = projectId;
-      setSelectedProjectId(projectId);
-      setInspectorProject(undefined);
-      setIsLoadingDetails(true);
-      onProjectSelected();
+  const handleProjectRefreshed = useCallback(
+    (project: ProjectSnapshot, details: ProjectSnapshot) => {
+      const nextProjects = snapshot.projects.map((candidate) =>
+        candidate.id === project.id ? details : candidate,
+      );
+      workspaceFingerprintRef.current = snapshotFingerprint({
+        ...snapshot,
+        projects: nextProjects,
+        scannedAt: details.scannedAt,
+      });
+      setSnapshot((current) => ({
+        ...current,
+        projects: current.projects.map((candidate) =>
+          candidate.id === project.id ? details : candidate,
+        ),
+        scannedAt: details.scannedAt,
+      }));
     },
-    [onProjectSelected],
+    [snapshot],
   );
+
+  const selection = useProjectSelection({
+    nativeRuntime,
+    projects: snapshot.projects,
+    initialProject: initialSnapshot.projects[0],
+    onError,
+    onMessage,
+    onProjectSelected,
+    onProjectRefreshed: handleProjectRefreshed,
+  });
+
+  const { clearSelection, getSelectedProjectId, selectProject } = selection;
 
   const applyWorkspaceSnapshot = useCallback(
     (nextSnapshot: WorkspaceSnapshot) => {
-      const currentProjectId = selectedProjectIdRef.current;
+      const currentProjectId = getSelectedProjectId();
       const nextProjectId = nextSnapshot.projects.some(
         (project) => project.id === currentProjectId,
       )
@@ -116,14 +126,11 @@ export function useProjectWorkspace({
         if (nextProjectId) {
           selectProject(nextProjectId);
         } else {
-          selectedProjectIdRef.current = "";
-          setSelectedProjectId("");
-          setInspectorProject(undefined);
-          setIsLoadingDetails(false);
+          clearSelection();
         }
       }
     },
-    [onSnapshotApplied, selectProject],
+    [clearSelection, getSelectedProjectId, onSnapshotApplied, selectProject],
   );
 
   useEffect(() => {
@@ -238,52 +245,6 @@ export function useProjectWorkspace({
     workspacePaths,
   ]);
 
-  useEffect(() => {
-    const project = snapshot.projects.find(
-      (candidate) => candidate.id === selectedProjectId,
-    );
-    if (!project) return undefined;
-
-    let disposed = false;
-    const requestId = ++detailRequest.current;
-    if (skipNextDetailRequest.current === project.id) {
-      skipNextDetailRequest.current = null;
-      return undefined;
-    }
-    const timer = window.setTimeout(() => {
-      if (disposed) return;
-      setInspectorProject(undefined);
-      setIsLoadingDetails(true);
-      void bridge
-        .inspectProject(project.path)
-        .then((details) => {
-          if (!disposed && requestId === detailRequest.current) {
-            setInspectorProject(details);
-          }
-        })
-        .catch((detailError) => {
-          if (!disposed && requestId === detailRequest.current) {
-            onError(
-              detailError instanceof Error
-                ? detailError.message
-                : String(detailError),
-            );
-            setInspectorProject(project);
-          }
-        })
-        .finally(() => {
-          if (!disposed && requestId === detailRequest.current) {
-            setIsLoadingDetails(false);
-          }
-        });
-    }, 0);
-
-    return () => {
-      disposed = true;
-      window.clearTimeout(timer);
-    };
-  }, [onError, selectedProjectId, snapshot.projects]);
-
   const updateWorkspacePaths = useCallback((nextPaths: string[]) => {
     const trimmed = nextPaths.map((path) => path.trim());
     const normalized = Array.from(new Set(trimmed.filter(Boolean)));
@@ -330,81 +291,20 @@ export function useProjectWorkspace({
     workspacePaths,
   ]);
 
-  const refreshProject = useCallback(
-    async (project: ProjectSnapshot) => {
-      if (refreshingProjectId) return;
-      setRefreshingProjectId(project.id);
-      onError(null);
-      detailRequest.current += 1;
-      try {
-        const details = await bridge.inspectProject(project.path);
-        const isStillSelected = selectedProjectIdRef.current === project.id;
-        const nextProjects = snapshot.projects.map((candidate) =>
-          candidate.id === project.id ? details : candidate,
-        );
-        workspaceFingerprintRef.current = snapshotFingerprint({
-          ...snapshot,
-          projects: nextProjects,
-          scannedAt: details.scannedAt,
-        });
-        setSnapshot((current) => ({
-          ...current,
-          projects: current.projects.map((candidate) =>
-            candidate.id === project.id ? details : candidate,
-          ),
-          scannedAt: details.scannedAt,
-        }));
-        if (isStillSelected) {
-          skipNextDetailRequest.current = project.id;
-          setInspectorProject(details);
-          setIsLoadingDetails(false);
-          onMessage({ type: "projectRefreshed" });
-        }
-      } catch (refreshError) {
-        onError(
-          refreshError instanceof Error
-            ? refreshError.message
-            : String(refreshError),
-        );
-      } finally {
-        setRefreshingProjectId(null);
-      }
-    },
-    [onError, onMessage, refreshingProjectId, snapshot],
-  );
-
-  const updateInspectorProject = useCallback(
-    (
-      updater: (
-        current: ProjectSnapshot | undefined,
-      ) => ProjectSnapshot | undefined,
-    ) => {
-      setInspectorProject(updater);
-    },
-    [],
-  );
-
-  const selectedProject = useMemo(
-    () =>
-      snapshot.projects.find((project) => project.id === selectedProjectId) ??
-      snapshot.projects[0],
-    [selectedProjectId, snapshot.projects],
-  );
-
   return {
     rootPath,
     workspacePaths,
     snapshot,
-    selectedProjectId,
-    selectedProject,
-    inspectorProject,
-    isLoadingDetails,
+    selectedProjectId: selection.selectedProjectId,
+    selectedProject: selection.selectedProject,
+    inspectorProject: selection.inspectorProject,
+    isLoadingDetails: selection.isLoadingDetails,
     isScanning,
-    refreshingProjectId,
-    updateInspectorProject,
+    refreshingProjectId: selection.refreshingProjectId,
+    updateInspectorProject: selection.updateInspectorProject,
     updateWorkspacePaths,
     selectProject,
     scanWorkspace,
-    refreshProject,
+    refreshProject: selection.refreshProject,
   };
 }
