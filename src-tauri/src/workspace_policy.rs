@@ -24,6 +24,7 @@ const PROJECT_MARKERS: &[&str] = &[
     "ProjectSettings",
     "Assets",
 ];
+const PROJECT_EXTENSIONS: &[&str] = &["sln", "csproj", "xcodeproj", "xcworkspace"];
 
 pub fn is_ignored_name(name: &str, excluded_names: &[String]) -> bool {
     IGNORED_DIRECTORIES.contains(&name)
@@ -46,22 +47,25 @@ pub fn is_project_candidate(path: &Path) -> Result<bool, String> {
         }
     }
 
-    for extension in ["sln", "csproj", "xcodeproj", "xcworkspace"] {
-        if has_extension(path, extension)? {
-            return Ok(true);
-        }
+    if has_project_extension(path)? {
+        return Ok(true);
     }
 
     Ok(false)
 }
 
-fn has_extension(path: &Path, extension: &str) -> Result<bool, String> {
+fn has_project_extension(path: &Path) -> Result<bool, String> {
     let entries = fs::read_dir(path)
         .map_err(|error| format!("Cannot inspect project entries {}: {error}", path.display()))?;
     for entry in entries {
         let entry = entry
             .map_err(|error| format!("Cannot inspect project entry {}: {error}", path.display()))?;
-        if entry.path().extension().and_then(|value| value.to_str()) == Some(extension) {
+        if entry
+            .path()
+            .extension()
+            .and_then(|value| value.to_str())
+            .is_some_and(|extension| PROJECT_EXTENSIONS.contains(&extension))
+        {
             return Ok(true);
         }
     }
@@ -106,5 +110,20 @@ mod tests {
 
         assert!(result.is_err());
         fs::remove_file(path).expect("remove file fixture");
+    }
+
+    #[test]
+    fn recognizes_project_file_extensions() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-project-extension-candidate-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create extension fixture");
+        fs::write(root.join("desktop.sln"), b"solution fixture").expect("write solution");
+
+        assert!(is_project_candidate(&root).expect("inspect extension fixture"));
+
+        fs::remove_dir_all(root).expect("remove extension fixture");
     }
 }
