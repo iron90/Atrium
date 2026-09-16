@@ -69,16 +69,24 @@ pub(crate) async fn supervise_process(
         };
         (status, true)
     } else {
-        match wait_result.expect("a process wait result is present") {
-            Ok(status) => (Some(status), false),
-            Err(error) => {
+        let status = match wait_result {
+            Some(Ok(status)) => Some(status),
+            Some(Err(error)) => {
                 record_error(
                     &mut supervision_error,
                     format!("Process wait failed: {error}"),
                 );
-                (None, false)
+                None
             }
-        }
+            None => {
+                record_error(
+                    &mut supervision_error,
+                    "Process wait result was unavailable".to_string(),
+                );
+                None
+            }
+        };
+        (status, false)
     };
 
     let stdout_text = collect_output(stdout_task, &mut supervision_error).await;
