@@ -72,7 +72,8 @@ Rust native core
   ├─ manifest_projection    声明投影、路径归一化和引用解析
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成
-  ├─ conformance              图标协议检查和事实读取
+  ├─ conformance              图标协议状态编排和事实读取
+  │  └─ icon_assets            图标路径安全、格式校验和兼容发现
   ├─ git                     Git 领域门面
   │  ├─ snapshot             分支、工作区、上游和引用快照
   │  ├─ change_summary       版本范围、提交和文件变更统计

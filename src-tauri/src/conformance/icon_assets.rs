@@ -1,0 +1,210 @@
+use std::fs;
+use std::path::{Component, Path, PathBuf};
+
+use base64::{engine::general_purpose::STANDARD, Engine};
+use serde_json::Value;
+
+use crate::model::ProjectIcon;
+
+use super::MAX_ICON_BYTES;
+
+const MAX_LEGACY_SCAN_DEPTH: u8 = 4;
+const IGNORED_DIRECTORIES: &[&str] = &[
+    ".git",
+    ".idea",
+    ".vscode",
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    "Library",
+    "Temp",
+    ".venv",
+    "vendor",
+    ".atrium",
+];
+
+pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf, String> {
+    let relative = Path::new(value);
+    if relative.is_absolute()
+        || relative.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "identity.icon must be a relative path inside the project: {value}"
+        ));
+    }
+
+    let candidate = root.join(relative);
+    let resolved = candidate
+        .canonicalize()
+        .map_err(|error| format!("Icon file {value} cannot be resolved: {error}"))?;
+    if !resolved.starts_with(root) {
+        return Err(format!(
+            "identity.icon resolves outside the project: {value}"
+        ));
+    }
+    Ok(resolved)
+}
+
+pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<ProjectIcon, String> {
+    let metadata = fs::metadata(path).map_err(|error| format!("cannot read metadata: {error}"))?;
+    if !metadata.is_file() {
+        return Err("path is not a regular file".to_string());
+    }
+    if metadata.len() == 0 {
+        return Err("file is empty".to_string());
+    }
+    if metadata.len() > MAX_ICON_BYTES {
+        return Err(format!(
+            "file is {} bytes; the limit is {} bytes",
+            metadata.len(),
+            MAX_ICON_BYTES
+        ));
+    }
+
+    let mime = if canonical {
+        canonical_icon_mime(path)
+    } else {
+        icon_mime(path)
+    }
+    .ok_or_else(|| {
+        if canonical {
+            "icon.v1 accepts only .png, .svg, and .webp files".to_string()
+        } else {
+            "file extension is not a supported image format".to_string()
+        }
+    })?;
+    let bytes = fs::read(path).map_err(|error| format!("cannot read file: {error}"))?;
+    validate_icon_bytes(mime, &bytes)?;
+
+    Ok(ProjectIcon {
+        data_url: format!("data:{mime};base64,{}", STANDARD.encode(bytes)),
+        source: relative_path(root, path),
+    })
+}
+
+fn validate_icon_bytes(mime: &str, bytes: &[u8]) -> Result<(), String> {
+    let valid = match mime {
+        "image/png" => bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
+        "image/webp" => bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP",
+        "image/jpeg" => bytes.starts_with(&[0xff, 0xd8, 0xff]),
+        "image/x-icon" => bytes.starts_with(&[0x00, 0x00, 0x01, 0x00]),
+        "image/svg+xml" => std::str::from_utf8(bytes)
+            .map(|text| text.trim_start_matches('\u{feff}').to_ascii_lowercase())
+            .map(|text| text.contains("<svg"))
+            .unwrap_or(false),
+        _ => false,
+    };
+    if valid {
+        Ok(())
+    } else {
+        Err("file contents do not match the declared image format".to_string())
+    }
+}
+
+pub(super) fn legacy_icon_candidates(root: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Ok(raw) = fs::read_to_string(root.join("package.json")) {
+        if let Ok(package) = serde_json::from_str::<Value>(&raw) {
+            if let Some(icon) = package.get("icon").and_then(Value::as_str) {
+                if !icon.contains("://") {
+                    push_icon_candidate(&mut candidates, root.join(icon));
+                }
+            }
+        }
+    }
+
+    for relative in [
+        ".atrium/icon.png",
+        ".atrium/icon.svg",
+        "src-tauri/icons/icon.png",
+        "src-tauri/icons/128x128.png",
+        "src-tauri/icons/32x32.png",
+        "ProjectSettings/ProjectIcon.png",
+        "icon.png",
+        "icon.svg",
+        "icon.ico",
+        "logo.png",
+        "logo.svg",
+        "assets/icon.png",
+        "assets/icon.svg",
+        "public/icon.png",
+        "public/icon.svg",
+    ] {
+        push_icon_candidate(&mut candidates, root.join(relative));
+    }
+    collect_icon_candidates(root, 0, &mut candidates);
+    candidates
+}
+
+fn push_icon_candidate(candidates: &mut Vec<PathBuf>, candidate: PathBuf) {
+    if candidate.is_file() && !candidates.iter().any(|item| item == &candidate) {
+        candidates.push(candidate);
+    }
+}
+
+fn collect_icon_candidates(root: &Path, depth: u8, candidates: &mut Vec<PathBuf>) {
+    if depth > MAX_LEGACY_SCAN_DEPTH {
+        return;
+    }
+    let Ok(read_dir) = fs::read_dir(root) else {
+        return;
+    };
+    let mut entries = read_dir.filter_map(Result::ok).collect::<Vec<_>>();
+    entries.sort_by_key(|entry| entry.file_name());
+
+    for entry in entries {
+        let entry_path = entry.path();
+        let entry_name = entry.file_name().to_string_lossy().to_string();
+        if is_ignored_name(&entry_name) {
+            continue;
+        }
+        if entry_path.is_file() {
+            let lower_name = entry_name.to_lowercase();
+            if (lower_name.contains("icon") || lower_name.contains("logo"))
+                && icon_mime(&entry_path).is_some()
+            {
+                push_icon_candidate(candidates, entry_path);
+            }
+        } else if entry_path.is_dir() {
+            collect_icon_candidates(&entry_path, depth + 1, candidates);
+        }
+    }
+}
+
+fn icon_mime(path: &Path) -> Option<&'static str> {
+    let extension = path.extension()?.to_str()?.to_ascii_lowercase();
+    match extension.as_str() {
+        "png" => Some("image/png"),
+        "svg" => Some("image/svg+xml"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "webp" => Some("image/webp"),
+        "ico" => Some("image/x-icon"),
+        _ => None,
+    }
+}
+
+fn canonical_icon_mime(path: &Path) -> Option<&'static str> {
+    match path.extension()?.to_str()?.to_ascii_lowercase().as_str() {
+        "png" => Some("image/png"),
+        "svg" => Some("image/svg+xml"),
+        "webp" => Some("image/webp"),
+        _ => None,
+    }
+}
+
+fn is_ignored_name(name: &str) -> bool {
+    IGNORED_DIRECTORIES.contains(&name)
+}
+
+pub(super) fn relative_path(root: &Path, path: &Path) -> String {
+    path.strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .replace('\\', "/")
+}
