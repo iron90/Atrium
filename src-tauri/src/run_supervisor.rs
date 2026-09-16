@@ -8,7 +8,7 @@ use tokio::process::{Child, ChildStderr, ChildStdout};
 use tokio::sync::oneshot;
 
 use crate::model::{OutputStream, RunFinished, RunOutput, RunStatus};
-use crate::runner::RunContext;
+use crate::run_context::RunContext;
 
 struct StreamOutput {
     text: String,
