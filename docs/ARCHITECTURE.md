@@ -76,6 +76,13 @@ React UI
   ├─ features/settings      主题、布局、工作区偏好
   ├─ shared                 格式化等无领域依赖的纯函数
   └─ bridge                 类型化 Tauri invoke/event 与预览适配
+       ├─ types.ts          兼容导出门面
+       │  ├─ types/common   Facet、命令和配置状态基础类型
+       │  ├─ types/project  项目与工作区 DTO
+       │  ├─ types/protocol 协议与图标 DTO
+       │  ├─ types/storage  存储、产物与清理 DTO
+       │  ├─ types/git      Git DTO
+       │  └─ types/run      运行事件与结果 DTO
        ├─ fake-bridge       预览适配兼容门面
        ├─ demo-data         确定性预览项目快照
        └─ demo-run          预览运行结果
