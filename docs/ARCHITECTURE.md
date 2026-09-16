@@ -369,6 +369,8 @@ path 会再次去重。
 - package.json、Cargo.toml、pyproject.toml、pubspec.yaml、Makefile 和
   `.atrium/manifest.toml` 等固定项目描述文件统一经过项目根路径边界读取；缺失、不可读和
   符号链接不是同一种状态，项目外部或经由符号链接到达的描述文件不会成为 Atrium 事实。
+- Atrium 生成的协议引导报告也经过同一项目路径边界写入；会逐级创建并校验普通目录，拒绝
+  通过符号链接写入项目外部，避免报告生成意外覆盖仓库之外的文件。
 
 Atrium 协议是项目上下文的上游接入门槛。只有 icon.v1 声明处于 compliant 状态时，
 界面才把平台、渠道和构建 Profile 作为已接入项目事实展示；协议未就绪时只显示等待

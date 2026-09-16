@@ -1,9 +1,8 @@
-use std::fs;
 use std::path::Path;
 
 use crate::conformance::MANIFEST_PATH;
 use crate::model::{ProjectConfigurationReport, ProjectConfigurationStatus, ProjectSnapshot};
-use crate::project_path::canonical_project_root;
+use crate::project_path::{canonical_project_root, write_project_text_file};
 
 pub const CONFIGURATION_REPORT_PATH: &str = ".atrium/reports/project-configuration.md";
 
@@ -12,14 +11,12 @@ pub fn write_project_configuration_report(
     project: &ProjectSnapshot,
 ) -> Result<ProjectConfigurationReport, String> {
     let root = canonical_project_root(project_path)?;
-    let report_path = root.join(CONFIGURATION_REPORT_PATH);
-    let parent = report_path
-        .parent()
-        .ok_or_else(|| "Cannot determine report directory".to_string())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("Cannot create report directory: {error}"))?;
-    fs::write(&report_path, render_configuration_report(&root, project))
-        .map_err(|error| format!("Cannot write project configuration report: {error}"))?;
+    write_project_text_file(
+        &root,
+        Path::new(CONFIGURATION_REPORT_PATH),
+        &render_configuration_report(&root, project),
+    )
+    .map_err(|error| format!("Cannot write project configuration report: {error}"))?;
 
     Ok(ProjectConfigurationReport {
         path: CONFIGURATION_REPORT_PATH.to_string(),

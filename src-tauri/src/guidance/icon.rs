@@ -1,24 +1,21 @@
-use std::fs;
 use std::path::Path;
 
 use crate::conformance::{
     inspect_icon, IconInspection, ICON_SPEC, MANIFEST_PATH, MAX_ICON_BYTES, REPORT_PATH,
 };
 use crate::model::{IconConformanceReport, IconConformanceStatus};
-use crate::project_path::canonical_project_root;
+use crate::project_path::{canonical_project_root, write_project_text_file};
 
 pub fn write_icon_conformance_report(project_path: &Path) -> Result<IconConformanceReport, String> {
     let root = canonical_project_root(project_path)?;
 
     let inspection = inspect_icon(&root);
-    let report_path = root.join(REPORT_PATH);
-    let parent = report_path
-        .parent()
-        .ok_or_else(|| "Cannot determine report directory".to_string())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("Cannot create report directory: {error}"))?;
-    fs::write(&report_path, render_icon_report(&root, &inspection))
-        .map_err(|error| format!("Cannot write icon conformance report: {error}"))?;
+    write_project_text_file(
+        &root,
+        Path::new(REPORT_PATH),
+        &render_icon_report(&root, &inspection),
+    )
+    .map_err(|error| format!("Cannot write icon conformance report: {error}"))?;
 
     Ok(IconConformanceReport {
         path: REPORT_PATH.to_string(),
