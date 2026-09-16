@@ -302,8 +302,9 @@ Atrium's application data directory. It writes a fully synced temporary file and
 atomically replaces the history file, so a process interruption leaves either the
 previous complete document or the new complete document. This is intentionally
 separate from the project repository and can later migrate to SQLite without
-changing the project-side protocol. Opening a log materializes a text file in the
-same application data area; a project-scoped viewing surface remains a follow-up.
+changing the project-side protocol. Opening a log materializes its text file in the
+same application data area with the same atomic replacement policy; a project-scoped
+viewing surface remains a follow-up.
 Each stdout/stderr stream is read through a fixed-size byte buffer, keeps at most
 256 KiB for durable capture, and truncates individual lines at 16 KiB. The reader
 continues draining the child pipe after a limit is reached, so noisy commands do

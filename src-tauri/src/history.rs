@@ -73,7 +73,7 @@ pub fn open_run_log(app: &AppHandle, run_id: &str) -> Result<(), String> {
     fs::create_dir_all(&logs_directory)
         .map_err(|error| format!("Cannot create Atrium log directory: {error}"))?;
     let log_path = logs_directory.join(format!("{run_id}.log"));
-    fs::write(&log_path, render_log(&record))
+    write_file_atomically(&log_path, &render_log(&record))
         .map_err(|error| format!("Cannot write run log: {error}"))?;
     os_open::open_path(&log_path).map_err(|error| format!("Cannot open run log: {error}"))
 }
@@ -90,7 +90,7 @@ fn write_file_atomically(path: &Path, content: &str) -> std::io::Result<()> {
     let parent = path
         .parent()
         .ok_or_else(|| std::io::Error::other("target has no parent directory"))?;
-    let temporary_path = parent.join(format!(".run-history-{}.tmp", Uuid::new_v4()));
+    let temporary_path = parent.join(format!(".atrium-write-{}.tmp", Uuid::new_v4()));
     let result = (|| {
         let mut temporary = OpenOptions::new()
             .create_new(true)
