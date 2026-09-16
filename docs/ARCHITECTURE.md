@@ -55,6 +55,9 @@ React UI
   │  ├─ use-project-workspace 工作区与项目选择组合根
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
+  │  ├─ GitHistoryView       Git 页面组合
+  │  ├─ GitChangePanel       版本范围查询和变更摘要
+  │  └─ GitCommitTimeline    跨项目提交时间线
   ├─ features/runs          项目命令执行状态与事件订阅
   │  ├─ use-project-runner   命令触发、预览运行和活动运行选择
   │  └─ use-run-event-stream 运行事件订阅、输出缓冲和运行集合
