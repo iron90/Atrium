@@ -1,14 +1,13 @@
 import { useCallback, useState } from "react";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge/types";
 import type { Language } from "../../i18n";
+import type { WorkspaceMessage } from "../../shared/activity";
 import { useProjectSelection } from "./use-project-selection";
 import {
   useWorkspaceScanLifecycle,
-  type WorkspaceMessage,
   type WorkspacePreferences,
 } from "./use-workspace-scan-lifecycle";
 
-export type { WorkspaceMessage } from "./use-workspace-scan-lifecycle";
 export type { WorkspacePreferences } from "./use-workspace-scan-lifecycle";
 
 export interface UseProjectWorkspaceOptions {

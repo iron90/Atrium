@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ActivityMessage } from "./app/activity-message";
 import { AppSidebar } from "./app/AppSidebar";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
@@ -17,18 +16,17 @@ import { metaForProject } from "./features/projects/project-list-model";
 import { emptySnapshot } from "./features/projects/workspace-snapshot";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
-import {
-  useProjectWorkspace,
-  type WorkspaceMessage,
-} from "./features/projects/use-project-workspace";
-import {
-  useProjectRunner,
-  type RunMessage as ProjectRunMessage,
-} from "./features/runs/use-project-runner";
+import { useProjectWorkspace } from "./features/projects/use-project-workspace";
+import { useProjectRunner } from "./features/runs/use-project-runner";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
+import type {
+  ActivityMessage,
+  RunMessage,
+  WorkspaceMessage,
+} from "./shared/activity";
 import {
   persistLocalPreferences,
   readLocalPreferences,
@@ -89,7 +87,7 @@ export default function App() {
     [],
   );
   const handleRunMessage = useCallback(
-    (message: ProjectRunMessage) => setRunMessage(message),
+    (message: RunMessage) => setRunMessage(message),
     [],
   );
   const resetProjectInspection = useCallback(() => {

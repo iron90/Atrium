@@ -1,10 +1,9 @@
 import type { Language } from "../i18n";
 import { translate } from "../i18n";
-import type { WorkspaceMessage } from "../features/projects/use-project-workspace";
-import type { RunMessage } from "../features/runs/use-project-runner";
 import { fill } from "../shared/format";
+import type { ActivityMessage } from "../shared/activity";
 
-export type ActivityMessage = RunMessage | WorkspaceMessage;
+export type { ActivityMessage } from "../shared/activity";
 
 export const formatActivityMessage = (
   message: ActivityMessage,

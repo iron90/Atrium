@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { bridge } from "../../bridge";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
+import type { RunMessage } from "../../shared/activity";
 import type {
   ProfileAction,
   ProjectCommand,
@@ -12,25 +13,7 @@ import type {
 } from "../../bridge";
 import { useRunEventStream } from "./use-run-event-stream";
 
-export type RunMessage =
-  | { type: "ready" }
-  | {
-      type: "localized";
-      key: "commandStartFailed";
-    }
-  | { type: "cancelled" }
-  | {
-      type: "command";
-      commandKind: ProjectCommand["kind"];
-      label: string;
-      displayCommand: string;
-    }
-  | { type: "demo"; displayCommand: string }
-  | {
-      type: "finished";
-      displayCommand: string;
-      status: RunFinished["status"];
-    };
+export type { RunMessage } from "../../shared/activity";
 
 export interface UseProjectRunnerOptions {
   nativeRuntime: boolean;

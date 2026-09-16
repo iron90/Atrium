@@ -86,7 +86,9 @@ React UI
   │  ├─ use-run-event-stream 运行事件订阅和运行集合
   │  └─ run-output-buffer    按运行 ID 隔离且有界的输出缓冲纯函数
   ├─ features/settings      主题、布局、工作区偏好
-  ├─ shared                 格式化等无领域依赖的纯函数
+  ├─ shared                 格式化和跨特性活动消息契约等无领域依赖代码
+  │  ├─ format              时间、相对时间、字节和模板文本格式化
+  │  └─ activity            工作区/运行活动消息的共享契约
   └─ bridge                 类型化 Tauri invoke/event 与预览适配
        ├─ types.ts          兼容导出门面
        │  ├─ types/common   Facet、命令和配置状态基础类型
