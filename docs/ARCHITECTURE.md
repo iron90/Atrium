@@ -97,7 +97,9 @@ Rust native core
   │  ├─ cleanup               清理目录声明
   │  └─ links                 工具和项目链接声明
   ├─ protocol                协议能力状态评估
-  ├─ guidance                Agent 引导文件和报告生成
+  ├─ guidance                Agent 引导文件和报告生成门面
+  │  ├─ configuration        项目配置引导报告
+  │  └─ icon                 图标协议报告
   ├─ conformance              图标协议状态编排和事实读取
   │  └─ icon_assets            图标路径安全、格式校验和兼容发现
   ├─ git                     Git 领域门面
