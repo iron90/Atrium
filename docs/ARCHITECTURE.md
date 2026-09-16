@@ -73,7 +73,11 @@ Rust native core
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成
   ├─ conformance              图标协议检查和事实读取
-  ├─ git                     Git CLI 只读适配器
+  ├─ git                     Git 领域门面
+  │  ├─ snapshot             分支、工作区、上游和引用快照
+  │  ├─ change_summary       版本范围、提交和文件变更统计
+  │  ├─ commit               统一提交记录解析
+  │  └─ command              Git CLI 执行边界
   ├─ artifacts/storage       声明产物检查、存储统计和清理
   ├─ runner                   运行编排、配置校验和运行上下文
   ├─ run_supervisor           子进程生命周期、输出转发和取消监督
