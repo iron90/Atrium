@@ -79,7 +79,9 @@ Rust native core
   │  ├─ change_summary       版本范围、提交和文件变更统计
   │  ├─ commit               统一提交记录解析
   │  └─ command              Git CLI 执行边界
-  ├─ artifacts               声明产物检查和产物打开
+  ├─ artifacts               构建产物领域门面
+  │  ├─ inspection            声明产物检查、计数和路径安全校验
+  │  └─ opening               已声明产物的跨平台打开适配
   ├─ storage                 存储领域门面
   │  ├─ inspection            项目大小和 manifest 清理候选统计
   │  └─ cleanup               用户确认后的清理执行和结果
