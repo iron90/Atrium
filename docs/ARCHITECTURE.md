@@ -45,6 +45,7 @@ Tauri 2 + React/TypeScript + Rust 已作为 Atrium 的实现方案确定。候�
 ```text
 React UI
   ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
+  ├─ app                   应用层持久化和跨特性消息格式化
   ├─ features/projects      项目列表、详情、平台/渠道事实和项目交互
   ├─ features/git           Git 历史页和提交列表
   ├─ features/runs          项目命令执行状态与事件订阅

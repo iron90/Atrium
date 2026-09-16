@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  formatActivityMessage,
+  type ActivityMessage,
+} from "./app/activity-message";
 import { bridge, isTauriRuntime } from "./bridge";
 import { demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
@@ -50,52 +54,6 @@ const navItems: Array<{
   { id: "settings", labelKey: "settings", glyph: "⚙" },
 ];
 
-type RunMessage = ProjectRunMessage | WorkspaceMessage;
-
-const formatRunMessage = (message: RunMessage, language: Language): string => {
-  switch (message.type) {
-    case "ready":
-      return translate(language, "readyMessage");
-    case "projects":
-      return fill(
-        translate(language, "projectsDiscovered"),
-        "count",
-        String(message.count),
-      );
-    case "workspaceUpdated":
-      return fill(
-        translate(language, "workspaceUpdated"),
-        "count",
-        String(message.count),
-      );
-    case "localized":
-      return translate(language, message.key);
-    case "projectRefreshed":
-      return translate(language, "projectRefreshed");
-    case "refreshingWorkspace":
-      return translate(language, "refreshingWorkspace");
-    case "scanning":
-      return translate(language, "scanningWorkspace");
-    case "cancelled":
-      return translate(language, "runCancellationRequested");
-    case "command": {
-      const label =
-        message.commandKind === "run"
-          ? translate(language, "run")
-          : message.commandKind === "check"
-            ? translate(language, "check")
-            : message.commandKind === "build"
-              ? translate(language, "build")
-              : message.label;
-      return `${label} · ${message.displayCommand}`;
-    }
-    case "demo":
-      return `${message.displayCommand} · ${translate(language, "succeeded")}`;
-    case "finished":
-      return `${message.displayCommand} · ${translate(language, message.status)}`;
-  }
-};
-
 export default function App() {
   const [preferences] = useState<LocalPreferences>(readLocalPreferences);
   const initialRootPath =
@@ -142,7 +100,9 @@ export default function App() {
   } | null>(null);
   const [cleanupSelection, setCleanupSelection] = useState<string[]>([]);
   const [isCleaningArtifacts, setIsCleaningArtifacts] = useState(false);
-  const [runMessage, setRunMessage] = useState<RunMessage>({ type: "ready" });
+  const [runMessage, setRunMessage] = useState<ActivityMessage>({
+    type: "ready",
+  });
 
   const handleWorkspaceError = useCallback(
     (message: string | null) => setError(message),
@@ -603,7 +563,7 @@ export default function App() {
                 <div className="local-activity">
                   <div className="activity-heading">
                     <span className="eyebrow">{t("localActivity")}</span>
-                    <span>{formatRunMessage(runMessage, language)}</span>
+                    <span>{formatActivityMessage(runMessage, language)}</span>
                   </div>
                   <div className="activity-cards">
                     <div className="activity-card">
