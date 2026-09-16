@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::Path;
 
+use crate::project_path::project_entry_exists;
+
 const IGNORED_DIRECTORIES: &[&str] = &[
     ".git",
     ".idea",
@@ -35,15 +37,8 @@ pub fn is_ignored_name(name: &str, excluded_names: &[String]) -> bool {
 
 pub fn is_project_candidate(path: &Path) -> Result<bool, String> {
     for marker in PROJECT_MARKERS {
-        match fs::metadata(path.join(marker)) {
-            Ok(_) => return Ok(true),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => {
-                return Err(format!(
-                    "Cannot inspect project marker {}: {error}",
-                    path.join(marker).display()
-                ));
-            }
+        if project_entry_exists(path, Path::new(marker))? {
+            return Ok(true);
         }
     }
 
@@ -60,6 +55,13 @@ fn has_project_extension(path: &Path) -> Result<bool, String> {
     for entry in entries {
         let entry = entry
             .map_err(|error| format!("Cannot inspect project entry {}: {error}", path.display()))?;
+        if entry
+            .file_type()
+            .map_err(|error| format!("Cannot inspect project entry {}: {error}", path.display()))?
+            .is_symlink()
+        {
+            continue;
+        }
         if entry
             .path()
             .extension()
@@ -125,5 +127,32 @@ mod tests {
         assert!(is_project_candidate(&root).expect("inspect extension fixture"));
 
         fs::remove_dir_all(root).expect("remove extension fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_classify_a_project_from_an_external_marker_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let root = std::env::temp_dir().join(format!(
+            "atrium-project-candidate-symlink-root-{}",
+            std::process::id()
+        ));
+        let outside = std::env::temp_dir().join(format!(
+            "atrium-project-candidate-symlink-outside-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(&root).expect("create project candidate directory");
+        fs::create_dir_all(&outside).expect("create outside directory");
+        fs::write(outside.join("package.json"), b"{}").expect("write outside marker");
+        symlink(outside.join("package.json"), root.join("package.json"))
+            .expect("create marker symlink");
+
+        assert!(!is_project_candidate(&root).expect("inspect candidate fixture"));
+
+        fs::remove_dir_all(root).expect("remove project candidate directory");
+        fs::remove_dir_all(outside).expect("remove outside directory");
     }
 }

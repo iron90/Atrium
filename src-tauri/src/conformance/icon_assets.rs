@@ -5,6 +5,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::Value;
 
 use crate::model::ProjectIcon;
+use crate::project_path::read_project_text_file;
 
 use super::MAX_ICON_BYTES;
 
@@ -120,7 +121,7 @@ fn validate_icon_bytes(mime: &str, bytes: &[u8]) -> Result<(), String> {
 
 pub(super) fn legacy_icon_candidates(root: &Path) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
-    if let Ok(raw) = fs::read_to_string(root.join("package.json")) {
+    if let Ok(Some(raw)) = read_project_text_file(root, Path::new("package.json")) {
         if let Ok(package) = serde_json::from_str::<Value>(&raw) {
             if let Some(icon) = package.get("icon").and_then(Value::as_str) {
                 if !icon.contains("://") {

@@ -4,6 +4,7 @@ use std::path::{Component, Path, PathBuf};
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ExistingProjectPathError {
     Missing(String),
+    Unreadable(String),
     OutsideProject,
     SymbolicLink,
 }
@@ -18,13 +19,92 @@ pub(crate) fn canonical_project_root(path: &Path) -> Result<PathBuf, String> {
     Ok(root)
 }
 
+pub(crate) fn project_entry_exists(root: &Path, relative: &Path) -> Result<bool, String> {
+    let canonical_root = canonical_project_root(root)?;
+    let target = safe_relative_target(&canonical_root, relative)?;
+    match resolve_existing_path_inside_project(&canonical_root, &target) {
+        Ok(_) => Ok(true),
+        Err(ExistingProjectPathError::Missing(_)) | Err(ExistingProjectPathError::SymbolicLink) => {
+            Ok(false)
+        }
+        Err(ExistingProjectPathError::Unreadable(reason)) => Err(format!(
+            "Cannot inspect project entry {}: {reason}",
+            relative.display()
+        )),
+        Err(ExistingProjectPathError::OutsideProject) => Err(format!(
+            "Project entry is outside the project: {}",
+            relative.display()
+        )),
+    }
+}
+
+pub(crate) fn read_project_text_file(
+    root: &Path,
+    relative: &Path,
+) -> Result<Option<String>, String> {
+    let canonical_root = canonical_project_root(root)?;
+    let target = safe_relative_target(&canonical_root, relative)?;
+    let resolved = match resolve_existing_path_inside_project(&canonical_root, &target) {
+        Ok(path) => path,
+        Err(ExistingProjectPathError::Missing(_)) => return Ok(None),
+        Err(ExistingProjectPathError::Unreadable(reason)) => {
+            return Err(format!(
+                "Cannot read project file {}: {reason}",
+                relative.display()
+            ));
+        }
+        Err(ExistingProjectPathError::OutsideProject) => {
+            return Err(format!(
+                "Project file is outside the project: {}",
+                relative.display()
+            ));
+        }
+        Err(ExistingProjectPathError::SymbolicLink) => {
+            return Err(format!(
+                "Project file cannot traverse symbolic links: {}",
+                relative.display()
+            ));
+        }
+    };
+    let metadata = fs::metadata(&resolved).map_err(|error| {
+        format!(
+            "Cannot inspect project file {}: {error}",
+            relative.display()
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "Project path is not a regular file: {}",
+            relative.display()
+        ));
+    }
+    fs::read_to_string(&resolved)
+        .map(Some)
+        .map_err(|error| format!("Cannot read project file {}: {error}", relative.display()))
+}
+
+fn safe_relative_target(root: &Path, relative: &Path) -> Result<PathBuf, String> {
+    if relative.is_absolute()
+        || relative.components().any(|component| {
+            matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            )
+        })
+    {
+        return Err(format!(
+            "Project entry must be a relative path inside the project: {}",
+            relative.display()
+        ));
+    }
+    Ok(root.join(relative))
+}
+
 pub(crate) fn resolve_existing_path_inside_project(
     root: &Path,
     target: &Path,
 ) -> Result<PathBuf, ExistingProjectPathError> {
-    let canonical_root = root
-        .canonicalize()
-        .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+    let canonical_root = root.canonicalize().map_err(classify_path_error)?;
     if target.strip_prefix(root).is_err() {
         return Err(ExistingProjectPathError::OutsideProject);
     }
@@ -32,9 +112,7 @@ pub(crate) fn resolve_existing_path_inside_project(
         return Err(ExistingProjectPathError::SymbolicLink);
     }
 
-    let canonical_target = target
-        .canonicalize()
-        .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+    let canonical_target = target.canonicalize().map_err(classify_path_error)?;
     if !canonical_target.starts_with(&canonical_root) {
         return Err(ExistingProjectPathError::OutsideProject);
     }
@@ -54,8 +132,7 @@ fn has_symbolic_link_component(
             continue;
         }
         current.push(component.as_os_str());
-        let metadata = fs::symlink_metadata(&current)
-            .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+        let metadata = fs::symlink_metadata(&current).map_err(classify_path_error)?;
         if metadata.file_type().is_symlink() {
             return Ok(true);
         }
@@ -63,10 +140,19 @@ fn has_symbolic_link_component(
     Ok(false)
 }
 
+fn classify_path_error(error: std::io::Error) -> ExistingProjectPathError {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        ExistingProjectPathError::Missing(error.to_string())
+    } else {
+        ExistingProjectPathError::Unreadable(error.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        canonical_project_root, resolve_existing_path_inside_project, ExistingProjectPathError,
+        canonical_project_root, project_entry_exists, read_project_text_file,
+        resolve_existing_path_inside_project, ExistingProjectPathError,
     };
     use std::fs;
 
@@ -122,6 +208,58 @@ mod tests {
             resolve_existing_path_inside_project(&root, &root.join("linked/cache"))
                 .expect_err("symlink traversal must be rejected"),
             ExistingProjectPathError::SymbolicLink
+        );
+
+        fs::remove_dir_all(root).expect("remove project directory");
+        fs::remove_dir_all(outside).expect("remove outside directory");
+    }
+
+    #[test]
+    fn reads_only_regular_files_inside_the_project() {
+        let root = fixture_root("safe-read");
+        fs::create_dir_all(&root).expect("create project directory");
+        fs::write(root.join("package.json"), "{\"name\":\"fixture\"}").expect("write project file");
+
+        assert_eq!(
+            read_project_text_file(&root, std::path::Path::new("package.json"))
+                .expect("read project file")
+                .as_deref(),
+            Some("{\"name\":\"fixture\"}")
+        );
+        assert!(
+            project_entry_exists(&root, std::path::Path::new("package.json"))
+                .expect("inspect project file")
+        );
+        assert!(
+            !project_entry_exists(&root, std::path::Path::new("missing.json"))
+                .expect("inspect missing project file")
+        );
+
+        fs::remove_dir_all(root).expect("remove project directory");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_project_files_that_traverse_symbolic_links() {
+        use std::os::unix::fs::symlink;
+
+        let root = fixture_root("safe-read-symlink");
+        let outside = fixture_root("safe-read-outside");
+        fs::create_dir_all(&root).expect("create project directory");
+        fs::create_dir_all(&outside).expect("create outside directory");
+        fs::write(outside.join("package.json"), "{\"name\":\"outside\"}")
+            .expect("write outside file");
+        symlink(outside.join("package.json"), root.join("package.json"))
+            .expect("create descriptor symlink");
+
+        let result = read_project_text_file(&root, std::path::Path::new("package.json"));
+
+        assert!(result
+            .expect_err("symlinked descriptor must be rejected")
+            .contains("symbolic links"));
+        assert!(
+            !project_entry_exists(&root, std::path::Path::new("package.json"))
+                .expect("inspect symlinked descriptor")
         );
 
         fs::remove_dir_all(root).expect("remove project directory");

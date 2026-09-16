@@ -31,6 +31,9 @@ pub fn open_declared_artifact(
             ExistingProjectPathError::Missing(reason) => {
                 format!("Artifact does not exist: {reason}")
             }
+            ExistingProjectPathError::Unreadable(reason) => {
+                format!("Cannot inspect artifact: {reason}")
+            }
             ExistingProjectPathError::OutsideProject => {
                 "Artifact path resolves outside the project".to_string()
             }

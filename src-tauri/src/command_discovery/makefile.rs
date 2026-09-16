@@ -1,12 +1,11 @@
-use std::fs;
 use std::path::Path;
 
 use super::common::{command, command_label, executable, is_safe_command_name};
 use crate::model::{CommandKind, ProjectCommand};
+use crate::project_path::read_project_text_file;
 
 pub(super) fn detect_commands(path: &Path, commands: &mut Vec<ProjectCommand>) {
-    let makefile = path.join("Makefile");
-    let Ok(content) = fs::read_to_string(&makefile) else {
+    let Ok(Some(content)) = read_project_text_file(path, Path::new("Makefile")) else {
         return;
     };
     let mut targets = Vec::new();

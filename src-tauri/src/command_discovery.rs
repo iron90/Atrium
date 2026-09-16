@@ -6,23 +6,28 @@ mod toolchain;
 use std::path::Path;
 
 use crate::model::ProjectCommand;
+use crate::project_path::project_entry_exists;
 
 pub fn discover_commands(path: &Path) -> Vec<ProjectCommand> {
     let mut commands = Vec::new();
     if let Some(package) = package::read_package(path) {
         package::detect_commands(path, &package, &mut commands);
     }
-    if commands.is_empty() && path.join("Cargo.toml").exists() {
+    if commands.is_empty() && has_project_entry(path, "Cargo.toml") {
         commands.extend(toolchain::cargo_commands(path));
     }
-    if commands.is_empty() && path.join("pubspec.yaml").exists() {
+    if commands.is_empty() && has_project_entry(path, "pubspec.yaml") {
         commands.extend(toolchain::flutter_commands(path));
     }
     makefile::detect_commands(path, &mut commands);
-    if commands.is_empty() && path.join("run.command").is_file() && !cfg!(windows) {
+    if commands.is_empty() && has_project_entry(path, "run.command") && !cfg!(windows) {
         commands.push(toolchain::script_command(path));
     }
     commands
+}
+
+fn has_project_entry(path: &Path, relative: &str) -> bool {
+    project_entry_exists(path, Path::new(relative)).unwrap_or(false)
 }
 
 #[cfg(test)]

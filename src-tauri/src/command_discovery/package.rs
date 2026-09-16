@@ -1,14 +1,14 @@
 use std::collections::HashSet;
-use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
 
 use super::common::{command, command_label, executable, is_safe_command_name};
 use crate::model::{CommandKind, ProjectCommand};
+use crate::project_path::read_project_text_file;
 
 pub(super) fn read_package(path: &Path) -> Option<Value> {
-    let content = fs::read_to_string(path.join("package.json")).ok()?;
+    let content = read_project_text_file(path, Path::new("package.json")).ok()??;
     serde_json::from_str(&content).ok()
 }
 
@@ -16,11 +16,11 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
     let Some(scripts) = package.get("scripts").and_then(Value::as_object) else {
         return;
     };
-    let manager = if path.join("pnpm-lock.yaml").exists() {
+    let manager = if has_project_file(path, "pnpm-lock.yaml") {
         "pnpm"
-    } else if path.join("yarn.lock").exists() {
+    } else if has_project_file(path, "yarn.lock") {
         "yarn"
-    } else if path.join("bun.lockb").exists() || path.join("bun.lock").exists() {
+    } else if has_project_file(path, "bun.lockb") || has_project_file(path, "bun.lock") {
         "bun"
     } else {
         "npm"
@@ -50,6 +50,10 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
             commands.push(package_command(path, manager, &name, CommandKind::Other));
         }
     }
+}
+
+fn has_project_file(path: &Path, relative: &str) -> bool {
+    crate::project_path::project_entry_exists(path, Path::new(relative)).unwrap_or(false)
 }
 
 fn package_command(path: &Path, manager: &str, script: &str, kind: CommandKind) -> ProjectCommand {

@@ -1,8 +1,8 @@
-use std::fs;
 use std::path::Path;
 
 use crate::manifest_schema;
 use crate::model::{IconConformance, IconConformanceStatus, ProjectIcon};
+use crate::project_path::read_project_text_file;
 
 mod icon_assets;
 
@@ -26,11 +26,10 @@ pub fn inspect_icon(project_path: &Path) -> IconInspection {
     let root = project_path
         .canonicalize()
         .unwrap_or_else(|_| project_path.to_path_buf());
-    let manifest_path = root.join(MANIFEST_PATH);
 
-    match fs::read_to_string(&manifest_path) {
-        Ok(raw) => inspect_manifest(&root, &raw),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => inspect_legacy_icons(&root),
+    match read_project_text_file(&root, Path::new(MANIFEST_PATH)) {
+        Ok(Some(raw)) => inspect_manifest(&root, &raw),
+        Ok(None) => inspect_legacy_icons(&root),
         Err(error) => invalid_inspection(
             None,
             None,

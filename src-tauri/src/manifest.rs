@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::Path;
 
 use crate::conformance::MANIFEST_PATH;
@@ -8,6 +7,7 @@ use crate::model::{
     BuildProfile, CleanupDeclaration, Facet, ProjectCommand, ProjectConfiguration,
     ProjectConfigurationStatus, ProjectLink, ProjectTools,
 };
+use crate::project_path::read_project_text_file;
 
 #[derive(Debug)]
 pub struct ProjectConfigurationInspection {
@@ -27,10 +27,9 @@ pub fn scan_project_configuration(
     project_path: &Path,
     commands: &[ProjectCommand],
 ) -> ProjectConfigurationInspection {
-    let manifest_path = project_path.join(MANIFEST_PATH);
-    let raw = match fs::read_to_string(&manifest_path) {
-        Ok(raw) => raw,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+    let raw = match read_project_text_file(project_path, Path::new(MANIFEST_PATH)) {
+        Ok(Some(raw)) => raw,
+        Ok(None) => {
             return missing_configuration();
         }
         Err(error) => {
@@ -382,5 +381,42 @@ payment = " direct "
 
             fs::remove_dir_all(root).expect("remove manifest directory");
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_a_manifest_that_traverses_a_symbolic_link() {
+        use std::os::unix::fs::symlink;
+
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-symlink-root-{}",
+            std::process::id()
+        ));
+        let outside = std::env::temp_dir().join(format!(
+            "atrium-manifest-symlink-outside-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::create_dir_all(&outside).expect("create outside directory");
+        fs::write(outside.join("manifest.toml"), "schema = 1\n").expect("write outside manifest");
+        symlink(
+            outside.join("manifest.toml"),
+            root.join(".atrium/manifest.toml"),
+        )
+        .expect("create manifest symlink");
+
+        let result = scan_project_configuration(&root, &[]);
+
+        assert_eq!(result.manifest_status, ProjectConfigurationStatus::Invalid);
+        assert!(result
+            .configuration
+            .issues
+            .iter()
+            .any(|issue| issue.contains("symbolic links")));
+
+        fs::remove_dir_all(root).expect("remove project directory");
+        fs::remove_dir_all(outside).expect("remove outside directory");
     }
 }

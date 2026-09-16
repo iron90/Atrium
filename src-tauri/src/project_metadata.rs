@@ -1,7 +1,8 @@
-use std::fs;
 use std::path::Path;
 
 use serde_json::Value;
+
+use crate::project_path::read_project_text_file;
 
 pub fn read_project_name(path: &Path) -> Option<String> {
     if let Some(package) = read_json(path, "package.json") {
@@ -35,12 +36,12 @@ pub fn read_project_description(path: &Path) -> Option<String> {
 }
 
 fn read_json(path: &Path, file: &str) -> Option<Value> {
-    let content = fs::read_to_string(path.join(file)).ok()?;
+    let content = read_project_text_file(path, Path::new(file)).ok()??;
     serde_json::from_str(&content).ok()
 }
 
 fn read_toml_string(path: &Path, file: &str, candidates: &[&[&str]]) -> Option<String> {
-    let content = fs::read_to_string(path.join(file)).ok()?;
+    let content = read_project_text_file(path, Path::new(file)).ok()??;
     let document = toml::from_str::<toml::Value>(&content).ok()?;
 
     candidates.iter().find_map(|segments| {
@@ -53,7 +54,7 @@ fn read_toml_string(path: &Path, file: &str, candidates: &[&[&str]]) -> Option<S
 }
 
 fn read_pubspec_name(path: &Path) -> Option<String> {
-    let content = fs::read_to_string(path.join("pubspec.yaml")).ok()?;
+    let content = read_project_text_file(path, Path::new("pubspec.yaml")).ok()??;
     content.lines().find_map(parse_pubspec_root_name)
 }
 
