@@ -21,28 +21,33 @@ impl PathMetricsCache {
             return *metrics;
         }
 
-        let metrics = self.measure_uncached(path);
-        self.metrics.insert(path.to_path_buf(), metrics);
+        let (metrics, is_directory) = self.measure_uncached(path);
+        if is_directory {
+            self.metrics.insert(path.to_path_buf(), metrics);
+        }
         metrics
     }
 
-    fn measure_uncached(&mut self, path: &Path) -> PathMetrics {
+    fn measure_uncached(&mut self, path: &Path) -> (PathMetrics, bool) {
         let Ok(metadata) = fs::symlink_metadata(path) else {
-            return PathMetrics::default();
+            return (PathMetrics::default(), false);
         };
         if metadata.file_type().is_symlink() {
-            return PathMetrics::default();
+            return (PathMetrics::default(), false);
         }
         if metadata.is_file() {
-            return PathMetrics {
-                bytes: metadata.len(),
-                file_count: 1,
-                modified_at: modified_millis(&metadata),
-                is_complete: true,
-            };
+            return (
+                PathMetrics {
+                    bytes: metadata.len(),
+                    file_count: 1,
+                    modified_at: modified_millis(&metadata),
+                    is_complete: true,
+                },
+                false,
+            );
         }
         if !metadata.is_dir() {
-            return PathMetrics::default();
+            return (PathMetrics::default(), false);
         }
 
         let mut total = PathMetrics {
@@ -52,7 +57,7 @@ impl PathMetricsCache {
         };
         let Ok(entries) = fs::read_dir(path) else {
             total.is_complete = false;
-            return total;
+            return (total, true);
         };
         for entry in entries {
             let Ok(entry) = entry else {
@@ -65,7 +70,7 @@ impl PathMetricsCache {
             total.modified_at = max_modified(total.modified_at, child.modified_at);
             total.is_complete &= child.is_complete;
         }
-        total
+        (total, true)
     }
 }
 
@@ -145,6 +150,7 @@ mod tests {
         assert_eq!(nested.file_count, 1);
         assert_eq!(total.bytes, nested.bytes);
         assert_eq!(cache.metrics.len(), cached_path_count);
+        assert_eq!(cached_path_count, 2, "only directories are cached");
 
         fs::remove_dir_all(root).expect("remove metrics fixture");
     }
