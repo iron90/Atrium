@@ -298,9 +298,12 @@ RunRecord
 ```
 
 The current durable implementation stores at most 100 finished records as JSON in
-Atrium's application data directory. It writes a fully synced temporary file and
-atomically replaces the history file, so a process interruption leaves either the
-previous complete document or the new complete document. This is intentionally
+Atrium's application data directory. Loading also rejects a history file larger
+than 64 MiB before reading it into memory, so corrupted or unexpectedly expanded
+application data fails explicitly instead of becoming an unbounded allocation. It
+writes a fully synced temporary file and atomically replaces the history file, so a
+process interruption leaves either the previous complete document or the new
+complete document. This is intentionally
 separate from the project repository and can later migrate to SQLite without
 changing the project-side protocol. Opening a log materializes its text file in the
 same application data area with the same atomic replacement policy; a project-scoped

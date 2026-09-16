@@ -12,14 +12,27 @@ use crate::model::RunFinished;
 use crate::os_open;
 
 const MAX_RUN_HISTORY: usize = 100;
+const MAX_RUN_HISTORY_BYTES: u64 = 64 * 1024 * 1024;
 
 pub fn load_run_history(app: &AppHandle) -> Result<Vec<RunFinished>, String> {
     let path = history_path(app)?;
-    match fs::read_to_string(&path) {
-        Ok(raw) => serde_json::from_str(&raw)
-            .map_err(|error| format!("Cannot parse Atrium run history: {error}")),
+    read_history_file(&path)
+}
+
+fn read_history_file(path: &Path) -> Result<Vec<RunFinished>, String> {
+    match fs::metadata(path) {
+        Ok(metadata) if metadata.len() > MAX_RUN_HISTORY_BYTES => Err(format!(
+            "Atrium run history exceeds the {} MiB limit",
+            MAX_RUN_HISTORY_BYTES / (1024 * 1024)
+        )),
+        Ok(_) => match fs::read_to_string(path) {
+            Ok(raw) => serde_json::from_str(&raw)
+                .map_err(|error| format!("Cannot parse Atrium run history: {error}")),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+            Err(error) => Err(format!("Cannot read Atrium run history: {error}")),
+        },
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
-        Err(error) => Err(format!("Cannot read Atrium run history: {error}")),
+        Err(error) => Err(format!("Cannot inspect Atrium run history: {error}")),
     }
 }
 
@@ -181,9 +194,12 @@ fn render_log(record: &RunFinished) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{merge_run_history, write_file_atomically};
+    use super::{
+        merge_run_history, read_history_file, write_file_atomically, MAX_RUN_HISTORY_BYTES,
+    };
     use crate::model::{RunFinished, RunStatus};
     use std::fs;
+    use std::fs::OpenOptions;
 
     fn record(run_id: &str, finished_at: i64) -> RunFinished {
         RunFinished {
@@ -255,6 +271,28 @@ mod tests {
             fs::read_to_string(&path).expect("read replaced history"),
             "new history"
         );
+        fs::remove_dir_all(root).expect("remove history fixture");
+    }
+
+    #[test]
+    fn rejects_history_files_over_the_size_limit() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-history-size-limit-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create history fixture");
+        let path = root.join("run-history.json");
+        let file = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&path)
+            .expect("create oversized history fixture");
+        file.set_len(MAX_RUN_HISTORY_BYTES + 1)
+            .expect("extend oversized history fixture");
+        drop(file);
+
+        let error = read_history_file(&path).expect_err("oversized history should fail");
+
+        assert!(error.contains("64 MiB limit"));
         fs::remove_dir_all(root).expect("remove history fixture");
     }
 }
