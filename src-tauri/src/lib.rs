@@ -1,4 +1,5 @@
 mod artifacts;
+mod command_discovery;
 mod commands;
 mod conformance;
 mod git;
