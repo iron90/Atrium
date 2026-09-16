@@ -2,9 +2,9 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use serde::Deserialize;
 use serde_json::Value;
 
+use crate::manifest_schema;
 use crate::model::{IconConformance, IconConformanceReport, IconConformanceStatus, ProjectIcon};
 
 pub const MANIFEST_PATH: &str = ".atrium/manifest.toml";
@@ -27,17 +27,6 @@ const IGNORED_DIRECTORIES: &[&str] = &[
     "vendor",
     ".atrium",
 ];
-
-#[derive(Debug, Deserialize)]
-struct AtriumManifest {
-    schema: u32,
-    identity: Option<IdentitySection>,
-}
-
-#[derive(Debug, Deserialize)]
-struct IdentitySection {
-    icon: Option<String>,
-}
 
 #[derive(Debug)]
 pub struct IconInspection {
@@ -92,7 +81,7 @@ pub fn write_icon_conformance_report(project_path: &Path) -> Result<IconConforma
 }
 
 fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
-    let manifest = match toml::from_str::<AtriumManifest>(raw) {
+    let manifest = match manifest_schema::parse(raw) {
         Ok(manifest) => manifest,
         Err(error) => {
             return invalid_inspection(

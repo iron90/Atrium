@@ -3,12 +3,18 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub(crate) struct ManifestDocument {
     pub(crate) schema: u32,
+    pub(crate) identity: Option<ManifestIdentity>,
     pub(crate) platforms: Option<Vec<ManifestFacet>>,
     pub(crate) channels: Option<Vec<ManifestFacet>>,
     pub(crate) build_profiles: Option<Vec<ManifestBuildProfile>>,
     pub(crate) cleanup: Option<ManifestCleanup>,
     pub(crate) tools: Option<ManifestTools>,
     pub(crate) links: Option<Vec<ManifestLink>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ManifestIdentity {
+    pub(crate) icon: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
