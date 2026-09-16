@@ -52,6 +52,14 @@ React UI
   ├─ features/projects      项目列表、详情、工作区扫描和项目交互
   │  ├─ project-list-model    列表筛选、排序和项目显示元数据
   │  ├─ workspace-snapshot    工作区快照指纹、合并和空快照
+  │  ├─ ProjectInspector       详情页区块组合根
+  │  │  ├─ ProjectRepositorySection    仓库事实
+  │  │  ├─ ProjectToolsSection         项目工具与链接
+  │  │  ├─ ProjectStorageSection       存储与清理
+  │  │  ├─ ProjectContextSection       平台与渠道上下文
+  │  │  ├─ ProjectBuildProfilesSection 构建配置与操作
+  │  │  ├─ ProjectRunSection            活动运行输出
+  │  │  └─ ProjectCommitsSection        近期提交
   │  ├─ use-project-workspace 工作区与项目选择组合根
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
