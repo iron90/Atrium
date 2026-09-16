@@ -4,6 +4,7 @@ import { translate, type Language } from "../../i18n";
 import type { WorkspaceSnapshot } from "../../bridge/types";
 import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
+import { LatestRequestGate } from "./scan-request-gate";
 
 export type WorkspaceMessage =
   | { type: "projects"; count: number }
@@ -62,7 +63,7 @@ export function useWorkspaceScanLifecycle({
   const [workspacePaths, setWorkspacePaths] = useState(initialWorkspacePaths);
   const [isScanning, setIsScanning] = useState(false);
   const workspaceFingerprintRef = useRef(snapshotFingerprint(initialSnapshot));
-  const workspaceScanInFlight = useRef(false);
+  const [scanRequests] = useState(() => new LatestRequestGate());
 
   useEffect(() => {
     workspaceFingerprintRef.current = snapshotFingerprint(snapshot);
@@ -80,10 +81,11 @@ export function useWorkspaceScanLifecycle({
     if (!nativeRuntime) return undefined;
 
     let disposed = false;
-    workspaceScanInFlight.current = true;
+    const requestId = scanRequests.begin();
     void bridge
       .defaultWorkspacePath()
       .then((defaultPath) => {
+        if (disposed || !scanRequests.isCurrent(requestId)) return null;
         const nextRoot = preferences.rootPath?.trim() || defaultPath;
         if (!nextRoot) {
           throw new Error("No default workspace path is available.");
@@ -102,19 +104,21 @@ export function useWorkspaceScanLifecycle({
         });
       })
       .then((nextSnapshot) => {
-        if (disposed) return;
+        if (!nextSnapshot || disposed || !scanRequests.isCurrent(requestId)) {
+          return;
+        }
         applyScannedSnapshot(nextSnapshot);
         onMessage({ type: "projects", count: nextSnapshot.projects.length });
       })
       .catch((scanError) => {
-        if (disposed) return;
+        if (disposed || !scanRequests.isCurrent(requestId)) return;
         onError(
           scanError instanceof Error ? scanError.message : String(scanError),
         );
         onMessage({ type: "localized", key: "scanFailed" });
       })
       .finally(() => {
-        workspaceScanInFlight.current = false;
+        scanRequests.finish(requestId);
       });
 
     return () => {
@@ -129,6 +133,7 @@ export function useWorkspaceScanLifecycle({
     onMessage,
     preferences.rootPath,
     preferences.workspaces,
+    scanRequests,
   ]);
 
   useEffect(() => {
@@ -137,8 +142,8 @@ export function useWorkspaceScanLifecycle({
 
     let disposed = false;
     const refreshWorkspace = async () => {
-      if (disposed || workspaceScanInFlight.current) return;
-      workspaceScanInFlight.current = true;
+      if (disposed || scanRequests.isBusy) return;
+      const requestId = scanRequests.begin();
       onMessage({ type: "refreshingWorkspace" });
       try {
         const nextSnapshot = await scanWorkspaces({
@@ -146,7 +151,7 @@ export function useWorkspaceScanLifecycle({
           excludeNames,
           language,
         });
-        if (disposed) return;
+        if (disposed || !scanRequests.isCurrent(requestId)) return;
         const changed =
           workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
         if (changed) {
@@ -164,9 +169,11 @@ export function useWorkspaceScanLifecycle({
           });
         }
       } catch {
-        if (!disposed) onMessage({ type: "localized", key: "refreshFailed" });
+        if (!disposed && scanRequests.isCurrent(requestId)) {
+          onMessage({ type: "localized", key: "refreshFailed" });
+        }
       } finally {
-        workspaceScanInFlight.current = false;
+        scanRequests.finish(requestId);
       }
     };
 
@@ -183,6 +190,7 @@ export function useWorkspaceScanLifecycle({
     onError,
     onMessage,
     onSnapshotTimestamp,
+    scanRequests,
     workspacePaths,
   ]);
 
@@ -205,23 +213,25 @@ export function useWorkspaceScanLifecycle({
     setWorkspacePaths(nextPaths);
     onError(null);
     onMessage({ type: "scanning" });
-    workspaceScanInFlight.current = true;
+    const requestId = scanRequests.begin();
     try {
       const nextSnapshot = await scanWorkspaces({
         paths: nextPaths,
         excludeNames,
         language,
       });
+      if (!scanRequests.isCurrent(requestId)) return;
       applyScannedSnapshot(nextSnapshot);
       onMessage({ type: "projects", count: nextSnapshot.projects.length });
     } catch (scanError) {
-      onError(
-        scanError instanceof Error ? scanError.message : String(scanError),
-      );
-      onMessage({ type: "localized", key: "scanFailed" });
+      if (scanRequests.isCurrent(requestId)) {
+        onError(
+          scanError instanceof Error ? scanError.message : String(scanError),
+        );
+        onMessage({ type: "localized", key: "scanFailed" });
+      }
     } finally {
-      workspaceScanInFlight.current = false;
-      setIsScanning(false);
+      if (scanRequests.finish(requestId)) setIsScanning(false);
     }
   }, [
     applyScannedSnapshot,
@@ -230,6 +240,7 @@ export function useWorkspaceScanLifecycle({
     onError,
     onMessage,
     workspacePaths,
+    scanRequests,
   ]);
 
   return {
