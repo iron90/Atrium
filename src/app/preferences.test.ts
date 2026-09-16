@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  MAX_PREFERENCES_BYTES,
   PREFERENCES_STORAGE_KEY,
   parseLocalPreferences,
   persistLocalPreferences,
@@ -63,5 +64,34 @@ describe("local preferences", () => {
 
     expect(readLocalPreferences()).toEqual({});
     expect(parseLocalPreferences(JSON.stringify(["invalid"]))).toEqual({});
+  });
+
+  it("bounds persisted input before parsing and normalizing it", () => {
+    const oversized = JSON.stringify({
+      rootPath: "x".repeat(MAX_PREFERENCES_BYTES),
+    });
+
+    expect(parseLocalPreferences(oversized)).toEqual({});
+    expect(
+      parseLocalPreferences(
+        JSON.stringify({
+          workspaces: Array.from(
+            { length: 130 },
+            (_, index) => `/workspace/${index}`,
+          ),
+        }),
+      ).workspaces,
+    ).toHaveLength(128);
+  });
+
+  it("does not replace a valid stored snapshot with an oversized one", () => {
+    persistLocalPreferences({ rootPath: "/workspace" });
+    const previous = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
+
+    persistLocalPreferences({
+      rootPath: "x".repeat(MAX_PREFERENCES_BYTES),
+    });
+
+    expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(previous);
   });
 });

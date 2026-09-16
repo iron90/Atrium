@@ -8,6 +8,11 @@ import {
 } from "../features/settings/model";
 
 export const PREFERENCES_STORAGE_KEY = "atrium.preferences.v1";
+export const MAX_PREFERENCES_BYTES = 256 * 1024;
+
+const MAX_PREFERENCE_STRING_LENGTH = 4096;
+const MAX_PREFERENCE_LIST_ITEMS = 128;
+const MAX_PROJECT_META_ENTRIES = 2048;
 
 export interface LocalPreferences {
   theme?: ThemeId;
@@ -22,6 +27,24 @@ export interface LocalPreferences {
 const isLanguage = (value: unknown): value is Language =>
   value === "en" || value === "zh";
 
+const isBoundedNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" &&
+  value.length <= MAX_PREFERENCE_STRING_LENGTH &&
+  Boolean(value.trim());
+
+const readStringList = (
+  value: unknown,
+  maxItems = MAX_PREFERENCE_LIST_ITEMS,
+): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const result: string[] = [];
+  for (const item of value) {
+    if (result.length >= maxItems) break;
+    if (isBoundedNonEmptyString(item)) result.push(item);
+  }
+  return result;
+};
+
 const readProjectMeta = (
   value: unknown,
 ): Record<string, ProjectMeta> | undefined => {
@@ -30,25 +53,28 @@ const readProjectMeta = (
   }
 
   const result: Record<string, ProjectMeta> = {};
-  Object.entries(value).forEach(([projectId, rawMeta], index) => {
-    if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
-      return;
-    }
-    const meta = rawMeta as Record<string, unknown>;
-    result[projectId] = {
-      favorite: meta.favorite === true,
-      hidden: meta.hidden === true,
-      order:
-        typeof meta.order === "number" && Number.isFinite(meta.order)
-          ? meta.order
-          : index,
-    };
-  });
+  Object.entries(value)
+    .slice(0, MAX_PROJECT_META_ENTRIES)
+    .forEach(([projectId, rawMeta], index) => {
+      if (!isBoundedNonEmptyString(projectId)) return;
+      if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
+        return;
+      }
+      const meta = rawMeta as Record<string, unknown>;
+      result[projectId] = {
+        favorite: meta.favorite === true,
+        hidden: meta.hidden === true,
+        order:
+          typeof meta.order === "number" && Number.isFinite(meta.order)
+            ? meta.order
+            : index,
+      };
+    });
   return result;
 };
 
 export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
-  if (!raw) return {};
+  if (!raw || raw.length > MAX_PREFERENCES_BYTES) return {};
   try {
     const value: unknown = JSON.parse(raw);
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -61,22 +87,11 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
       language: isLanguage(preferences.language)
         ? preferences.language
         : undefined,
-      rootPath:
-        typeof preferences.rootPath === "string" && preferences.rootPath.trim()
-          ? preferences.rootPath
-          : undefined,
-      workspaces: Array.isArray(preferences.workspaces)
-        ? preferences.workspaces.filter(
-            (path): path is string =>
-              typeof path === "string" && Boolean(path.trim()),
-          )
+      rootPath: isBoundedNonEmptyString(preferences.rootPath)
+        ? preferences.rootPath
         : undefined,
-      excludeNames: Array.isArray(preferences.excludeNames)
-        ? preferences.excludeNames.filter(
-            (name): name is string =>
-              typeof name === "string" && Boolean(name.trim()),
-          )
-        : undefined,
+      workspaces: readStringList(preferences.workspaces),
+      excludeNames: readStringList(preferences.excludeNames),
       projectMeta: readProjectMeta(preferences.projectMeta),
     };
   } catch {
@@ -96,10 +111,9 @@ export const persistLocalPreferences = (
 ): void => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(
-      PREFERENCES_STORAGE_KEY,
-      JSON.stringify(preferences),
-    );
+    const serialized = JSON.stringify(preferences);
+    if (serialized.length > MAX_PREFERENCES_BYTES) return;
+    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, serialized);
   } catch {
     // Preferences are best effort; repository facts never depend on them.
   }
