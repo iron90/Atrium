@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use crate::os_open;
-use crate::project_path::canonical_project_root;
+use crate::project_path::{
+    canonical_project_root, resolve_existing_path_inside_project, ExistingProjectPathError,
+};
 use crate::scanner::scan_project;
 
 use super::inspection::safe_declared_path;
@@ -24,11 +26,17 @@ pub fn open_declared_artifact(
 
     let root = canonical_project_root(project_path)?;
     let target = safe_declared_path(&root, relative_path)?;
-    let canonical_target = target
-        .canonicalize()
-        .map_err(|error| format!("Artifact does not exist: {error}"))?;
-    if !canonical_target.starts_with(&root) {
-        return Err("Artifact path resolves outside the project".to_string());
-    }
+    let canonical_target =
+        resolve_existing_path_inside_project(&root, &target).map_err(|error| match error {
+            ExistingProjectPathError::Missing(reason) => {
+                format!("Artifact does not exist: {reason}")
+            }
+            ExistingProjectPathError::OutsideProject => {
+                "Artifact path resolves outside the project".to_string()
+            }
+            ExistingProjectPathError::SymbolicLink => {
+                "Artifact path cannot traverse symbolic links".to_string()
+            }
+        })?;
     os_open::open_path(&canonical_target).map_err(|error| format!("Cannot open artifact: {error}"))
 }

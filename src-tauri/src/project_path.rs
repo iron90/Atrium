@@ -1,4 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::{Component, Path, PathBuf};
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ExistingProjectPathError {
+    Missing(String),
+    OutsideProject,
+    SymbolicLink,
+}
 
 pub(crate) fn canonical_project_root(path: &Path) -> Result<PathBuf, String> {
     let root = path
@@ -10,9 +18,56 @@ pub(crate) fn canonical_project_root(path: &Path) -> Result<PathBuf, String> {
     Ok(root)
 }
 
+pub(crate) fn resolve_existing_path_inside_project(
+    root: &Path,
+    target: &Path,
+) -> Result<PathBuf, ExistingProjectPathError> {
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+    if target.strip_prefix(root).is_err() {
+        return Err(ExistingProjectPathError::OutsideProject);
+    }
+    if has_symbolic_link_component(root, target)? {
+        return Err(ExistingProjectPathError::SymbolicLink);
+    }
+
+    let canonical_target = target
+        .canonicalize()
+        .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+    if !canonical_target.starts_with(&canonical_root) {
+        return Err(ExistingProjectPathError::OutsideProject);
+    }
+    Ok(canonical_target)
+}
+
+fn has_symbolic_link_component(
+    root: &Path,
+    target: &Path,
+) -> Result<bool, ExistingProjectPathError> {
+    let relative = target
+        .strip_prefix(root)
+        .map_err(|_| ExistingProjectPathError::OutsideProject)?;
+    let mut current = root.to_path_buf();
+    for component in relative.components() {
+        if matches!(component, Component::CurDir) {
+            continue;
+        }
+        current.push(component.as_os_str());
+        let metadata = fs::symlink_metadata(&current)
+            .map_err(|error| ExistingProjectPathError::Missing(error.to_string()))?;
+        if metadata.file_type().is_symlink() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::canonical_project_root;
+    use super::{
+        canonical_project_root, resolve_existing_path_inside_project, ExistingProjectPathError,
+    };
     use std::fs;
 
     fn fixture_root(name: &str) -> std::path::PathBuf {
@@ -48,5 +103,28 @@ mod tests {
         );
 
         fs::remove_file(file).expect("remove project file");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_paths_that_traverse_symbolic_links() {
+        use std::os::unix::fs::symlink;
+
+        let root = fixture_root("symlink-root");
+        let outside = fixture_root("symlink-outside");
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(outside.join("cache")).expect("create outside directory");
+        fs::create_dir_all(&root).expect("create project directory");
+        symlink(&outside, root.join("linked")).expect("create project symlink");
+
+        assert_eq!(
+            resolve_existing_path_inside_project(&root, &root.join("linked/cache"))
+                .expect_err("symlink traversal must be rejected"),
+            ExistingProjectPathError::SymbolicLink
+        );
+
+        fs::remove_dir_all(root).expect("remove project directory");
+        fs::remove_dir_all(outside).expect("remove outside directory");
     }
 }

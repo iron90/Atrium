@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::filesystem_metrics::measure_path;
 use crate::model::{CleanupDeclaration, ProjectStorage, StorageEntry, StorageEntryKind};
+use crate::project_path::resolve_existing_path_inside_project;
 
 pub fn inspect_project_storage(
     project_path: &Path,
@@ -42,18 +43,14 @@ pub(super) fn discover_cleanable_entries(
 
     for (relative_path, kind) in declared_paths {
         let target = project_path.join(relative_path);
-        if !is_safe_cleanable_directory(project_path, &target) {
-            continue;
-        }
-
-        let Ok(canonical_target) = target.canonicalize() else {
+        let Some(canonical_target) = resolve_safe_cleanable_directory(project_path, &target) else {
             continue;
         };
-        if !seen_targets.insert(canonical_target) {
+        if !seen_targets.insert(canonical_target.clone()) {
             continue;
         }
 
-        let count = measure_path(&target);
+        let count = measure_path(&canonical_target);
         entries.push(StorageEntry {
             relative_path: relative_path.clone(),
             kind,
@@ -67,13 +64,11 @@ pub(super) fn discover_cleanable_entries(
     entries
 }
 
-pub(super) fn is_safe_cleanable_directory(root: &Path, target: &Path) -> bool {
-    if !target.starts_with(root) {
-        return false;
+pub(super) fn resolve_safe_cleanable_directory(root: &Path, target: &Path) -> Option<PathBuf> {
+    let canonical_target = resolve_existing_path_inside_project(root, target).ok()?;
+    let metadata = fs::symlink_metadata(target).ok()?;
+    if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        return None;
     }
-
-    let Ok(metadata) = fs::symlink_metadata(target) else {
-        return false;
-    };
-    metadata.is_dir() && !metadata.file_type().is_symlink()
+    Some(canonical_target)
 }

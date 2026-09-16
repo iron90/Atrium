@@ -65,4 +65,35 @@ mod tests {
             assert!(safe_declared_path(root, path).is_err(), "{path}");
         }
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_artifacts_that_traverse_symbolic_links() {
+        use std::os::unix::fs::symlink;
+
+        let root = std::env::temp_dir().join(format!(
+            "atrium-artifacts-symlink-root-{}",
+            std::process::id()
+        ));
+        let outside = std::env::temp_dir().join(format!(
+            "atrium-artifacts-symlink-outside-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(outside.join("dist")).expect("create outside artifact directory");
+        fs::write(outside.join("dist/app"), b"outside").expect("write outside artifact");
+        fs::create_dir_all(&root).expect("create project directory");
+        symlink(&outside, root.join("linked")).expect("create project symlink");
+
+        let mut profile = profile();
+        profile.artifacts = vec!["linked/dist".to_string()];
+        let artifacts = inspect_project_artifacts(&root, &[profile]);
+
+        assert!(matches!(artifacts[0].kind, BuildArtifactKind::Invalid));
+        assert_eq!(artifacts[0].bytes, 0);
+
+        fs::remove_dir_all(root).expect("remove project fixture");
+        fs::remove_dir_all(outside).expect("remove outside fixture");
+    }
 }

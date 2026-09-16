@@ -84,4 +84,31 @@ mod tests {
 
         fs::remove_dir_all(root).expect("remove storage fixture");
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn cleanup_does_not_follow_symbolic_linked_directories() {
+        use std::os::unix::fs::symlink;
+
+        let root = fixture_root("symlink-root");
+        let outside = fixture_root("symlink-outside");
+        let _ = fs::remove_dir_all(&root);
+        let _ = fs::remove_dir_all(&outside);
+        fs::create_dir_all(outside.join("cache")).expect("create outside cache directory");
+        fs::write(outside.join("cache/item"), b"outside").expect("write outside cache");
+        fs::create_dir_all(&root).expect("create project directory");
+        symlink(&outside, root.join("linked")).expect("create project symlink");
+
+        let cleanup = CleanupDeclaration {
+            cache: vec!["linked/cache".to_string()],
+            build: Vec::new(),
+        };
+        let result = clean_project_artifacts(&root, &cleanup).expect("clean project fixture");
+
+        assert!(result.removed_entries.is_empty());
+        assert!(outside.join("cache/item").exists());
+
+        fs::remove_dir_all(root).expect("remove project fixture");
+        fs::remove_dir_all(outside).expect("remove outside fixture");
+    }
 }

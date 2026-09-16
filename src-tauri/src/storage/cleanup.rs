@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::model::{CleanupDeclaration, CleanupResult, StorageCleanupFailure};
 
 use super::inspection::{
-    discover_cleanable_entries, inspect_project_storage, is_safe_cleanable_directory,
+    discover_cleanable_entries, inspect_project_storage, resolve_safe_cleanable_directory,
 };
 
 #[allow(dead_code)]
@@ -41,13 +41,13 @@ pub fn clean_project_artifacts_selected(
 
     for entry in candidates {
         let target = root.join(&entry.relative_path);
-        if !is_safe_cleanable_directory(&root, &target) {
+        let Some(target) = resolve_safe_cleanable_directory(&root, &target) else {
             failed_entries.push(StorageCleanupFailure {
                 relative_path: entry.relative_path,
                 message: "The path is not a safe cleanable directory".to_string(),
             });
             continue;
-        }
+        };
 
         match fs::remove_dir_all(&target) {
             Ok(()) => {

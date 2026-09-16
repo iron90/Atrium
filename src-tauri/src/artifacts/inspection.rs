@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::filesystem_metrics::measure_path;
 use crate::manifest_projection::normalize_declared_path;
 use crate::model::{BuildArtifact, BuildArtifactKind, BuildProfile};
+use crate::project_path::resolve_existing_path_inside_project;
 
 pub fn inspect_project_artifacts(
     project_path: &Path,
@@ -45,11 +46,15 @@ fn inspect_artifact(
     if metadata.file_type().is_symlink() {
         return invalid_artifact(profile, relative_path);
     }
+    let resolved_target = match resolve_existing_path_inside_project(project_path, &target) {
+        Ok(path) => path,
+        Err(_) => return invalid_artifact(profile, relative_path),
+    };
 
     let (kind, metrics) = if metadata.is_file() {
-        (BuildArtifactKind::File, measure_path(&target))
+        (BuildArtifactKind::File, measure_path(&resolved_target))
     } else if metadata.is_dir() {
-        (BuildArtifactKind::Directory, measure_path(&target))
+        (BuildArtifactKind::Directory, measure_path(&resolved_target))
     } else {
         (BuildArtifactKind::Invalid, Default::default())
     };
