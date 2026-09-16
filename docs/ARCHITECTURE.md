@@ -65,6 +65,10 @@ React UI
   │  ├─ use-project-detail-lifecycle 详情异步读取、刷新和过期请求保护
   │  ├─ use-project-guidance-actions 协议引导与 Agent 提示词
   │  ├─ use-project-cleanup-actions 产物清理选择与执行
+  │  ├─ git-presentation          Git 状态展示纯函数
+  │  ├─ protocol-presentation     协议能力展示纯函数
+  │  ├─ command-presentation      命令与配置映射纯函数
+  │  ├─ storage-presentation      存储与产物标签纯函数
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
