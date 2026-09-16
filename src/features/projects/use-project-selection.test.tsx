@@ -34,4 +34,52 @@ describe("project selection state", () => {
     );
     expect(inspectProject).toHaveBeenCalledWith(nextProject.path);
   });
+
+  it("does not let a stale detail response replace the current project", async () => {
+    const projects = demoSnapshot("/workspace").projects;
+    const resolvers = new Map<
+      string,
+      (project: (typeof projects)[number]) => void
+    >();
+    const inspectProject = vi.fn(
+      (path: string) =>
+        new Promise<(typeof projects)[number]>((resolve) => {
+          resolvers.set(path, resolve);
+        }),
+    );
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    const onProjectSelected = vi.fn();
+    const onProjectRefreshed = vi.fn();
+    const { result } = renderHook(() =>
+      useProjectSelection({
+        nativeRuntime: true,
+        projects,
+        onError,
+        onMessage,
+        onProjectSelected,
+        onProjectRefreshed,
+        inspectProject,
+      }),
+    );
+
+    const firstProject = projects[0];
+    const nextProject = projects[1];
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(firstProject.path),
+    );
+
+    act(() => result.current.selectProject(nextProject.id));
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(nextProject.path),
+    );
+
+    act(() => resolvers.get(firstProject.path)?.(firstProject));
+    expect(result.current.inspectorProject).toBeUndefined();
+
+    act(() => resolvers.get(nextProject.path)?.(nextProject));
+    await waitFor(() =>
+      expect(result.current.inspectorProject?.id).toBe(nextProject.id),
+    );
+  });
 });
