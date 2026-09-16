@@ -15,10 +15,9 @@ import {
   emptySnapshot,
   filterAndSortProjects,
   metaForProject,
-  reorderProjectMeta,
-  type ProjectMeta,
   type ProjectSort,
 } from "./features/projects/model";
+import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import {
   useProjectWorkspace,
   type WorkspaceMessage,
@@ -76,9 +75,13 @@ export default function App() {
   const [excludeNames, setExcludeNames] = useState<string[]>(
     preferences.excludeNames ?? [],
   );
-  const [projectMeta, setProjectMeta] = useState<Record<string, ProjectMeta>>(
-    preferences.projectMeta ?? {},
-  );
+  const {
+    projectMeta,
+    ensureProjectMeta,
+    updateProjectMeta,
+    reorderProjects,
+    moveProjectByKeyboard,
+  } = useProjectMetaState(preferences.projectMeta ?? {});
   const [projectSearch, setProjectSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
@@ -124,22 +127,6 @@ export default function App() {
     setCleanupSelection([]);
     setIsCleaningArtifacts(false);
   }, []);
-  const ensureProjectMeta = useCallback((nextSnapshot: WorkspaceSnapshot) => {
-    setProjectMeta((current) => {
-      const next = { ...current };
-      nextSnapshot.projects.forEach((project, index) => {
-        if (!next[project.id]) {
-          next[project.id] = {
-            favorite: false,
-            hidden: false,
-            order: index,
-          };
-        }
-      });
-      return next;
-    });
-  }, []);
-
   const {
     rootPath,
     workspacePaths,
@@ -234,49 +221,6 @@ export default function App() {
       showHiddenProjects,
       snapshot.projects,
     ],
-  );
-
-  const updateProjectMeta = useCallback(
-    (projectId: string, change: Partial<ProjectMeta>) => {
-      setProjectMeta((current) => ({
-        ...current,
-        [projectId]: {
-          ...metaForProject(current, projectId, snapshot.projects.length),
-          ...change,
-        },
-      }));
-    },
-    [snapshot.projects.length],
-  );
-
-  const reorderProjects = useCallback(
-    (orderedVisibleIds: string[]) => {
-      setProjectMeta((current) => {
-        return (
-          reorderProjectMeta(snapshot.projects, current, orderedVisibleIds) ??
-          current
-        );
-      });
-    },
-    [snapshot.projects],
-  );
-
-  const moveProjectByKeyboard = useCallback(
-    (projectId: string, direction: "up" | "down") => {
-      const orderedIds = visibleProjects.map((project) => project.id);
-      const index = orderedIds.indexOf(projectId);
-      const nextIndex = index + (direction === "up" ? -1 : 1);
-      if (index < 0 || nextIndex < 0 || nextIndex >= orderedIds.length) {
-        return false;
-      }
-      [orderedIds[index], orderedIds[nextIndex]] = [
-        orderedIds[nextIndex],
-        orderedIds[index],
-      ];
-      reorderProjects(orderedIds);
-      return true;
-    },
-    [reorderProjects, visibleProjects],
   );
 
   const handleGenerateGuidance = async (project: ProjectSnapshot) => {
@@ -546,17 +490,35 @@ export default function App() {
                     filterOptions={filterOptions}
                     projectMeta={projectMeta}
                     onToggleFavorite={(id) =>
-                      updateProjectMeta(id, {
-                        favorite: !metaForProject(projectMeta, id, 0).favorite,
-                      })
+                      updateProjectMeta(
+                        id,
+                        {
+                          favorite: !metaForProject(projectMeta, id, 0)
+                            .favorite,
+                        },
+                        snapshot.projects.length,
+                      )
                     }
                     onToggleHidden={(id) =>
-                      updateProjectMeta(id, {
-                        hidden: !metaForProject(projectMeta, id, 0).hidden,
-                      })
+                      updateProjectMeta(
+                        id,
+                        {
+                          hidden: !metaForProject(projectMeta, id, 0).hidden,
+                        },
+                        snapshot.projects.length,
+                      )
                     }
-                    onReorder={reorderProjects}
-                    onKeyboardMove={moveProjectByKeyboard}
+                    onReorder={(orderedVisibleIds) =>
+                      reorderProjects(snapshot.projects, orderedVisibleIds)
+                    }
+                    onKeyboardMove={(projectId, direction) =>
+                      moveProjectByKeyboard(
+                        snapshot.projects,
+                        visibleProjects,
+                        projectId,
+                        direction,
+                      )
+                    }
                   />
                 )}
 
