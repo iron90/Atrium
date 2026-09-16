@@ -1,10 +1,11 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { isTauriRuntime } from "./runtime";
-import type { RunFinished, RunOutput } from "./types";
+import type { RunError, RunFinished, RunOutput } from "./types";
 
 export interface RunEventHandlers {
   onOutput: (output: RunOutput) => void;
   onFinished: (finished: RunFinished) => void;
+  onError?: (error: RunError) => void;
 }
 
 export async function subscribeToRunEvents(
@@ -21,6 +22,7 @@ export async function subscribeToRunEvents(
     listen<RunFinished>("run-finished", (event) =>
       handlers.onFinished(event.payload),
     ),
+    listen<RunError>("run-error", (event) => handlers.onError?.(event.payload)),
   ]);
 
   return () => {

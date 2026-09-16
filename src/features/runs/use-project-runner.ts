@@ -69,6 +69,9 @@ export function useProjectRunner({
       onOutput: (output) => {
         setOutputLines((lines) => [...lines, output.line].slice(-180));
       },
+      onError: (runError) => {
+        onError(runError.message);
+      },
       onFinished: (finished) => {
         setActiveRuns((runs) => {
           const next = { ...runs };
@@ -93,7 +96,7 @@ export function useProjectRunner({
       disposed = true;
       cleanup?.();
     };
-  }, [onMessage]);
+  }, [onError, onMessage]);
 
   const activeRun = useMemo(
     () =>

@@ -234,6 +234,11 @@ export interface RunOutput {
   line: string;
 }
 
+export interface RunError {
+  runId: string;
+  message: string;
+}
+
 export interface RunFinished {
   runId: string;
   projectId: string;

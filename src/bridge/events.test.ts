@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { subscribeToRunEvents } from "./events";
-import type { RunFinished, RunOutput } from "./types";
+import type { RunError, RunFinished, RunOutput } from "./types";
 
 const listenMock = vi.hoisted(() => vi.fn());
 
@@ -28,6 +28,7 @@ describe("run event bridge", () => {
     const unsubscribe = await subscribeToRunEvents({
       onOutput: vi.fn(),
       onFinished: vi.fn(),
+      onError: vi.fn(),
     });
 
     unsubscribe();
@@ -43,19 +44,29 @@ describe("run event bridge", () => {
 
     const unlistenOutput = vi.fn();
     const unlistenFinished = vi.fn();
+    const unlistenError = vi.fn();
     const handlers = new Map<string, (event: { payload: unknown }) => void>();
     listenMock.mockImplementation(
       (eventName: string, handler: (event: { payload: unknown }) => void) => {
         handlers.set(eventName, handler);
         return Promise.resolve(
-          eventName === "run-output" ? unlistenOutput : unlistenFinished,
+          eventName === "run-output"
+            ? unlistenOutput
+            : eventName === "run-finished"
+              ? unlistenFinished
+              : unlistenError,
         );
       },
     );
 
     const onOutput = vi.fn();
     const onFinished = vi.fn();
-    const unsubscribe = await subscribeToRunEvents({ onOutput, onFinished });
+    const onError = vi.fn();
+    const unsubscribe = await subscribeToRunEvents({
+      onOutput,
+      onFinished,
+      onError,
+    });
     const output: RunOutput = {
       runId: "run-1",
       stream: "stdout",
@@ -82,14 +93,21 @@ describe("run event bridge", () => {
       stdout: "ready",
       stderr: "",
     } satisfies RunFinished;
+    const runError: RunError = {
+      runId: "run-1",
+      message: "Could not persist run history",
+    };
 
     handlers.get("run-output")?.({ payload: output });
     handlers.get("run-finished")?.({ payload: finished });
+    handlers.get("run-error")?.({ payload: runError });
     unsubscribe();
 
     expect(onOutput).toHaveBeenCalledWith(output);
     expect(onFinished).toHaveBeenCalledWith(finished);
+    expect(onError).toHaveBeenCalledWith(runError);
     expect(unlistenOutput).toHaveBeenCalledOnce();
     expect(unlistenFinished).toHaveBeenCalledOnce();
+    expect(unlistenError).toHaveBeenCalledOnce();
   });
 });
