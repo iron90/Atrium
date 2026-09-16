@@ -71,7 +71,11 @@ Rust native core
   ├─ scanner                 对外暴露扫描器边界
   ├─ workspace_scan          工作区遍历和项目候选发现
   ├─ project_scan            单项目快照组装和项目元数据读取
-  ├─ command_discovery       确定性原生命令发现适配器
+  ├─ command_discovery       确定性原生命令发现门面
+  │  ├─ package               package.json scripts 适配
+  │  ├─ toolchain             Cargo/Flutter/脚本入口适配
+  │  ├─ makefile              Makefile target 适配
+  │  └─ common                argv、标签和平台可执行文件规则
   ├─ manifest_schema         manifest DTO 与 TOML 解析
   ├─ manifest                配置文件读取、Schema 校验和入口编排
   ├─ manifest_projection    声明投影门面
