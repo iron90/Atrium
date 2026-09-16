@@ -46,8 +46,16 @@ pub fn scan_workspace_with_exclusions(
     let mut projects = Vec::new();
     for entry in entries {
         let path = entry.path();
-        if !is_project_candidate(&path) {
-            continue;
+        match is_project_candidate(&path) {
+            Ok(true) => {}
+            Ok(false) => continue,
+            Err(error) => {
+                warnings.push(format!(
+                    "Skipped unreadable project candidate {}: {error}",
+                    path.display()
+                ));
+                continue;
+            }
         }
         match scan_project(&path) {
             Some(project) => projects.push(project),
