@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
 import { errorMessage } from "../../shared/errors";
+import { projectFingerprint } from "./workspace-snapshot";
 
 export interface ProjectDetailLifecycleState {
   inspectorProject?: ProjectSnapshot;
@@ -52,15 +53,24 @@ export function useProjectDetailLifecycle({
   const detailRequest = useRef(0);
   const selectedProjectIdRef = useRef(selectedProjectId);
   const skipNextDetailRequest = useRef<string | null>(null);
+  const selectedProject = projects.find(
+    (candidate) => candidate.id === selectedProjectId,
+  );
+  const selectedProjectRef = useRef(selectedProject);
+  const selectedProjectFingerprint = selectedProject
+    ? projectFingerprint(selectedProject)
+    : null;
+
+  useEffect(() => {
+    selectedProjectRef.current = selectedProject;
+  }, [selectedProject]);
 
   useEffect(() => {
     selectedProjectIdRef.current = selectedProjectId;
   }, [selectedProjectId]);
 
   useEffect(() => {
-    const project = projects.find(
-      (candidate) => candidate.id === selectedProjectId,
-    );
+    const project = selectedProjectRef.current;
     if (!project) return undefined;
 
     let disposed = false;
@@ -96,7 +106,7 @@ export function useProjectDetailLifecycle({
       disposed = true;
       window.clearTimeout(timer);
     };
-  }, [inspectProject, onError, projects, selectedProjectId]);
+  }, [inspectProject, onError, selectedProjectFingerprint, selectedProjectId]);
 
   const resetForSelection = useCallback(() => {
     detailRequest.current += 1;

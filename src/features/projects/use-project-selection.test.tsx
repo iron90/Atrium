@@ -82,4 +82,44 @@ describe("project selection state", () => {
       expect(result.current.inspectorProject?.id).toBe(nextProject.id),
     );
   });
+
+  it("does not reload selected details when another project changes", async () => {
+    const projects = demoSnapshot("/workspace").projects;
+    const inspectProject = vi.fn(
+      async (path: string) =>
+        projects.find((project) => project.path === path) ?? projects[0],
+    );
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    const onProjectSelected = vi.fn();
+    const onProjectRefreshed = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ currentProjects }: { currentProjects: typeof projects }) =>
+        useProjectSelection({
+          nativeRuntime: true,
+          projects: currentProjects,
+          onError,
+          onMessage,
+          onProjectSelected,
+          onProjectRefreshed,
+          inspectProject,
+        }),
+      { initialProps: { currentProjects: projects } },
+    );
+
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(projects[0].path),
+    );
+    inspectProject.mockClear();
+
+    rerender({
+      currentProjects: projects.map((project, index) =>
+        index === 1 ? { ...project, description: "updated" } : project,
+      ),
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+    expect(result.current.selectedProject?.id).toBe(projects[0].id);
+    expect(inspectProject).not.toHaveBeenCalled();
+  });
 });
