@@ -59,12 +59,26 @@ const facetKeys: Record<string, TranslationKey> = {
   "microsoft-store": "facetMicrosoftStore",
 };
 
+function normalizeFacetKey(key: string): string {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+const normalizedFacetKeys: Record<string, TranslationKey> = Object.fromEntries(
+  Object.entries(facetKeys).map(([key, translationKey]) => [
+    normalizeFacetKey(key),
+    translationKey,
+  ]),
+) as Record<string, TranslationKey>;
+
 export function localizedFacetLabel(
   language: Language,
   key: string,
   fallback: string,
 ): string {
-  const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const translationKey = facetKeys[key] ?? facetKeys[normalizedKey];
+  const normalizedKey = normalizeFacetKey(key);
+  const translationKey =
+    facetKeys[key] ??
+    facetKeys[normalizedKey] ??
+    normalizedFacetKeys[normalizedKey];
   return translationKey ? translate(language, translationKey) : fallback;
 }
