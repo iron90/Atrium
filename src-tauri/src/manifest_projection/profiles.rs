@@ -17,19 +17,17 @@ pub(super) fn parse_build_profiles(
     let mut build_profiles = Vec::new();
 
     for manifest_profile in declarations {
-        let profile_source = format!("{MANIFEST_PATH}#build_profiles.{}", manifest_profile.id);
-        if manifest_profile.id.trim().is_empty() {
+        let id = manifest_profile.id.trim().to_string();
+        if id.is_empty() {
             issues.push("A build profile is missing its id.".to_string());
             continue;
         }
-        if !profile_ids.insert(manifest_profile.id.clone()) {
-            issues.push(format!(
-                "Duplicate build profile id: {}.",
-                manifest_profile.id
-            ));
+        if !profile_ids.insert(id.clone()) {
+            issues.push(format!("Duplicate build profile id: {id}."));
             continue;
         }
 
+        let profile_source = format!("{MANIFEST_PATH}#build_profiles.{id}");
         let mut profile_issues = Vec::new();
         let platform = resolve_facet(
             &manifest_profile.platform,
@@ -54,15 +52,14 @@ pub(super) fn parse_build_profiles(
             resolve_command_reference(bindings.run.as_deref(), commands, &mut profile_issues);
         let artifacts = parse_artifact_paths(
             manifest_profile.artifacts.unwrap_or_default(),
-            &manifest_profile.id,
+            &id,
             &mut profile_issues,
         );
 
-        let label = manifest_profile
-            .label
+        let label = normalize_optional_text(manifest_profile.label)
             .unwrap_or_else(|| format!("{} · {}", platform.label, channel.label));
         build_profiles.push(BuildProfile {
-            id: manifest_profile.id,
+            id,
             label,
             platform,
             channel,
@@ -70,8 +67,8 @@ pub(super) fn parse_build_profiles(
             check_command_id,
             build_command_id,
             source: profile_source,
-            region: manifest_profile.region,
-            payment: manifest_profile.payment,
+            region: normalize_optional_text(manifest_profile.region),
+            payment: normalize_optional_text(manifest_profile.payment),
             artifacts,
             issues: profile_issues,
         });
@@ -87,12 +84,19 @@ fn resolve_facet(
     section: &str,
     issues: &mut Vec<String>,
 ) -> Facet {
+    let id = id.trim();
     if let Some(facet) = facets.get(id) {
         return facet.clone();
     }
 
     issues.push(format!("{kind} {id} is not declared in [[{section}]]."));
     configured_facet(id, section, id)
+}
+
+fn normalize_optional_text(value: Option<String>) -> Option<String> {
+    value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
 }
 
 fn resolve_command_reference(

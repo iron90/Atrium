@@ -283,6 +283,51 @@ label = "Website"
     }
 
     #[test]
+    fn trims_profile_identifiers_before_binding() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-profile-whitespace-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 1
+
+[[platforms]]
+id = " macos "
+
+[[channels]]
+id = " local "
+
+[[build_profiles]]
+id = " macos-local "
+label = " macOS local "
+platform = " macos "
+channel = " local "
+region = " CN "
+payment = " direct "
+"#,
+        )
+        .expect("write manifest");
+
+        let result = scan_project_configuration(&root, &[]);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(result.build_profiles[0].id, "macos-local");
+        assert_eq!(result.build_profiles[0].label, "macOS local");
+        assert_eq!(result.build_profiles[0].platform.key, "macos");
+        assert_eq!(result.build_profiles[0].channel.key, "local");
+        assert_eq!(result.build_profiles[0].region.as_deref(), Some("CN"));
+        assert_eq!(result.build_profiles[0].payment.as_deref(), Some("direct"));
+
+        fs::remove_dir_all(root).expect("remove project");
+    }
+
+    #[test]
     fn invalid_manifest_does_not_leave_partial_declarations() {
         let root =
             std::env::temp_dir().join(format!("atrium-manifest-invalid-{}", std::process::id()));
