@@ -65,10 +65,10 @@ impl PathMetricsCache {
                 continue;
             };
             let child = self.measure(&entry.path());
-            total.bytes += child.bytes;
-            total.file_count += child.file_count;
+            let bytes_complete = add_metric(&mut total.bytes, child.bytes);
+            let files_complete = add_metric(&mut total.file_count, child.file_count);
             total.modified_at = max_modified(total.modified_at, child.modified_at);
-            total.is_complete &= child.is_complete;
+            total.is_complete &= child.is_complete && bytes_complete && files_complete;
         }
         (total, true)
     }
@@ -76,6 +76,15 @@ impl PathMetricsCache {
 
 pub(crate) fn measure_path(path: &Path) -> PathMetrics {
     PathMetricsCache::default().measure(path)
+}
+
+fn add_metric(total: &mut u64, value: u64) -> bool {
+    let Some(sum) = total.checked_add(value) else {
+        *total = u64::MAX;
+        return false;
+    };
+    *total = sum;
+    true
 }
 
 fn modified_millis(metadata: &fs::Metadata) -> Option<i64> {
@@ -97,7 +106,7 @@ fn max_modified(left: Option<i64>, right: Option<i64>) -> Option<i64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{measure_path, PathMetrics, PathMetricsCache};
+    use super::{add_metric, measure_path, PathMetrics, PathMetricsCache};
     use std::fs;
 
     #[test]
@@ -153,5 +162,23 @@ mod tests {
         assert_eq!(cached_path_count, 2, "only directories are cached");
 
         fs::remove_dir_all(root).expect("remove metrics fixture");
+    }
+
+    #[test]
+    fn saturates_overflowed_metrics_and_marks_the_total_incomplete() {
+        let mut total = PathMetrics {
+            bytes: u64::MAX - 1,
+            file_count: u64::MAX - 1,
+            is_complete: true,
+            ..PathMetrics::default()
+        };
+
+        let bytes_complete = add_metric(&mut total.bytes, 2);
+        let files_complete = add_metric(&mut total.file_count, 2);
+        total.is_complete &= bytes_complete && files_complete;
+
+        assert_eq!(total.bytes, u64::MAX);
+        assert_eq!(total.file_count, u64::MAX);
+        assert!(!total.is_complete);
     }
 }
