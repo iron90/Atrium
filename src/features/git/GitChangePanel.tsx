@@ -1,29 +1,22 @@
-import { useState } from "react";
-import { bridge } from "../../bridge";
-import type { GitChangeSummary, ProjectSnapshot } from "../../bridge";
+import type { ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { CommitList } from "./CommitList";
+import { useGitChangeSummary } from "./use-git-change-summary";
 
 export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
   const { t } = useI18n();
-  const revisionOptions = Array.from(
-    new Set([
-      "HEAD",
-      "HEAD~1",
-      ...(project?.repo?.references ?? []).map((reference) => reference.name),
-      ...(project?.repo?.recentCommits ?? []).map((commit) => commit.sha),
-    ]),
-  );
-  const [fromRevision, setFromRevision] = useState(
-    project?.repo?.recentCommits[1]?.sha ?? "HEAD~1",
-  );
-  const [toRevision, setToRevision] = useState("HEAD");
-  const [changeSummary, setChangeSummary] = useState<GitChangeSummary | null>(
-    null,
-  );
-  const [isLoadingChanges, setIsLoadingChanges] = useState(false);
-  const [changeError, setChangeError] = useState<string | null>(null);
+  const {
+    revisionOptions,
+    fromRevision,
+    setFromRevision,
+    toRevision,
+    setToRevision,
+    changeSummary,
+    isLoadingChanges,
+    changeError,
+    loadChanges,
+  } = useGitChangeSummary(project);
 
   return (
     <section className="git-change-panel">
@@ -65,23 +58,7 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
             <button
               type="button"
               disabled={isLoadingChanges || !fromRevision.trim()}
-              onClick={() => {
-                setIsLoadingChanges(true);
-                setChangeError(null);
-                void bridge
-                  .readGitChangeSummary(
-                    project.path,
-                    fromRevision.trim(),
-                    toRevision.trim() || undefined,
-                  )
-                  .then(setChangeSummary)
-                  .catch((error) =>
-                    setChangeError(
-                      error instanceof Error ? error.message : String(error),
-                    ),
-                  )
-                  .finally(() => setIsLoadingChanges(false));
-              }}
+              onClick={loadChanges}
             >
               {isLoadingChanges ? t("loadingChanges") : t("loadChanges")}
             </button>

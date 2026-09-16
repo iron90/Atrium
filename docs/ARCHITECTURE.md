@@ -78,6 +78,8 @@ React UI
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
   │  ├─ GitChangePanel       版本范围查询和变更摘要
+  │  ├─ use-git-change-summary 查询状态与异步加载
+  │  ├─ git-change-model      revision 候选与默认值纯函数
   │  └─ GitCommitTimeline    跨项目提交时间线
   ├─ features/runs          项目命令执行状态与事件订阅
   │  ├─ use-project-runner   命令触发、预览运行和活动运行选择
