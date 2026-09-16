@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -64,8 +65,32 @@ pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<Pro
         return Err("icon path resolves outside the project".to_string());
     }
 
-    let metadata =
-        fs::metadata(&resolved_path).map_err(|error| format!("cannot read metadata: {error}"))?;
+    let mime = if canonical {
+        canonical_icon_mime(&resolved_path)
+    } else {
+        icon_mime(&resolved_path)
+    }
+    .ok_or_else(|| {
+        if canonical {
+            "icon.v1 accepts only .png, .svg, and .webp files".to_string()
+        } else {
+            "file extension is not a supported image format".to_string()
+        }
+    })?;
+    let bytes = read_bounded_icon(&resolved_path)?;
+    validate_icon_bytes(mime, &bytes)?;
+
+    Ok(ProjectIcon {
+        data_url: format!("data:{mime};base64,{}", STANDARD.encode(bytes)),
+        source: relative_path(&canonical_root, &resolved_path),
+    })
+}
+
+fn read_bounded_icon(path: &Path) -> Result<Vec<u8>, String> {
+    let file = fs::File::open(path).map_err(|error| format!("cannot read file: {error}"))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("cannot read metadata: {error}"))?;
     if !metadata.is_file() {
         return Err("path is not a regular file".to_string());
     }
@@ -80,25 +105,20 @@ pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<Pro
         ));
     }
 
-    let mime = if canonical {
-        canonical_icon_mime(&resolved_path)
-    } else {
-        icon_mime(&resolved_path)
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(MAX_ICON_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("cannot read file: {error}"))?;
+    if bytes.is_empty() {
+        return Err("file is empty".to_string());
     }
-    .ok_or_else(|| {
-        if canonical {
-            "icon.v1 accepts only .png, .svg, and .webp files".to_string()
-        } else {
-            "file extension is not a supported image format".to_string()
-        }
-    })?;
-    let bytes = fs::read(&resolved_path).map_err(|error| format!("cannot read file: {error}"))?;
-    validate_icon_bytes(mime, &bytes)?;
-
-    Ok(ProjectIcon {
-        data_url: format!("data:{mime};base64,{}", STANDARD.encode(bytes)),
-        source: relative_path(&canonical_root, &resolved_path),
-    })
+    if bytes.len() as u64 > MAX_ICON_BYTES {
+        return Err(format!(
+            "file is larger than the {} byte limit",
+            MAX_ICON_BYTES
+        ));
+    }
+    Ok(bytes)
 }
 
 fn validate_icon_bytes(mime: &str, bytes: &[u8]) -> Result<(), String> {
@@ -242,7 +262,10 @@ pub(super) fn relative_path(root: &Path, path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{legacy_icon_candidates, load_icon, MAX_LEGACY_ICON_CANDIDATES};
+    use super::{
+        legacy_icon_candidates, load_icon, read_bounded_icon, MAX_ICON_BYTES,
+        MAX_LEGACY_ICON_CANDIDATES,
+    };
     use std::fs;
 
     #[test]
@@ -310,6 +333,24 @@ mod tests {
         let candidates = legacy_icon_candidates(&root);
 
         assert_eq!(candidates.len(), MAX_LEGACY_ICON_CANDIDATES);
+        fs::remove_dir_all(root).expect("remove root fixture");
+    }
+
+    #[test]
+    fn bounded_icon_read_rejects_a_file_that_exceeds_the_limit() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-icon-assets-read-limit-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create root fixture");
+        let icon = root.join("icon.png");
+        let file = fs::File::create(&icon).expect("create icon fixture");
+        file.set_len(MAX_ICON_BYTES + 1).expect("grow icon fixture");
+
+        let error = read_bounded_icon(&icon).expect_err("oversized icon should be rejected");
+
+        assert!(error.contains("limit"));
         fs::remove_dir_all(root).expect("remove root fixture");
     }
 }
