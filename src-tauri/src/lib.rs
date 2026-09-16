@@ -13,6 +13,7 @@ mod manifest_schema;
 mod model;
 mod os_open;
 mod project_metadata;
+mod project_path;
 mod project_scan;
 mod protocol;
 mod run_commands;

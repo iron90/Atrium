@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::os_open;
+use crate::project_path::canonical_project_root;
 use crate::scanner::scan_project;
 
 use super::inspection::safe_declared_path;
@@ -21,9 +22,7 @@ pub fn open_declared_artifact(
         return Err("Artifact path is not declared by this build profile".to_string());
     }
 
-    let root = project_path
-        .canonicalize()
-        .map_err(|error| format!("Cannot open project: {error}"))?;
+    let root = canonical_project_root(project_path)?;
     let target = safe_declared_path(&root, relative_path)?;
     let canonical_target = target
         .canonicalize()

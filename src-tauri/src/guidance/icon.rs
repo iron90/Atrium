@@ -5,14 +5,10 @@ use crate::conformance::{
     inspect_icon, IconInspection, ICON_SPEC, MANIFEST_PATH, MAX_ICON_BYTES, REPORT_PATH,
 };
 use crate::model::{IconConformanceReport, IconConformanceStatus};
+use crate::project_path::canonical_project_root;
 
 pub fn write_icon_conformance_report(project_path: &Path) -> Result<IconConformanceReport, String> {
-    let root = project_path
-        .canonicalize()
-        .map_err(|error| format!("Cannot open project: {error}"))?;
-    if !root.is_dir() {
-        return Err("Project path is not a directory".to_string());
-    }
+    let root = canonical_project_root(project_path)?;
 
     let inspection = inspect_icon(&root);
     let report_path = root.join(REPORT_PATH);

@@ -3,6 +3,7 @@ use std::path::Path;
 
 use crate::conformance::MANIFEST_PATH;
 use crate::model::{ProjectConfigurationReport, ProjectConfigurationStatus, ProjectSnapshot};
+use crate::project_path::canonical_project_root;
 
 pub const CONFIGURATION_REPORT_PATH: &str = ".atrium/reports/project-configuration.md";
 
@@ -10,12 +11,7 @@ pub fn write_project_configuration_report(
     project_path: &Path,
     project: &ProjectSnapshot,
 ) -> Result<ProjectConfigurationReport, String> {
-    let root = project_path
-        .canonicalize()
-        .map_err(|error| format!("Cannot open project: {error}"))?;
-    if !root.is_dir() {
-        return Err("Project path is not a directory".to_string());
-    }
+    let root = canonical_project_root(project_path)?;
     let report_path = root.join(CONFIGURATION_REPORT_PATH);
     let parent = report_path
         .parent()

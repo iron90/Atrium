@@ -124,6 +124,7 @@ Rust native core
   ├─ scanner                 对外暴露扫描器边界
   ├─ os_open                 跨平台路径与 URL 打开适配
   ├─ project_metadata        项目名称和描述读取
+  ├─ project_path            项目根路径解析与目录边界校验
   ├─ workspace_scan          工作区遍历和项目候选发现
   ├─ workspace_policy        确定性的排除目录与项目标记规则
   ├─ filesystem_metrics      文件/目录指标与符号链接安全策略

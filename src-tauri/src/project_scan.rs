@@ -7,6 +7,7 @@ use crate::git::read_git_snapshot;
 use crate::manifest::scan_project_configuration;
 use crate::model::ProjectSnapshot;
 use crate::project_metadata::{read_project_description, read_project_name};
+use crate::project_path::canonical_project_root;
 use crate::protocol::build_protocol_status;
 use crate::storage::inspect_project_storage;
 use crate::time::now_millis;
@@ -19,10 +20,7 @@ pub fn scan_project_with_storage(
     project_path: &Path,
     include_storage: bool,
 ) -> Option<ProjectSnapshot> {
-    let path = project_path.canonicalize().ok()?;
-    if !path.is_dir() {
-        return None;
-    }
+    let path = canonical_project_root(project_path).ok()?;
 
     let name = read_project_name(&path).unwrap_or_else(|| {
         path.file_name()
