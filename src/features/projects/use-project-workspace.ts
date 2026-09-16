@@ -2,11 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge/types";
-import {
-  emptySnapshot,
-  mergeWorkspaceSnapshots,
-  snapshotFingerprint,
-} from "./model";
+import { snapshotFingerprint } from "./model";
+import { scanWorkspaces } from "./workspace-scan";
 
 export type WorkspaceMessage =
   | { type: "projects"; count: number }
@@ -129,55 +126,6 @@ export function useProjectWorkspace({
     [onSnapshotApplied, selectProject],
   );
 
-  const scanAllWorkspaces = useCallback(
-    async (paths: string[]): Promise<WorkspaceSnapshot> => {
-      const normalized = Array.from(
-        new Set(paths.map((path) => path.trim()).filter(Boolean)),
-      );
-      if (!normalized.length) return emptySnapshot("");
-      const results = await Promise.allSettled(
-        normalized.map((path) => bridge.scanWorkspace(path, excludeNames)),
-      );
-      const snapshots = results
-        .filter(
-          (result): result is PromiseFulfilledResult<WorkspaceSnapshot> =>
-            result.status === "fulfilled",
-        )
-        .map((result) => result.value);
-      if (!snapshots.length) {
-        const failure = results.find(
-          (result): result is PromiseRejectedResult =>
-            result.status === "rejected",
-        );
-        throw failure?.reason ?? new Error("No workspace could be scanned");
-      }
-      const scan = mergeWorkspaceSnapshots(snapshots, normalized[0] ?? "");
-      const rejected = results
-        .map((result, index) =>
-          result.status === "rejected"
-            ? `Workspace ${normalized[index] ?? ""}: ${String(result.reason)}`
-            : null,
-        )
-        .filter((warning): warning is string => Boolean(warning));
-      const overlap = normalized.some((left, index) =>
-        normalized.some(
-          (right, rightIndex) =>
-            index !== rightIndex &&
-            (right.startsWith(`${left}/`) || left.startsWith(`${right}/`)),
-        ),
-      );
-      return {
-        ...scan,
-        warnings: [
-          ...scan.warnings,
-          ...rejected,
-          ...(overlap ? [translate(language, "workspaceOverlap")] : []),
-        ],
-      };
-    },
-    [excludeNames, language],
-  );
-
   useEffect(() => {
     if (!nativeRuntime) return undefined;
 
@@ -197,7 +145,11 @@ export function useProjectWorkspace({
           setRootPath(nextPaths[0] ?? nextRoot);
           setWorkspacePaths(nextPaths);
         }
-        return scanAllWorkspaces(nextPaths);
+        return scanWorkspaces({
+          paths: nextPaths,
+          excludeNames,
+          language,
+        });
       })
       .then((nextSnapshot) => {
         if (disposed) return;
@@ -225,7 +177,8 @@ export function useProjectWorkspace({
     onMessage,
     preferences.rootPath,
     preferences.workspaces,
-    scanAllWorkspaces,
+    excludeNames,
+    language,
   ]);
 
   useEffect(() => {
@@ -238,7 +191,11 @@ export function useProjectWorkspace({
       workspaceScanInFlight.current = true;
       onMessage({ type: "refreshingWorkspace" });
       try {
-        const nextSnapshot = await scanAllWorkspaces(workspacePaths);
+        const nextSnapshot = await scanWorkspaces({
+          paths: workspacePaths,
+          excludeNames,
+          language,
+        });
         if (disposed) return;
         const changed =
           workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
@@ -276,7 +233,8 @@ export function useProjectWorkspace({
     nativeRuntime,
     onError,
     onMessage,
-    scanAllWorkspaces,
+    excludeNames,
+    language,
     workspacePaths,
   ]);
 
@@ -347,7 +305,11 @@ export function useProjectWorkspace({
     onMessage({ type: "scanning" });
     workspaceScanInFlight.current = true;
     try {
-      const nextSnapshot = await scanAllWorkspaces(nextPaths);
+      const nextSnapshot = await scanWorkspaces({
+        paths: nextPaths,
+        excludeNames,
+        language,
+      });
       applyWorkspaceSnapshot(nextSnapshot);
       onMessage({ type: "projects", count: nextSnapshot.projects.length });
     } catch (scanError) {
@@ -361,10 +323,10 @@ export function useProjectWorkspace({
     }
   }, [
     applyWorkspaceSnapshot,
-    language,
+    excludeNames,
     onError,
     onMessage,
-    scanAllWorkspaces,
+    language,
     workspacePaths,
   ]);
 
