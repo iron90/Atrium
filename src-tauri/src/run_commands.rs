@@ -1,7 +1,7 @@
 use tauri::{AppHandle, State};
 
 use crate::command_boundary::run_blocking;
-use crate::history::{load_run_history, open_run_log};
+use crate::history::{load_run_history, open_run_log, with_history_lock};
 use crate::model::{CommandKind, RunFinished, RunStarted};
 use crate::runner::{start_project_command, stop_project_run};
 use crate::state::AppState;
@@ -32,11 +32,26 @@ pub fn stop_project_command(state: State<'_, AppState>, run_id: String) -> Resul
 }
 
 #[tauri::command]
-pub async fn list_run_history_command(app: AppHandle) -> Result<Vec<RunFinished>, String> {
-    run_blocking("Run history", move || load_run_history(&app)).await
+pub async fn list_run_history_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Vec<RunFinished>, String> {
+    let history_lock = state.inner().history_lock.clone();
+    run_blocking("Run history", move || {
+        with_history_lock(&history_lock, || load_run_history(&app))
+    })
+    .await
 }
 
 #[tauri::command]
-pub async fn open_run_log_command(app: AppHandle, run_id: String) -> Result<(), String> {
-    run_blocking("Open run log", move || open_run_log(&app, &run_id)).await
+pub async fn open_run_log_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    run_id: String,
+) -> Result<(), String> {
+    let history_lock = state.inner().history_lock.clone();
+    run_blocking("Open run log", move || {
+        with_history_lock(&history_lock, || open_run_log(&app, &run_id))
+    })
+    .await
 }

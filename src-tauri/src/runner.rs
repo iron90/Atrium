@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::process::Command;
 use tokio::sync::oneshot;
 
-use crate::history::append_run_history;
+use crate::history::{append_run_history, with_history_lock};
 use crate::model::{CommandKind, ProjectCommand, RunError, RunStarted};
 use crate::run_context::RunContext;
 use crate::run_supervisor::supervise_process;
@@ -61,12 +61,27 @@ pub async fn start_project_command(
                 "Run registry could not be cleaned up".to_string(),
             );
         }
-        if let Err(error) = append_run_history(&app_for_task, &finished) {
-            report_run_error(
+        let history_lock = state_for_task.history_lock.clone();
+        let history_app = app_for_task.clone();
+        let history_record = finished.clone();
+        let history_result = tauri::async_runtime::spawn_blocking(move || {
+            with_history_lock(&history_lock, || {
+                append_run_history(&history_app, &history_record)
+            })
+        })
+        .await;
+        match history_result {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => report_run_error(
                 &app_for_task,
                 &finished.run_id,
                 format!("Run completed but could not be persisted: {error}"),
-            );
+            ),
+            Err(error) => report_run_error(
+                &app_for_task,
+                &finished.run_id,
+                format!("Run completed but history task failed: {error}"),
+            ),
         }
         if let Err(error) = app_for_task.emit("run-finished", &finished) {
             eprintln!(

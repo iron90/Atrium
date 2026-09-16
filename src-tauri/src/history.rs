@@ -1,6 +1,7 @@
 use std::cmp::Reverse;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use tauri::{AppHandle, Manager};
 
@@ -21,10 +22,7 @@ pub fn load_run_history(app: &AppHandle) -> Result<Vec<RunFinished>, String> {
 
 pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(), String> {
     let mut history = load_run_history(app)?;
-    history.retain(|record| record.run_id != finished.run_id);
-    history.push(finished.clone());
-    history.sort_by_key(|record| Reverse(record.finished_at));
-    history.truncate(MAX_RUN_HISTORY);
+    history = merge_run_history(history, finished);
 
     let path = history_path(app)?;
     let parent = path
@@ -35,6 +33,24 @@ pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(),
     let raw = serde_json::to_string_pretty(&history)
         .map_err(|error| format!("Cannot serialize Atrium run history: {error}"))?;
     fs::write(&path, raw).map_err(|error| format!("Cannot write Atrium run history: {error}"))
+}
+
+pub fn with_history_lock<T, F>(lock: &Mutex<()>, task: F) -> Result<T, String>
+where
+    F: FnOnce() -> Result<T, String>,
+{
+    let _guard = lock
+        .lock()
+        .map_err(|_| "Atrium run history is unavailable".to_string())?;
+    task()
+}
+
+fn merge_run_history(mut history: Vec<RunFinished>, finished: &RunFinished) -> Vec<RunFinished> {
+    history.retain(|record| record.run_id != finished.run_id);
+    history.push(finished.clone());
+    history.sort_by_key(|record| Reverse(record.finished_at));
+    history.truncate(MAX_RUN_HISTORY);
+    history
 }
 
 pub fn open_run_log(app: &AppHandle, run_id: &str) -> Result<(), String> {
@@ -104,4 +120,65 @@ fn render_log(record: &RunFinished) -> String {
     output.push_str("\n--- stderr ---\n");
     output.push_str(&record.stderr);
     output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_run_history;
+    use crate::model::{RunFinished, RunStatus};
+
+    fn record(run_id: &str, finished_at: i64) -> RunFinished {
+        RunFinished {
+            run_id: run_id.to_string(),
+            project_id: "project".to_string(),
+            command_id: "command".to_string(),
+            profile_id: None,
+            profile_action: None,
+            project_path: "/project".to_string(),
+            platform: None,
+            channel: None,
+            git_branch: None,
+            git_commit: None,
+            worktree_clean: None,
+            display_command: "command".to_string(),
+            started_at: finished_at - 1,
+            finished_at,
+            duration_ms: 1,
+            status: RunStatus::Succeeded,
+            exit_code: Some(0),
+            stdout: String::new(),
+            stderr: String::new(),
+        }
+    }
+
+    #[test]
+    fn replaces_duplicate_records_and_orders_newest_first() {
+        let result = merge_run_history(
+            vec![record("old", 10), record("same", 20)],
+            &record("same", 30),
+        );
+
+        assert_eq!(
+            result
+                .iter()
+                .map(|record| record.run_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["same", "old"]
+        );
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].finished_at, 30);
+    }
+
+    #[test]
+    fn retains_only_the_newest_hundred_records() {
+        let history = (0..100)
+            .map(|index| record(&format!("run-{index}"), index))
+            .collect();
+
+        let result = merge_run_history(history, &record("new", 100));
+
+        assert_eq!(result.len(), 100);
+        assert_eq!(result[0].run_id, "new");
+        assert!(!result.iter().any(|record| record.run_id == "run-0"));
+    }
 }

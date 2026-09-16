@@ -10,4 +10,5 @@ pub struct RunControl {
 #[derive(Clone, Default)]
 pub struct AppState {
     pub runs: Arc<Mutex<HashMap<String, RunControl>>>,
+    pub history_lock: Arc<Mutex<()>>,
 }
