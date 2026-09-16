@@ -18,6 +18,7 @@ export interface GitSnapshot {
   branch: string | null;
   isClean: boolean;
   worktreeChanges: number;
+  worktreeStatusAvailable: boolean;
   remote: string | null;
   ahead: number | null;
   behind: number | null;

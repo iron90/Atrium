@@ -19,19 +19,21 @@ pub fn read_git_snapshot(project_path: &Path) -> Option<GitSnapshot> {
     let status = run_git(
         project_path,
         &["status", "--porcelain", "--untracked-files=all"],
-    )
-    .unwrap_or_default();
+    );
     let remote = run_git(project_path, &["remote", "get-url", "origin"])
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty());
     let recent_commits = read_commits(project_path);
     let references = read_references(project_path);
     let (ahead, behind) = read_tracking_counts(project_path);
+    let (is_clean, worktree_changes, worktree_status_available) =
+        worktree_status(status.as_deref());
 
     Some(GitSnapshot {
         branch,
-        is_clean: status.trim().is_empty(),
-        worktree_changes: count_worktree_changes(&status),
+        is_clean,
+        worktree_changes,
+        worktree_status_available,
         remote,
         ahead,
         behind,
@@ -115,9 +117,20 @@ fn count_worktree_changes(status: &str) -> u32 {
         .unwrap_or(u32::MAX)
 }
 
+fn worktree_status(status: Option<&str>) -> (bool, u32, bool) {
+    match status {
+        Some(status) => (
+            status.trim().is_empty(),
+            count_worktree_changes(status),
+            true,
+        ),
+        None => (false, 0, false),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{count_worktree_changes, read_tracking_counts};
+    use super::{count_worktree_changes, read_tracking_counts, worktree_status};
     use std::path::Path;
 
     #[test]
@@ -132,5 +145,11 @@ mod tests {
     fn counts_staged_unstaged_and_untracked_status_entries() {
         let status = " M src/App.tsx\nA  src/new.ts\n?? notes.txt\n";
         assert_eq!(count_worktree_changes(status), 3);
+    }
+
+    #[test]
+    fn does_not_treat_unavailable_worktree_status_as_clean() {
+        assert_eq!(worktree_status(None), (false, 0, false));
+        assert_eq!(worktree_status(Some("")), (true, 0, true));
     }
 }

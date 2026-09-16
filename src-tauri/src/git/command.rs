@@ -7,19 +7,42 @@ const MAX_GIT_STDOUT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_GIT_STDERR_BYTES: usize = 64 * 1024;
 
 pub(super) fn run_git(project_path: &Path, args: &[&str]) -> Option<String> {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(project_path)
-        .args(args)
-        .output()
-        .ok()?;
-    if !output.status.success() {
+    let output = run_git_process(project_path, args).ok()?;
+    if !output.status.success() || output.stdout.truncated || output.stderr.truncated {
         return None;
     }
-    String::from_utf8(output.stdout).ok()
+    String::from_utf8(output.stdout.bytes).ok()
 }
 
 pub(super) fn run_git_required(project_path: &Path, args: &[&str]) -> Result<String, String> {
+    let output = run_git_process(project_path, args)?;
+
+    if !output.status.success() {
+        if output.stderr.truncated {
+            return Err(format!(
+                "Git command failed; error output exceeded {MAX_GIT_STDERR_BYTES} bytes"
+            ));
+        }
+        return Err(String::from_utf8_lossy(&output.stderr.bytes)
+            .trim()
+            .to_string());
+    }
+    if output.stdout.truncated {
+        return Err(format!(
+            "Git output exceeded {MAX_GIT_STDOUT_BYTES} bytes; narrow the selected range"
+        ));
+    }
+    String::from_utf8(output.stdout.bytes)
+        .map_err(|error| format!("Git returned invalid UTF-8: {error}"))
+}
+
+struct GitProcessOutput {
+    status: std::process::ExitStatus,
+    stdout: LimitedOutput,
+    stderr: LimitedOutput,
+}
+
+fn run_git_process(project_path: &Path, args: &[&str]) -> Result<GitProcessOutput, String> {
     let mut child = Command::new("git")
         .arg("-C")
         .arg(project_path)
@@ -50,20 +73,11 @@ pub(super) fn run_git_required(project_path: &Path, args: &[&str]) -> Result<Str
         .map_err(|_| "Git error reader failed".to_string())?
         .map_err(|error| format!("Cannot read git errors: {error}"))?;
 
-    if !status.success() {
-        if stderr.truncated {
-            return Err(format!(
-                "Git command failed; error output exceeded {MAX_GIT_STDERR_BYTES} bytes"
-            ));
-        }
-        return Err(String::from_utf8_lossy(&stderr.bytes).trim().to_string());
-    }
-    if stdout.truncated {
-        return Err(format!(
-            "Git output exceeded {MAX_GIT_STDOUT_BYTES} bytes; narrow the selected range"
-        ));
-    }
-    String::from_utf8(stdout.bytes).map_err(|error| format!("Git returned invalid UTF-8: {error}"))
+    Ok(GitProcessOutput {
+        status,
+        stdout,
+        stderr,
+    })
 }
 
 struct LimitedOutput {

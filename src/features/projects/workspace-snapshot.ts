@@ -15,6 +15,7 @@ export const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
             branch: project.repo.branch,
             isClean: project.repo.isClean,
             worktreeChanges: project.repo.worktreeChanges,
+            worktreeStatusAvailable: project.repo.worktreeStatusAvailable,
             remote: project.repo.remote,
             ahead: project.repo.ahead,
             behind: project.repo.behind,

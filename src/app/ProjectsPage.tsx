@@ -57,8 +57,11 @@ export function ProjectsPage({
                 t("cleanRepositories"),
                 "count",
                 String(
-                  snapshot.projects.filter((project) => project.repo?.isClean)
-                    .length,
+                  snapshot.projects.filter(
+                    (project) =>
+                      project.repo?.worktreeStatusAvailable &&
+                      project.repo.isClean,
+                  ).length,
                 ),
               )}
             </span>

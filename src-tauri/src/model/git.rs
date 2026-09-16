@@ -6,6 +6,7 @@ pub struct GitSnapshot {
     pub branch: Option<String>,
     pub is_clean: bool,
     pub worktree_changes: u32,
+    pub worktree_status_available: bool,
     pub remote: Option<String>,
     pub ahead: Option<u32>,
     pub behind: Option<u32>,

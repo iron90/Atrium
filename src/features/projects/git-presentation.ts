@@ -7,6 +7,9 @@ export const statusLabel = (
   language: Language,
 ): string => {
   if (!project.repo) return translate(language, "gitNotFound");
+  if (!project.repo.worktreeStatusAvailable) {
+    return translate(language, "gitStatusUnavailable");
+  }
   if (project.repo.isClean) return translate(language, "clean");
   return fill(
     translate(language, "uncommittedChanges"),
@@ -17,6 +20,7 @@ export const statusLabel = (
 
 export const statusClass = (project: ProjectSnapshot): string => {
   if (!project.repo) return "status-muted";
+  if (!project.repo.worktreeStatusAvailable) return "status-warning";
   return project.repo.isClean ? "status-good" : "status-warning";
 };
 
