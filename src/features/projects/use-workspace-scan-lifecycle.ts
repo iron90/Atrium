@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { WorkspaceMessage } from "../../shared/activity";
+import { errorMessage } from "../../shared/errors";
 import type { WorkspaceSnapshot } from "../../bridge/types";
 import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
@@ -102,9 +103,7 @@ export function useWorkspaceScanLifecycle({
       })
       .catch((scanError) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return;
-        onError(
-          scanError instanceof Error ? scanError.message : String(scanError),
-        );
+        onError(errorMessage(scanError));
         onMessage({ type: "localized", key: "scanFailed" });
       })
       .finally(() => {
@@ -215,9 +214,7 @@ export function useWorkspaceScanLifecycle({
       onMessage({ type: "projects", count: nextSnapshot.projects.length });
     } catch (scanError) {
       if (scanRequests.isCurrent(requestId)) {
-        onError(
-          scanError instanceof Error ? scanError.message : String(scanError),
-        );
+        onError(errorMessage(scanError));
         onMessage({ type: "localized", key: "scanFailed" });
       }
     } finally {

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { bridge } from "../../bridge";
 import type { GitChangeSummary, ProjectSnapshot } from "../../bridge";
+import { errorMessage } from "../../shared/errors";
 import { defaultFromRevision, revisionOptions } from "./git-change-model";
 
 export interface GitChangeSummaryState {
@@ -39,9 +40,7 @@ export function useGitChangeSummary(
         toRevision.trim() || undefined,
       )
       .then(setChangeSummary)
-      .catch((error) =>
-        setChangeError(error instanceof Error ? error.message : String(error)),
-      )
+      .catch((error) => setChangeError(errorMessage(error)))
       .finally(() => setIsLoadingChanges(false));
   }, [fromRevision, project, toRevision]);
 

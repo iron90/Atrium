@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
+import { errorMessage } from "../../shared/errors";
 
 export interface ProjectDetailLifecycleState {
   inspectorProject?: ProjectSnapshot;
@@ -28,9 +29,6 @@ export interface UseProjectDetailLifecycleOptions {
   ) => void;
   inspectProject?: (projectPath: string) => Promise<ProjectSnapshot>;
 }
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export function useProjectDetailLifecycle({
   nativeRuntime,

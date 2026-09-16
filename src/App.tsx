@@ -27,6 +27,7 @@ import type {
   RunMessage,
   WorkspaceMessage,
 } from "./shared/activity";
+import { errorMessage } from "./shared/errors";
 import {
   persistLocalPreferences,
   readLocalPreferences,
@@ -211,9 +212,7 @@ export default function App() {
       try {
         await openProjectAction(action, project, linkId);
       } catch (openError) {
-        setError(
-          openError instanceof Error ? openError.message : String(openError),
-        );
+        setError(errorMessage(openError));
       }
     },
     [],
@@ -224,9 +223,7 @@ export default function App() {
       void bridge
         .openArtifact(projectPath, profileId, relativePath)
         .catch((openError) => {
-          setError(
-            openError instanceof Error ? openError.message : String(openError),
-          );
+          setError(errorMessage(openError));
         });
     },
     [],

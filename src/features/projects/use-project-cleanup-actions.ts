@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot, ProjectStorage } from "../../bridge";
 import { translate, type Language } from "../../i18n";
+import { errorMessage } from "../../shared/errors";
 
 export interface CleanupFeedback {
   removedBytes: number;
@@ -35,9 +36,6 @@ export const cleanupPathsForProject = (
   selectedPaths.length
     ? selectedPaths
     : (storage?.entries.map((entry) => entry.relativePath) ?? []);
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export function useProjectCleanupActions({
   language,

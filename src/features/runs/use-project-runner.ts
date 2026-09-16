@@ -3,6 +3,7 @@ import { bridge } from "../../bridge";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
 import type { RunMessage } from "../../shared/activity";
+import { errorMessage } from "../../shared/errors";
 import type {
   ProfileAction,
   ProjectCommand,
@@ -115,9 +116,7 @@ export function useProjectRunner({
           }, 700);
         }
       } catch (runError) {
-        onError(
-          runError instanceof Error ? runError.message : String(runError),
-        );
+        onError(errorMessage(runError));
         onMessage({ type: "localized", key: "commandStartFailed" });
       }
     },
@@ -140,9 +139,7 @@ export function useProjectRunner({
       completeRun(activeRun.runId);
       onMessage({ type: "cancelled" });
     } catch (stopError) {
-      onError(
-        stopError instanceof Error ? stopError.message : String(stopError),
-      );
+      onError(errorMessage(stopError));
     }
   }, [activeRun, completeRun, onError, onMessage]);
 

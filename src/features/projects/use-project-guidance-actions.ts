@@ -4,6 +4,7 @@ import type { ProjectSnapshot } from "../../bridge";
 import { createConfigurationAgentPrompt } from "./guidance-prompt";
 import { translate, type Language } from "../../i18n";
 import { fill } from "../../shared/format";
+import { errorMessage } from "../../shared/errors";
 
 export interface ProjectGuidanceActions {
   guidanceMessage: string | null;
@@ -19,9 +20,6 @@ export interface UseProjectGuidanceActionsOptions {
   language: Language;
   onError: (message: string | null) => void;
 }
-
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 export function useProjectGuidanceActions({
   language,
