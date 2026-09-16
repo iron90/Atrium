@@ -108,9 +108,8 @@
 - 修改 manifest 或 Git 工作区后，下一次轻量刷新能反映变化。
 - 自动刷新不递归计算所有项目磁盘占用，也不阻塞列表交互。
 
-本批次验证结果：Rust 单元测试 14 项、前端测试 5 项、TypeScript 类型检查、ESLint、
-Rust 格式检查和 Tauri macOS 应用构建均通过。Windows/Linux 的构建未在当前 macOS
-主机上实测。
+本批次历史验证结果：Rust 单元测试 14 项、前端测试 5 项、TypeScript 类型检查、ESLint、
+Rust 格式检查和 Tauri macOS 应用构建均通过。当前质量门禁还会持续复验这些边界。
 
 ## 批次二：执行与结果闭环
 
@@ -138,9 +137,9 @@ SQLite 仍作为后续多工作区和更大规模历史数据的迁移方向。
 验收：未声明产物时不显示框架默认目录；声明路径不存在时只显示“尚未生成”，不
 把它当成构建失败，也不执行任何清理。
 
-本批次验证结果：Rust 单元测试 15 项、前端测试 5 项、TypeScript 类型检查、ESLint、
-Prettier、Rust 格式检查和 Vite 构建均通过。Tauri 原生应用打包会在本批次末尾再次
-验证；Windows/Linux 仍未在当前 macOS 主机上实测。
+本批次历史验证结果：Rust 单元测试 15 项、前端测试 5 项、TypeScript 类型检查、ESLint、
+Prettier、Rust 格式检查和 Vite 构建均通过。Tauri 原生应用打包和 Windows/Linux
+真机构建仍未在当前 macOS 主机上实测。
 
 ## 批次三：跨项目管理效率
 
@@ -203,6 +202,14 @@ shell 字符串拼接，项目声明优先，空声明回退到 Atrium 偏好或
 - 修改 Rust DTO、manifest 或桥接接口时同步更新 TypeScript 类型、文档和测试。
 - 先保留现有用户数据和项目文件，任何删除操作都必须由用户明确触发。
 - macOS 实际验证；Windows/Linux 未实测时明确标注验证边界。
+
+## 工程质量门禁（2026-09-16）
+
+状态：已实现。`npm run quality` 统一执行前端格式、类型、Lint、测试、构建，以及
+Rust 格式、测试和严格 Clippy。`rust:check` 提供单独的 Rust 编译检查。GitHub Actions
+在每次 push 和 pull request 上执行前端门禁，并在 Ubuntu、macOS、Windows 三个平台
+执行 Rust 格式、测试和 Clippy 检查。该门禁验证跨平台编译边界，但不宣称当前主机已
+完成三平台桌面打包。
 
 批次三/四未完成事项：SQLite 迁移、Git/产物变化历史、更新日志生成、Website Server
 同步以及 Windows/Linux 真机打包验证仍留在后续批次。项目创建和脚手架由项目自身的常规

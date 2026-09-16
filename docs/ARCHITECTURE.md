@@ -44,27 +44,39 @@ Tauri 2 + React/TypeScript + Rust 已作为 Atrium 的实现方案确定。候�
 
 ```text
 React UI
-  ├─ features/projects      项目总览、详情、平台/渠道事实和命令执行反馈
+  ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
+  ├─ features/projects      项目列表、详情、平台/渠道事实和项目交互
+  ├─ features/git           Git 历史页和提交列表
+  ├─ features/runs          项目命令执行状态与事件订阅
   ├─ features/settings      主题、布局、工作区偏好
-  ├─ shared/design-system   颜色、密度、图标、通用控件
-  └─ bridge                  类型化 Tauri invoke/event 适配
+  ├─ shared                 格式化等无领域依赖的纯函数
+  └─ bridge                 类型化 Tauri invoke/event 适配
        │
        ▼
 Tauri command boundary
        │
        ▼
 Rust native core
-  ├─ scanner                 工作区和项目候选发现
-  ├─ manifest                结构化平台、渠道和构建配置解析
-  ├─ detectors               项目原生命令检测器
+  ├─ commands                窄 Tauri command 适配器和线程边界
+  ├─ model                   前后端共享的序列化领域 DTO
+  ├─ scanner                 工作区/项目发现和确定性原生命令检测
+  ├─ manifest_schema         manifest DTO 与 TOML 解析
+  ├─ manifest                协议能力评估和引导报告编排
+  ├─ conformance              图标协议检查和报告写入
   ├─ git                     Git CLI 只读适配器
-  ├─ runner                  参数化进程执行和运行记录
-  ├─ persistence             SQLite / migration（下一垂直切片）
-  └─ platform                Windows/macOS/Linux 差异
+  ├─ artifacts/storage       声明产物检查、存储统计和清理
+  ├─ runner/state             参数化进程执行和并发运行控制
+  └─ history                  应用数据目录中的运行记录和日志
 ```
 
 UI 不直接读取文件系统，也不直接拼接 shell 命令。Rust 端不保存项目业务
 阶段，不对项目内容做重写。
+
+前端依赖方向是 `App → feature → bridge/shared`；项目特性之间通过类型化 props
+和回调协作，不通过共享的页面级可变状态互相调用。Rust 的 `commands` 只负责
+Tauri 输入校验、阻塞任务调度和错误边界，具体领域规则留在对应模块中。当前
+仍有少量跨特性编排保留在 `App.tsx`，它是组合根，不承载扫描、执行或详情视图的
+实现细节。
 
 ## 4. 核心领域模型
 
@@ -180,13 +192,13 @@ RunRecord
   status: running | succeeded | failed | cancelled
   exitCode?
   stdout/stderr?
+```
 
-The first durable implementation stores at most 100 finished records as JSON in
+The current durable implementation stores at most 100 finished records as JSON in
 Atrium's application data directory. This is intentionally separate from the
 project repository and can later migrate to SQLite without changing the
 project-side protocol. Opening a log materializes a text file in the same
 application data area; a project-scoped viewing surface remains a follow-up.
-```
 
 当前不提供脱离项目上下文的独立运行记录页面。运行记录仍由执行核心持久化，记录中
 始终包含项目、命令、平台/渠道和 Git 上下文；后续应在项目详情中按项目重新设计查看
@@ -219,7 +231,7 @@ projectMeta[path]: favorite | hidden | order
 用户在 Settings 维护多个工作区
   → 并行枚举每个工作区一级目录
   → 判断 Git/manifest/project markers
-  → 为每个候选项目运行独立 detectors
+  → 由 scanner 中的确定性适配器发现项目命令
   → 读取 Git 只读事实
   → 生成带 evidence 和 icon 的列表 snapshot
   → 先更新项目选中态
