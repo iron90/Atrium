@@ -32,9 +32,12 @@ pub fn scan_workspace_with_exclusions(
                 continue;
             }
         };
-        if entry.path().is_dir()
-            && !is_ignored_name(&entry.file_name().to_string_lossy(), excluded_names)
-        {
+        let entry_name = entry.file_name();
+        if is_ignored_name(&entry_name.to_string_lossy(), excluded_names) {
+            continue;
+        }
+        let entry_path = entry.path();
+        if is_directory_or_warn(&entry_path, &mut warnings) {
             entries.push(entry);
         }
     }
@@ -58,4 +61,37 @@ pub fn scan_workspace_with_exclusions(
         projects,
         warnings,
     })
+}
+
+fn is_directory_or_warn(path: &Path, warnings: &mut Vec<String>) -> bool {
+    match fs::metadata(path) {
+        Ok(metadata) => metadata.is_dir(),
+        Err(error) => {
+            warnings.push(format!(
+                "Skipped unreadable workspace entry {}: {error}",
+                path.display()
+            ));
+            false
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_directory_or_warn;
+    use std::path::Path;
+
+    #[test]
+    fn reports_entries_that_cannot_be_stat() {
+        let path = std::env::temp_dir().join(format!(
+            "atrium-workspace-entry-that-does-not-exist-{}",
+            std::process::id()
+        ));
+        let mut warnings = Vec::new();
+
+        assert!(!is_directory_or_warn(&path, &mut warnings));
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].starts_with("Skipped unreadable workspace entry "));
+        assert!(warnings[0].contains(Path::new(&path).to_string_lossy().as_ref()));
+    }
 }
