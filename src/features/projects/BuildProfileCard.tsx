@@ -110,7 +110,7 @@ export function BuildProfileCard({
                     <strong>{relativePath}</strong>
                     <small>
                       {artifact
-                        ? `${artifactKindLabel(artifact, t)} · ${formatBytes(artifact.bytes)} · ${fill(t("artifactFiles"), "count", String(artifact.fileCount))}`
+                        ? `${artifactKindLabel(artifact, t)} · ${formatBytes(artifact.bytes)} · ${fill(t("artifactFiles"), "count", String(artifact.fileCount))}${artifact.isComplete ? "" : ` · ${t("artifactMetricsIncomplete")}`}`
                         : t("artifactUnavailable")}
                       {artifact?.modifiedAt
                         ? ` · ${fill(t("artifactUpdated"), "time", formatTime(artifact.modifiedAt, language))}`

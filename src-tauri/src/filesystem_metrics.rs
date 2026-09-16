@@ -6,6 +6,7 @@ pub(crate) struct PathMetrics {
     pub bytes: u64,
     pub file_count: u64,
     pub modified_at: Option<i64>,
+    pub is_complete: bool,
 }
 
 pub(crate) fn measure_path(path: &Path) -> PathMetrics {
@@ -20,6 +21,7 @@ pub(crate) fn measure_path(path: &Path) -> PathMetrics {
             bytes: metadata.len(),
             file_count: 1,
             modified_at: modified_millis(&metadata),
+            is_complete: true,
         };
     }
     if !metadata.is_dir() {
@@ -28,16 +30,23 @@ pub(crate) fn measure_path(path: &Path) -> PathMetrics {
 
     let mut total = PathMetrics {
         modified_at: modified_millis(&metadata),
+        is_complete: true,
         ..PathMetrics::default()
     };
     let Ok(entries) = fs::read_dir(path) else {
+        total.is_complete = false;
         return total;
     };
-    for entry in entries.flatten() {
+    for entry in entries {
+        let Ok(entry) = entry else {
+            total.is_complete = false;
+            continue;
+        };
         let child = measure_path(&entry.path());
         total.bytes += child.bytes;
         total.file_count += child.file_count;
         total.modified_at = max_modified(total.modified_at, child.modified_at);
+        total.is_complete &= child.is_complete;
     }
     total
 }
@@ -78,8 +87,20 @@ mod tests {
             "directories do not count as files"
         );
         assert_eq!(measure_path(&root).bytes, 7);
+        assert!(measure_path(&root).is_complete);
         assert_ne!(measure_path(&root), PathMetrics::default());
 
         fs::remove_dir_all(root).expect("remove metrics fixture");
+    }
+
+    #[test]
+    fn marks_missing_paths_as_incomplete() {
+        let path = std::env::temp_dir().join(format!(
+            "atrium-filesystem-metrics-missing-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&path);
+
+        assert!(!measure_path(&path).is_complete);
     }
 }

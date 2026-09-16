@@ -41,6 +41,11 @@ export function StoragePanel({
           <span>{t("cleanableStorage")}</span>
         </div>
       </div>
+      {!storage.isComplete ? (
+        <p className="storage-warning" role="status">
+          {t("storageScanIncomplete")}
+        </p>
+      ) : null}
 
       {storage.entries.length ? (
         <>
@@ -67,6 +72,9 @@ export function StoragePanel({
                   <span>
                     {storageKindLabel(entry, t)} ·{" "}
                     {fill(t("storageFiles"), "count", String(entry.fileCount))}
+                    {!entry.isComplete
+                      ? ` · ${t("storageEntryIncomplete")}`
+                      : ""}
                   </span>
                 </div>
                 <em>{formatBytes(entry.bytes)}</em>

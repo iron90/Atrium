@@ -33,7 +33,9 @@ mod tests {
         let storage = inspect_project_storage(&root, &cleanup);
         assert_eq!(storage.total_bytes, 14);
         assert_eq!(storage.cleanable_bytes, 8);
+        assert!(storage.is_complete);
         assert_eq!(storage.entries.len(), 2);
+        assert!(storage.entries.iter().all(|entry| entry.is_complete));
 
         fs::remove_dir_all(root).expect("remove storage fixture");
     }

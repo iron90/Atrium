@@ -12,6 +12,7 @@ pub struct CleanupDeclaration {
 pub struct ProjectStorage {
     pub total_bytes: u64,
     pub cleanable_bytes: u64,
+    pub is_complete: bool,
     pub entries: Vec<StorageEntry>,
 }
 
@@ -22,6 +23,7 @@ pub struct StorageEntry {
     pub kind: StorageEntryKind,
     pub bytes: u64,
     pub file_count: u64,
+    pub is_complete: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +36,7 @@ pub struct BuildArtifact {
     pub bytes: u64,
     pub file_count: u64,
     pub modified_at: Option<i64>,
+    pub is_complete: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -46,7 +46,9 @@ mod tests {
         assert_eq!(artifacts.len(), 2);
         assert!(matches!(artifacts[0].kind, BuildArtifactKind::Directory));
         assert_eq!(artifacts[0].bytes, 8);
+        assert!(artifacts[0].is_complete);
         assert!(matches!(artifacts[1].kind, BuildArtifactKind::Missing));
+        assert!(artifacts[1].is_complete);
 
         fs::remove_dir_all(root).expect("remove artifact fixture");
     }

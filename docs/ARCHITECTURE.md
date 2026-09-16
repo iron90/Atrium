@@ -197,8 +197,8 @@ ProjectSnapshot
   configuration: ProjectConfiguration
   commands: ProjectCommand[]
   cleanup: CleanupDeclaration
-  storage: ProjectStorage?       # loaded by detail inspection
-  artifacts: BuildArtifact[]?    # loaded by detail inspection
+  storage: ProjectStorage?       # loaded by detail inspection; includes isComplete
+  artifacts: BuildArtifact[]?    # loaded by detail inspection; metrics include isComplete
   scannedAt: timestamp
 ```
 
@@ -365,11 +365,14 @@ Atrium 协议是项目上下文的上游接入门槛。只有 icon.v1 声明处�
 项目存储统计和清理同样遵循项目声明：`[cleanup]` 中的 `cache` 与 `build`
 数组由项目开发 Agent 根据真实模板补齐。Rust 核心只统计项目目录中的文件大小，
 并在详情页异步展示；清理命令只接受 manifest 中声明、位于项目目录内且不是符号链接的
-目录。工作区总览不递归计算这些目录，避免扫描大仓库时阻塞项目列表。
+目录。统计结果同时带有完整性标记：遇到无法读取的目录项时，Atrium 展示已读取的部分
+数值并明确提示，不把部分统计伪装成精确总量。工作区总览不递归计算这些目录，避免扫描
+大仓库时阻塞项目列表。
 
 构建产物统计只在详情检查中执行，并且只读取当前 manifest 的
 `build_profiles[].artifacts`。声明可以指向文件或目录；不存在的声明显示为缺失，
-不会被解释为构建失败。目录大小和最近修改时间只统计真实文件，不跟随符号链接。
+不会被解释为构建失败。目录大小和最近修改时间只统计真实文件，不跟随符号链接；目录
+递归无法完整读取时，产物指标带有 `isComplete = false`。
 
 图标检测优先使用项目 manifest 和 Tauri/Unity 常见位置，再在有限目录深度内
 查找 `icon` / `logo` 文件；仅读取小于 512 KB 的 png、svg、jpeg、webp、ico

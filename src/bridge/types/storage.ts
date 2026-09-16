@@ -5,6 +5,7 @@ export interface StorageEntry {
   kind: StorageEntryKind;
   bytes: number;
   fileCount: number;
+  isComplete: boolean;
 }
 
 export type BuildArtifactKind = "file" | "directory" | "missing" | "invalid";
@@ -17,11 +18,13 @@ export interface BuildArtifact {
   bytes: number;
   fileCount: number;
   modifiedAt: number | null;
+  isComplete: boolean;
 }
 
 export interface ProjectStorage {
   totalBytes: number;
   cleanableBytes: number;
+  isComplete: boolean;
   entries: StorageEntry[];
 }
 

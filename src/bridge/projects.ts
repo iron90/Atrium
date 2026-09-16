@@ -58,6 +58,7 @@ export const cleanProjectArtifacts = async (
       storage: {
         totalBytes: 0,
         cleanableBytes: 0,
+        isComplete: true,
         entries: [],
       },
     };

@@ -5,18 +5,21 @@ import { cleanupPathsForProject } from "./use-project-inspector-actions";
 const storage: ProjectStorage = {
   totalBytes: 120,
   cleanableBytes: 100,
+  isComplete: true,
   entries: [
     {
       relativePath: "target",
       kind: "build",
       bytes: 80,
       fileCount: 4,
+      isComplete: true,
     },
     {
       relativePath: "dist",
       kind: "build",
       bytes: 20,
       fileCount: 2,
+      isComplete: true,
     },
   ],
 };

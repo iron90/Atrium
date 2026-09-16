@@ -17,6 +17,7 @@ pub fn inspect_project_storage(
     ProjectStorage {
         total_bytes: total.bytes,
         cleanable_bytes,
+        is_complete: total.is_complete,
         entries,
     }
 }
@@ -58,6 +59,7 @@ pub(super) fn discover_cleanable_entries(
             kind,
             bytes: count.bytes,
             file_count: count.file_count,
+            is_complete: count.is_complete,
         });
     }
 

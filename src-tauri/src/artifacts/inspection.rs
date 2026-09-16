@@ -39,6 +39,7 @@ fn inspect_artifact(
             bytes: 0,
             file_count: 0,
             modified_at: None,
+            is_complete: true,
         };
     };
     if metadata.file_type().is_symlink() {
@@ -53,6 +54,11 @@ fn inspect_artifact(
         (BuildArtifactKind::Invalid, Default::default())
     };
 
+    let is_complete = match &kind {
+        BuildArtifactKind::File | BuildArtifactKind::Directory => metrics.is_complete,
+        BuildArtifactKind::Missing | BuildArtifactKind::Invalid => true,
+    };
+
     BuildArtifact {
         profile_id: profile.id.clone(),
         profile_label: profile.label.clone(),
@@ -61,6 +67,7 @@ fn inspect_artifact(
         bytes: metrics.bytes,
         file_count: metrics.file_count,
         modified_at: metrics.modified_at,
+        is_complete,
     }
 }
 
@@ -73,6 +80,7 @@ fn invalid_artifact(profile: &BuildProfile, relative_path: &str) -> BuildArtifac
         bytes: 0,
         file_count: 0,
         modified_at: None,
+        is_complete: true,
     }
 }
 
