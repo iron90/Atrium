@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -22,7 +23,7 @@ pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(),
     let mut history = load_run_history(app)?;
     history.retain(|record| record.run_id != finished.run_id);
     history.push(finished.clone());
-    history.sort_by(|left, right| right.finished_at.cmp(&left.finished_at));
+    history.sort_by_key(|record| Reverse(record.finished_at));
     history.truncate(MAX_RUN_HISTORY);
 
     let path = history_path(app)?;

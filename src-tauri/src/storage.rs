@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -129,7 +130,7 @@ fn discover_cleanable_entries(
         });
     }
 
-    entries.sort_by(|left, right| right.bytes.cmp(&left.bytes));
+    entries.sort_by_key(|entry| Reverse(entry.bytes));
     entries
 }
 

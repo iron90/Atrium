@@ -199,7 +199,7 @@ pub fn build_protocol_status(
     inspection: &ProjectConfigurationInspection,
     icon: &IconConformance,
 ) -> ProtocolStatus {
-    let manifest_status = inspection.manifest_status.clone();
+    let manifest_status = inspection.manifest_status;
     let manifest_issues = inspection.configuration.issues.clone();
     let manifest_is_valid = manifest_status == ProjectConfigurationStatus::Configured;
 
@@ -406,7 +406,7 @@ pub fn write_project_configuration_report(
 
     Ok(ProjectConfigurationReport {
         path: CONFIGURATION_REPORT_PATH.to_string(),
-        status: project.configuration.status.clone(),
+        status: project.configuration.status,
     })
 }
 
