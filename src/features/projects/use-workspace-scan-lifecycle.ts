@@ -26,6 +26,8 @@ export interface UseWorkspaceScanLifecycleOptions {
   onMessage: (message: WorkspaceMessage) => void;
   onApplySnapshot: (snapshot: WorkspaceSnapshot) => void;
   onSnapshotTimestamp: (scannedAt: number) => void;
+  defaultWorkspacePath?: () => Promise<string>;
+  scanWorkspacesFn?: typeof scanWorkspaces;
 }
 
 export interface UseWorkspaceScanLifecycleResult {
@@ -49,12 +51,19 @@ export function useWorkspaceScanLifecycle({
   onMessage,
   onApplySnapshot,
   onSnapshotTimestamp,
+  defaultWorkspacePath = bridge.defaultWorkspacePath,
+  scanWorkspacesFn = scanWorkspaces,
 }: UseWorkspaceScanLifecycleOptions): UseWorkspaceScanLifecycleResult {
   const [rootPath, setRootPath] = useState(initialRootPath);
   const [workspacePaths, setWorkspacePaths] = useState(initialWorkspacePaths);
   const [isScanning, setIsScanning] = useState(false);
   const workspaceFingerprintRef = useRef(snapshotFingerprint(initialSnapshot));
   const [scanRequests] = useState(() => new LatestRequestGate());
+  const languageRef = useRef(language);
+
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
   useEffect(() => {
     workspaceFingerprintRef.current = snapshotFingerprint(snapshot);
@@ -73,8 +82,7 @@ export function useWorkspaceScanLifecycle({
 
     let disposed = false;
     const requestId = scanRequests.begin();
-    void bridge
-      .defaultWorkspacePath()
+    void defaultWorkspacePath()
       .then((defaultPath) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return null;
         const nextRoot = preferences.rootPath?.trim() || defaultPath;
@@ -88,10 +96,10 @@ export function useWorkspaceScanLifecycle({
           setRootPath(nextPaths[0] ?? nextRoot);
           setWorkspacePaths(nextPaths);
         }
-        return scanWorkspaces({
+        return scanWorkspacesFn({
           paths: nextPaths,
           excludeNames,
-          language,
+          language: languageRef.current,
         });
       })
       .then((nextSnapshot) => {
@@ -116,12 +124,13 @@ export function useWorkspaceScanLifecycle({
   }, [
     applyScannedSnapshot,
     excludeNames,
-    language,
+    defaultWorkspacePath,
     nativeRuntime,
     onError,
     onMessage,
     preferences.rootPath,
     preferences.workspaces,
+    scanWorkspacesFn,
     scanRequests,
   ]);
 
@@ -135,10 +144,10 @@ export function useWorkspaceScanLifecycle({
       const requestId = scanRequests.begin();
       onMessage({ type: "refreshingWorkspace" });
       try {
-        const nextSnapshot = await scanWorkspaces({
+        const nextSnapshot = await scanWorkspacesFn({
           paths: workspacePaths,
           excludeNames,
-          language,
+          language: languageRef.current,
         });
         if (disposed || !scanRequests.isCurrent(requestId)) return;
         const changed =
@@ -174,11 +183,11 @@ export function useWorkspaceScanLifecycle({
   }, [
     applyScannedSnapshot,
     excludeNames,
-    language,
     nativeRuntime,
     onError,
     onMessage,
     onSnapshotTimestamp,
+    scanWorkspacesFn,
     scanRequests,
     workspacePaths,
   ]);
@@ -204,7 +213,7 @@ export function useWorkspaceScanLifecycle({
     onMessage({ type: "scanning" });
     const requestId = scanRequests.begin();
     try {
-      const nextSnapshot = await scanWorkspaces({
+      const nextSnapshot = await scanWorkspacesFn({
         paths: nextPaths,
         excludeNames,
         language,
@@ -227,6 +236,7 @@ export function useWorkspaceScanLifecycle({
     onError,
     onMessage,
     workspacePaths,
+    scanWorkspacesFn,
     scanRequests,
   ]);
 
