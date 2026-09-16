@@ -1,13 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fakeRun } from "./fake-bridge";
 import { isTauriRuntime } from "./runtime";
-import type { RunFinished, RunStarted } from "./types";
+import type { ProfileAction, RunFinished, RunStarted } from "./types";
 
 export const runProjectCommand = async (
   projectPath: string,
   commandId: string,
   profileId?: string,
-  profileAction?: "run" | "check" | "build",
+  profileAction?: ProfileAction,
 ): Promise<RunStarted> => {
   if (!isTauriRuntime()) {
     return fakeRun(projectPath, commandId, profileId);

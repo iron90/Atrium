@@ -1,5 +1,6 @@
 export type FacetSource = "detected" | "configured";
 export type CommandKind = "run" | "check" | "build" | "other";
+export type ProfileAction = Exclude<CommandKind, "other">;
 export type ProjectConfigurationStatus = "configured" | "missing" | "invalid";
 export type RunStatus = "running" | "succeeded" | "failed" | "cancelled";
 export type OutputStream = "stdout" | "stderr";

@@ -1,12 +1,12 @@
 import type {
   BuildArtifact,
   BuildProfile,
+  ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
   StorageEntry,
 } from "../../bridge";
 import { translate, type Language, type TranslationKey } from "../../i18n";
-import type { ProfileAction } from "../runs/use-project-runner";
 import { fill } from "../../shared/format";
 
 export const storageKindLabel = (

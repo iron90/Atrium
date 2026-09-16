@@ -4,13 +4,12 @@ import { subscribeToRunEvents } from "../../bridge/events";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
 import type {
+  ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
   RunFinished,
   RunStarted,
 } from "../../bridge";
-
-export type ProfileAction = "run" | "check" | "build";
 
 export type RunMessage =
   | { type: "ready" }

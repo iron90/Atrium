@@ -1,12 +1,12 @@
 import type {
   BuildArtifact,
   BuildProfile,
+  ProfileAction,
   ProjectCommand,
   RunStarted,
 } from "../../bridge";
 import { useI18n, localizedFacetLabel } from "../../i18n";
 import { fill, formatBytes, formatTime } from "../../shared/format";
-import type { ProfileAction } from "../runs/use-project-runner";
 import { artifactKindLabel, commandForProfile } from "./presentation";
 
 export function BuildProfileCard({

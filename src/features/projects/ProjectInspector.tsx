@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { ProjectCommand, ProjectSnapshot, RunStarted } from "../../bridge";
+import type {
+  ProfileAction,
+  ProjectCommand,
+  ProjectSnapshot,
+  RunStarted,
+} from "../../bridge";
 import { CommitList } from "../git/CommitList";
 import { useI18n } from "../../i18n";
 import { ProjectIconView } from "./ProjectIconView";
@@ -21,7 +26,6 @@ import {
   syncStatusClass,
   syncStatusVisual,
 } from "./presentation";
-import type { ProfileAction } from "../runs/use-project-runner";
 import { fill, formatBytes } from "../../shared/format";
 
 export interface ProjectInspectorProps {
