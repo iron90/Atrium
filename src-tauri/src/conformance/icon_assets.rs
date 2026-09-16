@@ -10,6 +10,7 @@ use crate::project_path::read_project_text_file;
 use super::MAX_ICON_BYTES;
 
 const MAX_LEGACY_SCAN_DEPTH: u8 = 4;
+const MAX_LEGACY_ICON_CANDIDATES: usize = 64;
 const IGNORED_DIRECTORIES: &[&str] = &[
     ".git",
     ".idea",
@@ -155,6 +156,9 @@ pub(super) fn legacy_icon_candidates(root: &Path) -> Vec<PathBuf> {
 }
 
 fn push_icon_candidate(candidates: &mut Vec<PathBuf>, candidate: PathBuf) {
+    if candidates.len() >= MAX_LEGACY_ICON_CANDIDATES {
+        return;
+    }
     let Ok(metadata) = fs::symlink_metadata(&candidate) else {
         return;
     };
@@ -177,6 +181,9 @@ fn collect_icon_candidates(root: &Path, depth: u8, candidates: &mut Vec<PathBuf>
     entries.sort_by_key(|entry| entry.file_name());
 
     for entry in entries {
+        if candidates.len() >= MAX_LEGACY_ICON_CANDIDATES {
+            break;
+        }
         let entry_path = entry.path();
         let entry_name = entry.file_name().to_string_lossy().to_string();
         if is_ignored_name(&entry_name) {
@@ -235,7 +242,7 @@ pub(super) fn relative_path(root: &Path, path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{legacy_icon_candidates, load_icon};
+    use super::{legacy_icon_candidates, load_icon, MAX_LEGACY_ICON_CANDIDATES};
     use std::fs;
 
     #[test]
@@ -285,5 +292,24 @@ mod tests {
 
         fs::remove_dir_all(root).expect("remove root fixture");
         fs::remove_dir_all(outside).expect("remove outside fixture");
+    }
+
+    #[test]
+    fn bounds_legacy_icon_candidate_count() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-icon-assets-candidate-limit-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create root fixture");
+        for index in 0..(MAX_LEGACY_ICON_CANDIDATES + 10) {
+            fs::write(root.join(format!("icon-{index}.png")), b"icon")
+                .expect("write icon candidate");
+        }
+
+        let candidates = legacy_icon_candidates(&root);
+
+        assert_eq!(candidates.len(), MAX_LEGACY_ICON_CANDIDATES);
+        fs::remove_dir_all(root).expect("remove root fixture");
     }
 }
