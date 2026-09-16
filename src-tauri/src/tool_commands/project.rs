@@ -1,13 +1,12 @@
 use std::path::Path;
 use std::process::Command;
 
+use crate::command_boundary::run_blocking;
 use crate::os_open;
 
 #[tauri::command]
 pub async fn open_project_directory_command(project_path: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || open_path(Path::new(&project_path)))
-        .await
-        .map_err(|error| format!("Open project task failed: {error}"))?
+    run_blocking("Open project", move || open_path(Path::new(&project_path))).await
 }
 
 #[tauri::command]
@@ -15,7 +14,7 @@ pub async fn open_project_terminal_command(
     project_path: String,
     terminal: Option<String>,
 ) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking("Open terminal", move || {
         if let Some(program) = terminal.filter(|value| !value.trim().is_empty()) {
             return Command::new(program.trim())
                 .current_dir(&project_path)
@@ -53,7 +52,6 @@ pub async fn open_project_terminal_command(
         Err("Terminal opening is not supported on this platform".to_string())
     })
     .await
-    .map_err(|error| format!("Open terminal task failed: {error}"))?
 }
 
 fn open_path(path: &Path) -> Result<(), String> {

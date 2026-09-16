@@ -101,6 +101,7 @@ Tauri command boundary
        │
        ▼
 Rust native core
+  ├─ command_boundary        阻塞 I/O 的统一异步边界与错误前缀
   ├─ workspace_commands      工作区、项目扫描和协议报告的 Tauri 适配器
   ├─ run_commands             运行控制和运行记录的 Tauri 适配器
   ├─ git_commands             Git 变更查询的 Tauri 适配器

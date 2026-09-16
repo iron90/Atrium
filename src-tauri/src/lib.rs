@@ -1,4 +1,5 @@
 mod artifacts;
+mod command_boundary;
 mod command_discovery;
 mod conformance;
 mod git;

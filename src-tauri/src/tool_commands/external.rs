@@ -1,14 +1,13 @@
 use std::path::Path;
 
+use crate::command_boundary::run_blocking;
 use crate::os_open;
 use crate::scanner::scan_project;
 
 #[tauri::command]
 pub async fn open_project_remote_command(remote: String) -> Result<(), String> {
     let url = normalize_remote(&remote)?;
-    tauri::async_runtime::spawn_blocking(move || open_external(&url))
-        .await
-        .map_err(|error| format!("Open remote task failed: {error}"))?
+    run_blocking("Open remote", move || open_external(&url)).await
 }
 
 #[tauri::command]
@@ -16,7 +15,7 @@ pub async fn open_project_link_command(
     project_path: String,
     link_id: String,
 ) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || {
+    run_blocking("Open project link", move || {
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;
         let link = project
@@ -27,7 +26,6 @@ pub async fn open_project_link_command(
         open_external(&link.url)
     })
     .await
-    .map_err(|error| format!("Open project link task failed: {error}"))?
 }
 
 fn open_external(url: &str) -> Result<(), String> {

@@ -1,5 +1,6 @@
 use tauri::{AppHandle, State};
 
+use crate::command_boundary::run_blocking;
 use crate::history::{load_run_history, open_run_log};
 use crate::model::{CommandKind, RunFinished, RunStarted};
 use crate::runner::{start_project_command, stop_project_run};
@@ -32,14 +33,10 @@ pub fn stop_project_command(state: State<'_, AppState>, run_id: String) -> Resul
 
 #[tauri::command]
 pub async fn list_run_history_command(app: AppHandle) -> Result<Vec<RunFinished>, String> {
-    tauri::async_runtime::spawn_blocking(move || load_run_history(&app))
-        .await
-        .map_err(|error| format!("Run history task failed: {error}"))?
+    run_blocking("Run history", move || load_run_history(&app)).await
 }
 
 #[tauri::command]
 pub async fn open_run_log_command(app: AppHandle, run_id: String) -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(move || open_run_log(&app, &run_id))
-        .await
-        .map_err(|error| format!("Open run log task failed: {error}"))?
+    run_blocking("Open run log", move || open_run_log(&app, &run_id)).await
 }
