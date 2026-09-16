@@ -15,6 +15,9 @@ pub(crate) fn project(
     document: ManifestDocument,
     commands: &[ProjectCommand],
 ) -> ProjectConfigurationInspection {
+    // The adapter hint is intentionally accepted for protocol compatibility, but it must not
+    // alter deterministic fact discovery until a concrete adapter contract exists.
+    let _adapter_profile = document.profile;
     let mut issues = Vec::new();
     let platforms = facets::build_facets(
         document.platforms.unwrap_or_default(),

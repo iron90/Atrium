@@ -44,6 +44,12 @@ details and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
+Schema 1 is strict: unknown fields at any manifest level make the manifest
+invalid instead of being ignored. This prevents a misspelled field or a field
+from a newer protocol version from looking configured while silently having no
+effect. A future protocol revision must introduce a new schema number before
+adding fields.
+
 ## `icon.v1`
 
 The first protocol field is the project-board preview icon:

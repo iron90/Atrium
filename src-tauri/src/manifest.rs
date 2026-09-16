@@ -352,4 +352,35 @@ payment = " direct "
 
         fs::remove_dir_all(root).expect("remove invalid project");
     }
+
+    #[test]
+    fn rejects_unknown_fields_in_schema_one() {
+        let cases = [
+            ("unknown-top-level", "schema = 1\nunexpected = true\n"),
+            (
+                "unknown-nested",
+                "schema = 1\n\n[identity]\nicon = \"icon.png\"\nunexpected = true\n",
+            ),
+        ];
+
+        for (name, raw) in cases {
+            let root =
+                std::env::temp_dir().join(format!("atrium-manifest-{name}-{}", std::process::id()));
+            let _ = fs::remove_dir_all(&root);
+            fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+            fs::write(root.join(".atrium/manifest.toml"), raw).expect("write manifest");
+
+            let result = scan_project_configuration(&root, &[]);
+            assert_eq!(
+                result.configuration.status,
+                ProjectConfigurationStatus::Invalid,
+                "{name}"
+            );
+            assert!(result.platforms.is_empty(), "{name}");
+            assert!(result.channels.is_empty(), "{name}");
+            assert!(result.build_profiles.is_empty(), "{name}");
+
+            fs::remove_dir_all(root).expect("remove manifest directory");
+        }
+    }
 }

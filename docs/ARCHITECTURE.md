@@ -350,6 +350,8 @@ path 会再次去重。
 - Flutter：从 `pubspec.yaml` 提供 Flutter 入口；
 - Make：从 `Makefile` 读取明确 target；
 - 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
+- Schema 1 的 manifest 结构严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，
+  不会被静默忽略。
 
 Atrium 协议是项目上下文的上游接入门槛。只有 icon.v1 声明处于 compliant 状态时，
 界面才把平台、渠道和构建 Profile 作为已接入项目事实展示；协议未就绪时只显示等待

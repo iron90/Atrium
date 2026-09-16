@@ -38,7 +38,7 @@ fn render_configuration_report(root: &Path, project: &ProjectSnapshot) -> String
         root.display()
     );
     report.push_str(
-        "Atrium reads platform, channel, and build-profile facts only from the structured manifest. This report is guidance for the project development Agent; Atrium never parses this Markdown file.\n\n",
+        "Atrium reads platform, channel, and build-profile facts only from the structured manifest. This report is guidance for the project development Agent; Atrium never parses this Markdown file. Schema 1 rejects unknown fields, so use only the fields shown below.\n\n",
     );
     report.push_str("## Required manifest shape\n\n```toml\nschema = 1\nprofile = \"<adapter-name>\"\n\n# Declare only platforms this project actually builds for.\n[[platforms]]\nid = \"<platform-id>\"\nlabel = \"<Platform label>\"\n\n# Declare the distribution channel for each supported build context.\n[[channels]]\nid = \"<channel-id>\"\nlabel = \"<Channel label>\"\n\n# Bind each platform/channel combination to existing repository commands.\n[[build_profiles]]\nid = \"<profile-id>\"\nlabel = \"<Platform> · <Channel>\"\nplatform = \"<platform-id>\"\nchannel = \"<channel-id>\"\n\n[build_profiles.commands]\nrun = \"<command-id-or-source>\"\ncheck = \"<command-id-or-source>\"\nbuild = \"<command-id-or-source>\"\n```\n\n");
     report.push_str("## Cleanup declarations\n\n");

@@ -1,8 +1,10 @@
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestDocument {
     pub(crate) schema: u32,
+    pub(crate) profile: Option<String>,
     pub(crate) identity: Option<ManifestIdentity>,
     pub(crate) platforms: Option<Vec<ManifestFacet>>,
     pub(crate) channels: Option<Vec<ManifestFacet>>,
@@ -13,17 +15,20 @@ pub(crate) struct ManifestDocument {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestIdentity {
     pub(crate) icon: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestFacet {
     pub(crate) id: String,
     pub(crate) label: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestBuildProfile {
     pub(crate) id: String,
     pub(crate) label: Option<String>,
@@ -36,6 +41,7 @@ pub(crate) struct ManifestBuildProfile {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestCommands {
     pub(crate) run: Option<String>,
     pub(crate) check: Option<String>,
@@ -43,17 +49,20 @@ pub(crate) struct ManifestCommands {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestCleanup {
     pub(crate) cache: Option<Vec<String>>,
     pub(crate) build: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestTools {
     pub(crate) terminal: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ManifestLink {
     pub(crate) id: String,
     pub(crate) label: Option<String>,
