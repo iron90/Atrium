@@ -216,6 +216,11 @@ ProtocolStatus
 平台、渠道和正式构建配置只有在对应能力通过确定性校验后才会进入可执行视图。
 清理目录是可选能力；未声明时仍可展示项目大小，但不会产生清理目标。
 
+项目展示名称也只来自确定性的结构化入口，优先级固定为
+`package.json:name`、`Cargo.toml:[package].name`、`pubspec.yaml` 根级 `name`、
+`pyproject.toml:[project].name` 或 Poetry 的 `[tool.poetry].name`；未找到有效字段时
+才回退到仓库目录名。不会在任意文本、注释、嵌套配置或 Markdown 中搜索 `name`。
+
 ### Facet
 
 平台和渠道都使用同一类事实模型，并且只接受 manifest 中的确定性声明：
