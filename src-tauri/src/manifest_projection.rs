@@ -1,6 +1,7 @@
 mod cleanup;
 mod facets;
 mod links;
+mod path_policy;
 mod profiles;
 
 use crate::conformance::MANIFEST_PATH;

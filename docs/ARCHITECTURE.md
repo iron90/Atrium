@@ -137,7 +137,8 @@ Rust native core
   │  ├─ facets               平台/渠道声明
   │  ├─ profiles             构建配置与命令绑定
   │  ├─ cleanup               清理目录声明
-  │  └─ links                 工具和项目链接声明
+  │  ├─ links                 工具和项目链接声明
+  │  └─ path_policy           manifest 相对路径和受保护路径规则
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成门面
   │  ├─ configuration        项目配置引导报告

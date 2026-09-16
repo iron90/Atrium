@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use super::facets::configured_facet;
+use super::path_policy::normalize_declared_path;
 use crate::conformance::MANIFEST_PATH;
 use crate::manifest_schema::ManifestBuildProfile;
 use crate::model::{BuildProfile, Facet, ProjectCommand};
@@ -121,22 +122,12 @@ fn parse_artifact_paths(
     paths
         .into_iter()
         .filter_map(|raw| {
-            let normalized = raw.trim().replace('\\', "/");
-            let invalid = normalized.is_empty()
-                || normalized == "."
-                || normalized.starts_with('/')
-                || normalized.get(1..2) == Some(":")
-                || normalized
-                    .split('/')
-                    .any(|part| part.is_empty() || part == "..");
-            let protected = matches!(normalized.as_str(), ".git" | ".atrium");
-
-            if invalid || protected {
+            let Some(normalized) = normalize_declared_path(&raw, &[".git", ".atrium"]) else {
                 issues.push(format!(
                     "Build profile {profile_id} artifact path must be a relative, non-protected file or directory: {raw}."
                 ));
                 return None;
-            }
+            };
             if !seen.insert(normalized.clone()) {
                 issues.push(format!(
                     "Build profile {profile_id} declares duplicate artifact path: {normalized}."

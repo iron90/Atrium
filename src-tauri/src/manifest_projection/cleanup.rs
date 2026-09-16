@@ -3,6 +3,8 @@ use std::collections::HashSet;
 use crate::manifest_schema::ManifestCleanup;
 use crate::model::CleanupDeclaration;
 
+use super::path_policy::normalize_declared_path;
+
 pub(super) fn parse_cleanup(
     declaration: Option<ManifestCleanup>,
     issues: &mut Vec<String>,
@@ -37,25 +39,14 @@ fn parse_cleanup_paths(
     paths
         .into_iter()
         .filter_map(|raw| {
-            let normalized = raw.trim().replace('\\', "/");
-            let invalid = normalized.is_empty()
-                || normalized == "."
-                || normalized.starts_with('/')
-                || normalized.get(1..2) == Some(":")
-                || normalized
-                    .split('/')
-                    .any(|part| part.is_empty() || part == "..");
-            let protected = matches!(
-                normalized.as_str(),
-                ".git" | ".atrium" | "node_modules" | "vendor"
-            );
-
-            if invalid || protected {
+            let Some(normalized) =
+                normalize_declared_path(&raw, &[".git", ".atrium", "node_modules", "vendor"])
+            else {
                 issues.push(format!(
                     "Cleanup {category} path must be a relative, non-protected directory: {raw}."
                 ));
                 return None;
-            }
+            };
             if !seen.insert(normalized.clone()) {
                 issues.push(format!("Duplicate cleanup directory: {normalized}."));
                 return None;
