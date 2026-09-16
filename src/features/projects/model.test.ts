@@ -144,4 +144,22 @@ describe("project domain model", () => {
       reorderProjectMeta(projects, projectMeta, ["unknown", "alpha"]),
     ).toBe(null);
   });
+
+  it("uses stable identity tie-breakers for equal sort values", () => {
+    const projects = [
+      project("zeta", { name: "Same name" }),
+      project("alpha", { name: "Same name" }),
+    ];
+    const filters = {
+      search: "",
+      platform: "all",
+      channel: "all",
+      showHidden: false,
+    };
+
+    for (const sort of ["modified", "storage", "name"] as const) {
+      const result = filterAndSortProjects(projects, {}, { ...filters, sort });
+      expect(result.map(({ id }) => id)).toEqual(["alpha", "zeta"]);
+    }
+  });
 });

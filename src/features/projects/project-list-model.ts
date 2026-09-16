@@ -42,14 +42,20 @@ export const collectFilterOptions = (
     project.channels.forEach((facet) => channels.set(facet.key, facet));
   });
   return {
-    platforms: Array.from(platforms.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
+    platforms: Array.from(platforms.values()).sort(
+      (a, b) => a.label.localeCompare(b.label) || a.key.localeCompare(b.key),
     ),
-    channels: Array.from(channels.values()).sort((a, b) =>
-      a.label.localeCompare(b.label),
+    channels: Array.from(channels.values()).sort(
+      (a, b) => a.label.localeCompare(b.label) || a.key.localeCompare(b.key),
     ),
   };
 };
+
+const compareProjectIdentity = (
+  left: ProjectSnapshot,
+  right: ProjectSnapshot,
+): number =>
+  left.name.localeCompare(right.name) || left.id.localeCompare(right.id);
 
 export const filterAndSortProjects = (
   projects: ProjectSnapshot[],
@@ -104,7 +110,7 @@ export const filterAndSortProjects = (
       if (filters.sort === "manual") {
         return (
           leftMeta.order - rightMeta.order ||
-          left.name.localeCompare(right.name)
+          compareProjectIdentity(left, right)
         );
       }
       if (leftMeta.favorite !== rightMeta.favorite) {
@@ -113,15 +119,17 @@ export const filterAndSortProjects = (
       if (filters.sort === "modified") {
         return (
           (right.repo?.lastCommit?.timestamp ?? 0) -
-          (left.repo?.lastCommit?.timestamp ?? 0)
+            (left.repo?.lastCommit?.timestamp ?? 0) ||
+          compareProjectIdentity(left, right)
         );
       }
       if (filters.sort === "storage") {
         return (
-          (right.storage?.totalBytes ?? 0) - (left.storage?.totalBytes ?? 0)
+          (right.storage?.totalBytes ?? 0) - (left.storage?.totalBytes ?? 0) ||
+          compareProjectIdentity(left, right)
         );
       }
-      return left.name.localeCompare(right.name);
+      return compareProjectIdentity(left, right);
     });
 };
 
