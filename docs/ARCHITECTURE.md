@@ -47,6 +47,8 @@ React UI
   ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
   ├─ app                   应用层持久化、消息格式化和外壳视图
   ├─ features/projects      项目列表、详情、工作区扫描和项目交互
+  │  ├─ use-project-workspace 工作区与项目选择组合根
+  │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   ├─ features/runs          项目命令执行状态与事件订阅
   ├─ features/settings      主题、布局、工作区偏好
