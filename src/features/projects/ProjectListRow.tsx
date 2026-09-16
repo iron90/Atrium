@@ -8,6 +8,7 @@ import { FacetMark } from "./FacetMark";
 import { facetTitle } from "./facets";
 import { ProjectIconView } from "./ProjectIconView";
 import type { ProjectMeta } from "./model";
+import type { DropPosition } from "./project-reorder";
 import {
   hasTrustedContext,
   statusClass,
@@ -16,8 +17,6 @@ import {
   syncStatusClass,
   syncStatusVisual,
 } from "./presentation";
-
-export type DropPosition = "before" | "after";
 
 export function ProjectListRow({
   project,
