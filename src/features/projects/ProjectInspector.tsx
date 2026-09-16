@@ -18,6 +18,7 @@ import { ProjectStorageSection } from "./ProjectStorageSection";
 import { ProjectToolsSection } from "./ProjectToolsSection";
 import type { ProjectAction } from "./project-actions";
 import type { CleanupFeedback } from "./StoragePanel";
+import { protocolViewModel } from "./protocol-presentation";
 
 export interface ProjectInspectorProps {
   project?: ProjectSnapshot;
@@ -96,14 +97,7 @@ export function ProjectInspector({
 
   const inspectedProject = details ?? project;
   const rawCommandsRevealed = rawCommandsRevealedFor === project.id;
-  const protocol = inspectedProject.protocol;
-  const coreCapabilities = protocol.capabilities.filter(
-    (capability) => capability.id !== "cleanup",
-  );
-  const protocolReady =
-    protocol.manifestStatus === "configured" &&
-    coreCapabilities.length > 0 &&
-    coreCapabilities.every((capability) => capability.status === "configured");
+  const protocolReady = protocolViewModel(inspectedProject).isReady;
 
   return (
     <aside className="inspector">
