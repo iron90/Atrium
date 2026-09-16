@@ -22,16 +22,25 @@ pub fn scan_workspace_with_exclusions(
         return Err("Workspace path is not a directory".to_string());
     }
 
-    let mut entries = fs::read_dir(&root)
-        .map_err(|error| format!("Cannot read workspace: {error}"))?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_dir())
-        .filter(|entry| !is_ignored_name(&entry.file_name().to_string_lossy(), excluded_names))
-        .collect::<Vec<_>>();
+    let mut warnings = Vec::new();
+    let mut entries = Vec::new();
+    for result in fs::read_dir(&root).map_err(|error| format!("Cannot read workspace: {error}"))? {
+        let entry = match result {
+            Ok(entry) => entry,
+            Err(error) => {
+                warnings.push(format!("Skipped unreadable workspace entry: {error}"));
+                continue;
+            }
+        };
+        if entry.path().is_dir()
+            && !is_ignored_name(&entry.file_name().to_string_lossy(), excluded_names)
+        {
+            entries.push(entry);
+        }
+    }
     entries.sort_by_key(|entry| entry.file_name());
 
     let mut projects = Vec::new();
-    let mut warnings = Vec::new();
     for entry in entries {
         let path = entry.path();
         if !is_project_candidate(&path) {
