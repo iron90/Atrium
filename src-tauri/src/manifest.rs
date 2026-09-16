@@ -65,27 +65,24 @@ pub fn scan_project_configuration(
 }
 
 fn missing_configuration() -> ProjectConfigurationInspection {
-    ProjectConfigurationInspection {
-        platforms: Vec::new(),
-        channels: Vec::new(),
-        build_profiles: Vec::new(),
-        cleanup: CleanupDeclaration::default(),
-        tools: ProjectTools::default(),
-        links: Vec::new(),
-        manifest_status: ProjectConfigurationStatus::Missing,
-        manifest_schema: None,
-        cleanup_issues: Vec::new(),
-        configuration: ProjectConfiguration {
-            status: ProjectConfigurationStatus::Missing,
-            manifest_path: MANIFEST_PATH.to_string(),
-            issues: vec![format!("{MANIFEST_PATH} is not present.")],
-        },
-    }
+    unavailable_configuration(
+        ProjectConfigurationStatus::Missing,
+        None,
+        vec![format!("{MANIFEST_PATH} is not present.")],
+    )
 }
 
 fn invalid_configuration(
     issues: Vec<String>,
     manifest_schema: Option<u32>,
+) -> ProjectConfigurationInspection {
+    unavailable_configuration(ProjectConfigurationStatus::Invalid, manifest_schema, issues)
+}
+
+fn unavailable_configuration(
+    status: ProjectConfigurationStatus,
+    manifest_schema: Option<u32>,
+    issues: Vec<String>,
 ) -> ProjectConfigurationInspection {
     ProjectConfigurationInspection {
         platforms: Vec::new(),
@@ -94,11 +91,11 @@ fn invalid_configuration(
         cleanup: CleanupDeclaration::default(),
         tools: ProjectTools::default(),
         links: Vec::new(),
-        manifest_status: ProjectConfigurationStatus::Invalid,
+        manifest_status: status,
         manifest_schema,
         cleanup_issues: Vec::new(),
         configuration: ProjectConfiguration {
-            status: ProjectConfigurationStatus::Invalid,
+            status,
             manifest_path: MANIFEST_PATH.to_string(),
             issues,
         },
@@ -283,5 +280,31 @@ label = "Website"
         assert!(result.build_profiles.is_empty());
 
         fs::remove_dir_all(root).expect("remove project");
+    }
+
+    #[test]
+    fn invalid_manifest_does_not_leave_partial_declarations() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-manifest-invalid-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(root.join(".atrium/manifest.toml"), "schema = [")
+            .expect("write invalid manifest");
+
+        let result = scan_project_configuration(&root, &[]);
+        assert_eq!(result.manifest_status, ProjectConfigurationStatus::Invalid);
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(result.manifest_schema.is_none());
+        assert!(result.platforms.is_empty());
+        assert!(result.channels.is_empty());
+        assert!(result.build_profiles.is_empty());
+        assert!(result.cleanup.cache.is_empty());
+        assert!(result.cleanup.build.is_empty());
+        assert!(!result.configuration.issues.is_empty());
+
+        fs::remove_dir_all(root).expect("remove invalid project");
     }
 }
