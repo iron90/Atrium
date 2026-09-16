@@ -1,0 +1,51 @@
+schema = 1
+profile = "tauri-react"
+
+[identity]
+icon = "src-tauri/icons/icon.png"
+
+[cleanup]
+cache = ["node_modules/.cache"]
+build = ["dist", "src-tauri/target"]
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[platforms]]
+id = "windows"
+label = "Windows"
+
+[[channels]]
+id = "local-development"
+label = "Local development"
+
+[[build_profiles]]
+id = "macos-local-development"
+label = "macOS · Local development"
+platform = "macos"
+channel = "local-development"
+artifacts = [
+  "src-tauri/target/release/bundle/macos",
+  "src-tauri/target/release/bundle/dmg",
+]
+
+[build_profiles.commands]
+run = "package.json#scripts.dev"
+check = "package.json#scripts.test"
+build = "package.json#scripts.build:macos"
+
+[[build_profiles]]
+id = "windows-local-development"
+label = "Windows · Local development"
+platform = "windows"
+channel = "local-development"
+artifacts = [
+  "src-tauri/target/release/bundle/msi",
+  "src-tauri/target/release/bundle/nsis",
+]
+
+[build_profiles.commands]
+run = "package.json#scripts.dev"
+check = "package.json#scripts.test"
+build = "package.json#scripts.build:windows"

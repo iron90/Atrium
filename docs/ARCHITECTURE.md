@@ -1,0 +1,355 @@
+# Atrium 技术架构
+
+## 1. 定位与一期边界
+
+Atrium 是一个本地优先的跨项目可视化项目看板。它负责发现项目、展示项目
+事实、调用项目已有入口并记录本地观察结果；它不替项目规定开发流程。
+
+一期目标：
+
+- 扫描用户选择的工作区目录，发现其中的项目仓库；
+- 根据 `.atrium/manifest.toml` 的确定性声明获取平台、渠道和构建配置；
+- 从项目现有配置中发现 `Run`、`Check`、`Build` 入口；
+- 使用安全的参数数组调用这些入口；
+- 读取 Git 分支、工作区状态、远程地址和近期提交；
+- 检索仓库中已有的项目图标，并在列表和详情中复用；
+- 提供可切换的中英文界面，以及可进入的 Settings 页面；
+- 以多主题、多布局看板展示上述事实。
+
+一期不做：
+
+- Website Server 推送和远程网站同步；
+- 支付、订阅和商店账号连接；
+- Git 提交、Tag、Push 或其他历史改写；
+- 通用项目 `Stage`、项目生命周期管理；
+- 通过 Atrium 复制模板或创建项目脚手架；
+- 开发 Agent 编排、聊天或任务管理。
+
+## 2. 已确定的技术分层
+
+| 层                  | 技术                                          | 责任                                                 |
+| ------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| Desktop shell       | Tauri 2                                       | 窗口、打包、跨平台入口、IPC                          |
+| Native/service core | Rust + Tokio                                  | 文件扫描、Git、命令发现、进程执行、OS 差异           |
+| UI                  | React + TypeScript + Vite                     | 看板、详情、主题、布局和交互                         |
+| Contract            | Serde DTO + TypeScript mirror                 | 保持前后端边界窄且可测试                             |
+| Persistence         | localStorage + app-data JSON / SQLite（规划） | 偏好和第一版运行记录；后续承载多工作区与大规模历史   |
+| Project protocol    | `.atrium/manifest.toml`（可选）               | 让项目主动声明平台、渠道和命令绑定，不影响无配置项目 |
+
+Tauri 2 + React/TypeScript + Rust 已作为 Atrium 的实现方案确定。候选方案比较
+和取舍依据保留在 [TECHNOLOGY_OPTIONS.md](TECHNOLOGY_OPTIONS.md) 中，便于未来
+开源后解释架构决策，但不再作为一期实现的待决项。
+
+## 3. 分层结构
+
+```text
+React UI
+  ├─ features/projects      项目总览、详情、平台/渠道事实和命令执行反馈
+  ├─ features/settings      主题、布局、工作区偏好
+  ├─ shared/design-system   颜色、密度、图标、通用控件
+  └─ bridge                  类型化 Tauri invoke/event 适配
+       │
+       ▼
+Tauri command boundary
+       │
+       ▼
+Rust native core
+  ├─ scanner                 工作区和项目候选发现
+  ├─ manifest                结构化平台、渠道和构建配置解析
+  ├─ detectors               项目原生命令检测器
+  ├─ git                     Git CLI 只读适配器
+  ├─ runner                  参数化进程执行和运行记录
+  ├─ persistence             SQLite / migration（下一垂直切片）
+  └─ platform                Windows/macOS/Linux 差异
+```
+
+UI 不直接读取文件系统，也不直接拼接 shell 命令。Rust 端不保存项目业务
+阶段，不对项目内容做重写。
+
+## 4. 核心领域模型
+
+### ProjectSnapshot
+
+```text
+ProjectSnapshot
+  id: stable local path identity
+  name: directory or manifest name
+  path: canonical repository path
+  description: optional structured project description
+  icon: optional data URL + repository-relative source path
+  protocol: ProtocolStatus
+  repo: GitSnapshot?
+  tools: ProjectTools
+  links: ProjectLink[]
+  platforms: Facet[]
+  channels: Facet[]
+  buildProfiles: BuildProfile[]
+  configuration: ProjectConfiguration
+  commands: ProjectCommand[]
+  cleanup: CleanupDeclaration
+  storage: ProjectStorage?       # loaded by detail inspection
+  artifacts: BuildArtifact[]?    # loaded by detail inspection
+  scannedAt: timestamp
+```
+
+`ProtocolStatus` 是项目事实的可信度边界：
+
+```text
+ProtocolStatus
+  manifestPath
+  schema?
+  manifestStatus: configured | missing | invalid
+  capabilities: identity | context | build_profiles | cleanup
+                 configured | partial | missing | invalid | legacy
+```
+
+平台、渠道和正式构建配置只有在对应能力通过确定性校验后才会进入可执行视图。
+清理目录是可选能力；未声明时仍可展示项目大小，但不会产生清理目标。
+
+### Facet
+
+平台和渠道都使用同一类事实模型，并且只接受 manifest 中的确定性声明：
+
+```text
+Facet
+  key: stable identifier
+  label: user-facing label
+  source: configured
+  evidence: repository-relative paths or manifest keys
+```
+
+不存在 manifest 时，列表为空并标记为 `missing`；Atrium 不从 README、Markdown、
+CI 文本或目录名称猜测平台和渠道。
+
+### BuildProfile
+
+```text
+BuildProfile
+  id
+  label
+  platform: Facet
+  channel: Facet
+  runCommandId?
+  checkCommandId?
+  buildCommandId?
+  source: manifest key
+  region? / payment?  (reserved for later variants)
+  artifacts: string[]             # explicit files or directories produced by this profile
+  issues: string[]
+```
+
+BuildProfile 是“平台 + 渠道 + 项目命令绑定”的组合。对于正式的目标操作，
+用户先选择配置，Atrium 再调用该配置绑定的仓库命令。
+
+项目文件中自动发现的 `ProjectCommand` 则属于独立的仓库命令入口。它们不会
+因为是否被 Profile 引用而被合并或过滤；用户确认显示后，可以直接执行其中
+任意类型的命令。即使命令实际相同，业务语义仍然分开。
+
+### ProjectCommand
+
+```text
+ProjectCommand
+  id: stable detector id
+  kind: run | check | build | other
+  label: Run / Check / Build / ...
+  program: executable name
+  args: argv array
+  workingDirectory: project path
+  displayCommand: safe display string
+  source: package.json / Makefile / Cargo.toml / ...
+```
+
+命令不是一段可任意执行的 shell 文本。扫描器只产生已知构建工具和项目配置
+中的参数数组；未来的协议文件也必须经过同样的结构校验。
+
+### Runtime records
+
+运行状态属于一次命令执行，而不是项目生命周期：
+
+```text
+RunRecord
+  runId
+  projectId
+  commandId
+  projectPath
+  profileId? / profileAction?
+  platform? / channel?
+  gitBranch? / gitCommit? / worktreeClean?
+  startedAt
+  finishedAt?
+  status: running | succeeded | failed | cancelled
+  exitCode?
+  stdout/stderr?
+
+The first durable implementation stores at most 100 finished records as JSON in
+Atrium's application data directory. This is intentionally separate from the
+project repository and can later migrate to SQLite without changing the
+project-side protocol. Opening a log materializes a text file in the same
+application data area; a project-scoped viewing surface remains a follow-up.
+```
+
+当前不提供脱离项目上下文的独立运行记录页面。运行记录仍由执行核心持久化，记录中
+始终包含项目、命令、平台/渠道和 Git 上下文；后续应在项目详情中按项目重新设计查看
+入口，而不是复用全局选中项目状态。
+
+看板不会出现 `Planning`、`Building`、`Improving` 之类的项目阶段字段。项目
+列表只展示客观的 Git、扫描和命令结果。
+
+跨项目管理偏好只保存在 Atrium 本地，不写回项目仓库：
+
+```text
+workspaces: string[]
+excludeNames: string[]
+projectMeta[path]: favorite | hidden | order
+```
+
+项目手动顺序是看板本地偏好中的显式事实。Projects 页面只有项目行左侧的拖拽手柄
+可以启动排序；项目内容区域仍然只负责选中项目。拖拽过程中，UI 先在当前可见列表中
+实时预览插入位置，用上下插入线提示 before/after；只有松手落在另一项目行上时才一次性
+提交新的 `order`，落到列表外则取消预览，不会修改仓库文件。筛选后的项目重排只改变
+这些可见项目之间的相对顺序，未显示项目会保留在完整手动顺序中的位置。非手动排序
+模式不提供拖拽提交入口。
+
+扫描器分别读取每个工作区，按 canonical project path 合并重复项目；无效工作区
+不会阻塞其他工作区，重叠路径会作为扫描警告显示。
+
+## 5. 扫描流程
+
+```text
+用户在 Settings 维护多个工作区
+  → 并行枚举每个工作区一级目录
+  → 判断 Git/manifest/project markers
+  → 为每个候选项目运行独立 detectors
+  → 读取 Git 只读事实
+  → 生成带 evidence 和 icon 的列表 snapshot
+  → 先更新项目选中态
+  → 通过独立 inspect command 异步读取选中项目详情
+  → UI 补齐 Git、入口和提交信息
+```
+
+原生会话会以固定的轻量周期重复工作区扫描。扫描结果用稳定字段计算指纹，只有
+项目事实变化时才替换列表；当前选中项目保持不变。用户也可以从检查器发起单项目
+刷新，重新读取完整详情。磁盘统计不会进入周期扫描。
+
+原生命令适配器保持独立，避免一个项目的命令规则污染其他项目：
+
+- JavaScript/TypeScript：从 `package.json` 读取 scripts；
+- Rust：从 `Cargo.toml` 提供 Cargo 入口；
+- Flutter：从 `pubspec.yaml` 提供 Flutter 入口；
+- Make：从 `Makefile` 读取明确 target；
+- 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
+
+Atrium 协议是项目上下文的上游接入门槛。只有 icon.v1 声明处于 compliant 状态时，
+界面才把平台、渠道和构建 Profile 作为已接入项目事实展示；协议未就绪时只显示等待
+接入的说明，不把扫描结果伪装成可信配置。
+
+没有 manifest 或没有有效 build profile 时显示未声明/无效，并提供生成结构化配置说明的
+操作；不猜测商店、支付或发布渠道。仓库命令仍然可以从项目文件中确定性发现，默认
+隐藏具体列表，用户明确确认后可执行；它们不能被当作平台/渠道操作。命令执行失败
+由项目和当前运行环境决定，Atrium 只负责返回执行结果。
+
+引导操作一次生成项目配置说明和图标协议说明两个 Agent-facing 文件，界面只暴露一个
+统一入口，避免用户理解两个独立修复流程。生成成功后，Atrium 同时生成一段固定模板的
+项目开发 Agent 提示词，用户可以复制该提示词，让 Agent 读取这两个引导文件并完成项目配置。
+
+项目存储统计和清理同样遵循项目声明：`[cleanup]` 中的 `cache` 与 `build`
+数组由项目开发 Agent 根据真实模板补齐。Rust 核心只统计项目目录中的文件大小，
+并在详情页异步展示；清理命令只接受 manifest 中声明、位于项目目录内且不是符号链接的
+目录。工作区总览不递归计算这些目录，避免扫描大仓库时阻塞项目列表。
+
+构建产物统计只在详情检查中执行，并且只读取当前 manifest 的
+`build_profiles[].artifacts`。声明可以指向文件或目录；不存在的声明显示为缺失，
+不会被解释为构建失败。目录大小和最近修改时间只统计真实文件，不跟随符号链接。
+
+图标检测优先使用项目 manifest 和 Tauri/Unity 常见位置，再在有限目录深度内
+查找 `icon` / `logo` 文件；仅读取小于 512 KB 的 png、svg、jpeg、webp、ico
+文件，避免扫描阶段把大型构建产物带入快照。
+
+项目工具和链接只来自结构化 manifest 字段。打开目录、终端、远程仓库或声明链接时
+由 Rust 原生命令执行；没有项目终端声明时直接使用操作系统默认终端。Atrium 不提供
+让用户填写终端命令的设置，编辑器入口也暂不提供。UI 不拼接 shell 文本。清理选择
+会在 Rust 端再次与 manifest 声明求交集后才允许删除。
+
+## 6. Git 边界
+
+Git CLI 是第一期的事实来源，因为用户现有项目的 Git 体系不需要改变，也不
+需要在 Atrium 内复制 Git 实现。Atrium 只调用只读命令：
+
+- `git rev-parse`：仓库识别和当前分支；
+- `git status --porcelain`：工作区干净/有修改和未提交变更数量；
+- `git remote get-url origin`：远程地址；
+- `git log`：近期提交；
+- `git for-each-ref`：可选择的分支和 Tag 引用；
+- `git diff`：用户选择的两个安全 revision 之间的文件统计；
+- `git rev-list --left-right --count @{upstream}...HEAD`：相对于本地上游跟踪分支的领先/落后提交数量；
+  没有上游分支时显示未设置上游，不伪造为零。
+
+后续生成更新日志时，直接以快照中的 commit 范围和提交记录为输入。
+
+## 7. 跨平台进程策略
+
+- 使用 Rust `Command` / `tokio::process::Command`，不经过用户默认 shell；
+- Windows 对 npm 使用 `npm.cmd`，其他工具通过 PATH 解析；
+- macOS/Linux 使用 `npm`、`cargo`、`flutter` 等 PATH 工具；
+- 工作目录始终是项目根目录；
+- 命令显示文本与实际 argv 分开，显示文本不再解析执行；
+- 运行器后续增加更完整的进程监督、取消、输出流和 Windows process tree 清理；
+- 工具不存在、权限不足、退出码非零都作为明确的运行结果返回。
+
+## 8. 持久化策略
+
+第一批使用应用本地存储保存显示偏好和当前工作区路径：
+
+```text
+atrium.preferences.v1
+  theme
+  layout
+  language
+  rootPath
+  workspaces
+  excludeNames
+  projectMeta
+```
+
+它不写入任何项目仓库。后续再使用应用数据目录下的 SQLite：
+
+```text
+workspace_roots
+projects
+project_facets
+project_commands
+scan_runs
+git_snapshots
+run_records
+preferences
+```
+
+仓库源文件和 Git 不受 Atrium 数据库反向写入。扫描缓存必须可丢弃并重新
+生成；用户手动配置和显示偏好才需要迁移。
+
+## 9. 主题和布局
+
+主题只改变设计 token，不改变领域数据：
+
+- Deep Ocean
+- Mist Silver
+- Warm Ink
+
+布局只改变数据排列，不增加项目语义：
+
+- Overview：项目列表 + 详情检查器；
+- Platform Matrix：按平台和渠道事实筛选。
+
+Settings 页面提供持久化的主题、布局、语言和工作区扫描设置。项目切换时
+选中高亮不等待扫描完成，右侧检查器显示异步加载骨架，避免首次打开项目阻塞
+整个看板。
+
+任何未来的 `Now / Next / Later` 都只能作为用户自定义视图或标签，不能成为
+ProjectSnapshot 的固定字段。
+
+## 10. 演进路线
+
+1. 当前：扫描、Git、协议能力状态、检测器、命令发现、跨项目管理 UI；
+2. 当前批次：多工作区、项目终端/链接入口、声明清理预览和 Git 版本差异；
+3. 后续：SQLite 迁移、产物变化历史和更新日志生成；
+4. 网站同步与发布相关能力作为独立适配器，不进入核心扫描模型。

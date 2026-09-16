@@ -1,0 +1,30 @@
+[package]
+name = "atrium"
+version = "0.1.0"
+description = "A local-first visual project board"
+authors = ["Atrium contributors"]
+edition = "2021"
+
+[lib]
+name = "atrium_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.5", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
+base64 = "0.23"
+futures-util = "0.3"
+tokio = { version = "1", features = ["io-util", "process", "sync"] }
+
+[profile.dev]
+debug = 1
+
+[profile.test]
+debug = 1
