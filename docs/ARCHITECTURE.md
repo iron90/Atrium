@@ -74,7 +74,11 @@ Rust native core
   ├─ command_discovery       确定性原生命令发现适配器
   ├─ manifest_schema         manifest DTO 与 TOML 解析
   ├─ manifest                配置文件读取、Schema 校验和入口编排
-  ├─ manifest_projection    声明投影、路径归一化和引用解析
+  ├─ manifest_projection    声明投影门面
+  │  ├─ facets               平台/渠道声明
+  │  ├─ profiles             构建配置与命令绑定
+  │  ├─ cleanup               清理目录声明
+  │  └─ links                 工具和项目链接声明
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成
   ├─ conformance              图标协议状态编排和事实读取
