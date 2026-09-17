@@ -3,7 +3,6 @@ import { DEMO_WORKSPACE_ROOT, demoSnapshot } from "./fake-bridge";
 import { isTauriRuntime } from "./runtime";
 import type {
   CleanupResult,
-  IconConformanceReport,
   ProjectConfigurationReport,
   ProjectGuidanceReport,
   ProjectSnapshot,
@@ -69,18 +68,6 @@ export const cleanProjectArtifacts = async (
   });
 };
 
-export const generateIconConformanceReport = async (
-  projectPath: string,
-): Promise<IconConformanceReport> => {
-  if (!isTauriRuntime()) {
-    return { path: ".atrium/reports/icon-conformance.md", status: "legacy" };
-  }
-  return invoke<IconConformanceReport>(
-    "generate_icon_conformance_report_command",
-    { projectPath },
-  );
-};
-
 export const generateProjectConfigurationReport = async (
   projectPath: string,
 ): Promise<ProjectConfigurationReport> => {
@@ -103,10 +90,10 @@ export const generateProjectGuidance = async (
     return {
       paths: [
         ".atrium/reports/project-configuration.md",
-        ".atrium/reports/icon-conformance.md",
+        ".atrium/guidance.toml",
       ],
       configurationStatus: "missing",
-      iconStatus: "missing",
+      guidanceRevision: 2,
     };
   }
   return invoke<ProjectGuidanceReport>("generate_project_guidance_command", {

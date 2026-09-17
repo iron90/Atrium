@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
 import { errorMessage } from "../../shared/errors";
-import { projectFingerprint } from "./workspace-snapshot";
 
 export interface ProjectDetailLifecycleState {
   inspectorProject?: ProjectSnapshot;
@@ -52,14 +51,10 @@ export function useProjectDetailLifecycle({
   );
   const detailRequest = useRef(0);
   const selectedProjectIdRef = useRef(selectedProjectId);
-  const skipNextDetailRequest = useRef<string | null>(null);
   const selectedProject = projects.find(
     (candidate) => candidate.id === selectedProjectId,
   );
   const selectedProjectRef = useRef(selectedProject);
-  const selectedProjectFingerprint = selectedProject
-    ? projectFingerprint(selectedProject)
-    : null;
 
   useEffect(() => {
     selectedProjectRef.current = selectedProject;
@@ -69,16 +64,15 @@ export function useProjectDetailLifecycle({
     selectedProjectIdRef.current = selectedProjectId;
   }, [selectedProjectId]);
 
+  // Workspace refreshes are lightweight. Protocol and repository fact changes
+  // are merged by the workspace hook; only selection and explicit refreshes
+  // should start the storage/artifact inspection.
   useEffect(() => {
     const project = selectedProjectRef.current;
     if (!project) return undefined;
 
     let disposed = false;
     const requestId = ++detailRequest.current;
-    if (skipNextDetailRequest.current === project.id) {
-      skipNextDetailRequest.current = null;
-      return undefined;
-    }
     const timer = window.setTimeout(() => {
       if (disposed) return;
       setInspectorProject(undefined);
@@ -106,7 +100,7 @@ export function useProjectDetailLifecycle({
       disposed = true;
       window.clearTimeout(timer);
     };
-  }, [inspectProject, onError, selectedProjectFingerprint, selectedProjectId]);
+  }, [inspectProject, onError, selectedProjectId]);
 
   const resetForSelection = useCallback(() => {
     detailRequest.current += 1;
@@ -131,7 +125,6 @@ export function useProjectDetailLifecycle({
         onProjectRefreshed(project, details);
         const isStillSelected = selectedProjectIdRef.current === project.id;
         if (isStillSelected) {
-          skipNextDetailRequest.current = project.id;
           setInspectorProject(details);
           setIsLoadingDetails(false);
           onMessage({ type: "projectRefreshed" });

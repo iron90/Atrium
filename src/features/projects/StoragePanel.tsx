@@ -1,4 +1,8 @@
-import type { ProjectSnapshot, ProjectStorage } from "../../bridge";
+import type {
+  CleanupProgress,
+  ProjectSnapshot,
+  ProjectStorage,
+} from "../../bridge";
 import { useI18n } from "../../i18n";
 import { fill, formatBytes } from "../../shared/format";
 import { storageKindLabel } from "./presentation";
@@ -13,9 +17,13 @@ interface StoragePanelProps {
   storage: ProjectStorage;
   cleanupFeedback: CleanupFeedback | null;
   cleanupSelection: string[];
+  cleanupConfirmation: string[] | null;
+  cleanupProgress: CleanupProgress | null;
   onCleanupSelectionChange: (paths: string[]) => void;
   isCleaningArtifacts: boolean;
   onCleanArtifacts: (project: ProjectSnapshot) => void;
+  onCancelCleanup: () => void;
+  onConfirmCleanup: () => void;
 }
 
 export function StoragePanel({
@@ -23,9 +31,13 @@ export function StoragePanel({
   storage,
   cleanupFeedback,
   cleanupSelection,
+  cleanupConfirmation,
+  cleanupProgress,
   onCleanupSelectionChange,
   isCleaningArtifacts,
   onCleanArtifacts,
+  onCancelCleanup,
+  onConfirmCleanup,
 }: StoragePanelProps) {
   const { t } = useI18n();
 
@@ -41,11 +53,6 @@ export function StoragePanel({
           <span>{t("cleanableStorage")}</span>
         </div>
       </div>
-      {!storage.isComplete ? (
-        <p className="storage-warning" role="status">
-          {t("storageScanIncomplete")}
-        </p>
-      ) : null}
 
       {storage.entries.length ? (
         <>
@@ -72,9 +79,6 @@ export function StoragePanel({
                   <span>
                     {storageKindLabel(entry, t)} ·{" "}
                     {fill(t("storageFiles"), "count", String(entry.fileCount))}
-                    {!entry.isComplete
-                      ? ` · ${t("storageEntryIncomplete")}`
-                      : ""}
                   </span>
                 </div>
                 <em>{formatBytes(entry.bytes)}</em>
@@ -87,8 +91,95 @@ export function StoragePanel({
             onClick={() => onCleanArtifacts(project)}
             disabled={isCleaningArtifacts || !cleanupSelection.length}
           >
-            {isCleaningArtifacts ? t("cleaningArtifacts") : t("cleanSelected")}
+            {isCleaningArtifacts ? (
+              <span className="cleanup-button-progress-label">
+                <span>{t("cleaningArtifacts")}</span>
+                <strong>{cleanupProgress?.percent ?? 0}%</strong>
+              </span>
+            ) : (
+              t("cleanSelected")
+            )}
           </button>
+          {isCleaningArtifacts ? (
+            <div className="cleanup-progress" role="status" aria-live="polite">
+              <div className="cleanup-progress-heading">
+                <span>
+                  {cleanupProgress?.phase === "finalizing"
+                    ? t("finalizingCleanup")
+                    : cleanupProgress?.relativePath || t("preparingCleanup")}
+                </span>
+                <strong>{cleanupProgress?.percent ?? 0}%</strong>
+              </div>
+              <div
+                className="cleanup-progress-track"
+                role="progressbar"
+                aria-label={t("cleaningArtifacts")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={cleanupProgress?.percent ?? 0}
+              >
+                <span
+                  className="cleanup-progress-value"
+                  style={{ width: `${cleanupProgress?.percent ?? 0}%` }}
+                />
+              </div>
+              {cleanupProgress ? (
+                <div className="cleanup-progress-meta">
+                  <span>
+                    {formatBytes(cleanupProgress.completedBytes)} /{" "}
+                    {formatBytes(cleanupProgress.totalBytes)}
+                  </span>
+                  {cleanupProgress.totalFiles ? (
+                    <span>
+                      {fill(
+                        fill(
+                          t("cleanupProgressFiles"),
+                          "completed",
+                          String(cleanupProgress.completedFiles),
+                        ),
+                        "total",
+                        String(cleanupProgress.totalFiles),
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {cleanupConfirmation ? (
+            <div
+              className="cleanup-confirmation"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cleanup-confirmation-title"
+            >
+              <strong id="cleanup-confirmation-title">
+                {t("cleanArtifacts")}
+              </strong>
+              <p>{t("confirmCleanArtifacts")}</p>
+              <ul>
+                {cleanupConfirmation.map((path) => (
+                  <li key={path}>{path}</li>
+                ))}
+              </ul>
+              <div className="cleanup-confirmation-actions">
+                <button
+                  className="cleanup-cancel-button"
+                  type="button"
+                  onClick={onCancelCleanup}
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  className="cleanup-confirm-button"
+                  type="button"
+                  onClick={onConfirmCleanup}
+                >
+                  {t("cleanSelected")}
+                </button>
+              </div>
+            </div>
+          ) : null}
           {cleanupFeedback ? (
             <p
               className={`cleanup-message ${

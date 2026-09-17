@@ -1,0 +1,120 @@
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { BuildArtifact, BuildProfile, ProjectCommand } from "../../bridge";
+import { BuildProfileCard } from "./BuildProfileCard";
+
+afterEach(cleanup);
+
+const profile: BuildProfile = {
+  id: "macos-direct",
+  label: "macOS · Direct",
+  platform: {
+    key: "macos",
+    label: "macOS",
+    source: "configured",
+    evidence: [".atrium/manifest.toml"],
+  },
+  channel: {
+    key: "direct",
+    label: "Direct",
+    source: "configured",
+    evidence: [".atrium/manifest.toml"],
+  },
+  runCommandId: "npm:dev",
+  checkCommandId: "npm:check",
+  buildCommandId: "npm:build:macos",
+  source: ".atrium/manifest.toml#build_profiles.macos-direct",
+  region: null,
+  payment: null,
+  artifacts: ["dist/SnapCutout.dmg"],
+  issues: [],
+};
+
+const commands: ProjectCommand[] = [
+  {
+    id: "npm:dev",
+    kind: "run",
+    label: "Run",
+    program: "npm",
+    args: ["run", "dev"],
+    workingDirectory: "/workspace/SnapCutout",
+    displayCommand: "npm run dev",
+    source: "package.json#scripts.dev",
+  },
+  {
+    id: "npm:check",
+    kind: "check",
+    label: "Check",
+    program: "npm",
+    args: ["run", "check"],
+    workingDirectory: "/workspace/SnapCutout",
+    displayCommand: "npm run check",
+    source: "package.json#scripts.check",
+  },
+  {
+    id: "npm:build:macos",
+    kind: "build",
+    label: "Build",
+    program: "npm",
+    args: ["run", "build:macos"],
+    workingDirectory: "/workspace/SnapCutout",
+    displayCommand: "npm run build:macos",
+    source: "package.json#scripts.build:macos",
+  },
+];
+
+const availableArtifact: BuildArtifact = {
+  profileId: profile.id,
+  profileLabel: profile.label,
+  relativePath: "dist/SnapCutout.dmg",
+  kind: "file",
+  bytes: 1024,
+  fileCount: 1,
+  modifiedAt: 1,
+  isComplete: true,
+};
+
+const renderCard = (artifacts: BuildArtifact[] = []) =>
+  render(
+    <BuildProfileCard
+      profile={profile}
+      commands={commands}
+      artifacts={artifacts}
+      projectPath="/workspace/SnapCutout"
+      canExecute
+      onRun={vi.fn()}
+      onOpenArtifact={vi.fn()}
+    />,
+  );
+
+describe("build profile card", () => {
+  it("orders profile actions as check, build, then run", () => {
+    const { container } = renderCard([availableArtifact]);
+
+    expect(
+      within(container)
+        .getAllByRole("button")
+        .filter((button) => button.classList.contains("profile-action"))
+        .map((button) => button.textContent),
+    ).toEqual(["Check", "Build", "Run"]);
+  });
+
+  it("requires an available artifact before enabling run", () => {
+    const { container } = renderCard();
+    const runButton = within(container).getByRole("button", { name: "Run" });
+    const runHint = container.querySelector(".profile-action-hint");
+
+    expect(runButton).toBeDisabled();
+    expect(runHint).toHaveAttribute(
+      "title",
+      "Build the project before running it.",
+    );
+    expect(runHint).toContainElement(runButton);
+  });
+
+  it("enables run after a declared artifact is available", () => {
+    renderCard([availableArtifact]);
+
+    expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  });
+});

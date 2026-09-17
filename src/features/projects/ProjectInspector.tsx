@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type {
+  CleanupProgress,
   ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
@@ -37,14 +38,19 @@ export interface ProjectInspectorProps {
   onGenerateGuidance: (project: ProjectSnapshot) => void;
   guidanceMessage: string | null;
   agentPrompt: string | null;
+  isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   onCopyAgentPrompt: () => void;
   isWritingGuidance: boolean;
   cleanupFeedback: CleanupFeedback | null;
   cleanupSelection: string[];
+  cleanupConfirmation: string[] | null;
+  cleanupProgress: CleanupProgress | null;
   onCleanupSelectionChange: (paths: string[]) => void;
   isCleaningArtifacts: boolean;
   onCleanArtifacts: (project: ProjectSnapshot) => void;
+  onCancelCleanup: () => void;
+  onConfirmCleanup: () => void;
   onOpenArtifact: (
     projectPath: string,
     profileId: string,
@@ -70,14 +76,19 @@ export function ProjectInspector({
   onGenerateGuidance,
   guidanceMessage,
   agentPrompt,
+  isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
   onCopyAgentPrompt,
   isWritingGuidance,
   cleanupFeedback,
   cleanupSelection,
+  cleanupConfirmation,
+  cleanupProgress,
   onCleanupSelectionChange,
   isCleaningArtifacts,
   onCleanArtifacts,
+  onCancelCleanup,
+  onConfirmCleanup,
   onOpenArtifact,
   onOpenProjectAction,
 }: ProjectInspectorProps) {
@@ -120,6 +131,7 @@ export function ProjectInspector({
         inspectedProject={inspectedProject}
         guidanceMessage={guidanceMessage}
         agentPrompt={agentPrompt}
+        isAgentPromptForGuidanceUpdate={isAgentPromptForGuidanceUpdate}
         isAgentPromptCopied={isAgentPromptCopied}
         onCopyAgentPrompt={onCopyAgentPrompt}
         isWritingGuidance={isWritingGuidance}
@@ -131,9 +143,13 @@ export function ProjectInspector({
         isLoading={isLoading}
         cleanupFeedback={cleanupFeedback}
         cleanupSelection={cleanupSelection}
+        cleanupConfirmation={cleanupConfirmation}
+        cleanupProgress={cleanupProgress}
         onCleanupSelectionChange={onCleanupSelectionChange}
         isCleaningArtifacts={isCleaningArtifacts}
         onCleanArtifacts={onCleanArtifacts}
+        onCancelCleanup={onCancelCleanup}
+        onConfirmCleanup={onConfirmCleanup}
       />
       <ProjectContextSection
         project={inspectedProject}

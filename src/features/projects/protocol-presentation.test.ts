@@ -16,6 +16,24 @@ describe("protocol view model", () => {
     expect(view.shouldShowGuidance).toBe(true);
   });
 
+  it("surfaces legacy icon detection as a separate integration state", () => {
+    const view = protocolViewModel({
+      ...baseProject,
+      protocol: {
+        ...baseProject.protocol,
+        manifestStatus: "missing",
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status: capability.id === "identity" ? "legacy" : "missing",
+        })),
+      },
+    });
+
+    expect(view.isReady).toBe(false);
+    expect(view.cardStatus).toBe("legacy");
+    expect(view.shouldShowGuidance).toBe(true);
+  });
+
   it("keeps a complete protocol quiet when every capability is configured", () => {
     const view = protocolViewModel({
       ...baseProject,

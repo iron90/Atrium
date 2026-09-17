@@ -29,7 +29,7 @@ export function useProjectListViewState(
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
-  const [projectSort, setProjectSort] = useState<ProjectSort>("manual");
+  const [projectSort, setProjectSort] = useState<ProjectSort>("name");
   const [showHiddenProjects, setShowHiddenProjects] = useState(false);
 
   const filterOptions = useMemo(

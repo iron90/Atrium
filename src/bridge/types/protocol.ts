@@ -8,14 +8,8 @@ export type ProtocolCapabilityStatus =
 export interface IconConformance {
   status: IconConformanceStatus;
   manifestPath: string;
-  reportPath: string;
   declaredIcon: string | null;
   resolvedIcon: string | null;
-}
-
-export interface IconConformanceReport {
-  path: string;
-  status: IconConformanceStatus;
 }
 
 export interface ProjectConfigurationReport {
@@ -26,7 +20,7 @@ export interface ProjectConfigurationReport {
 export interface ProjectGuidanceReport {
   paths: string[];
   configurationStatus: ProjectConfigurationStatus;
-  iconStatus: IconConformanceStatus;
+  guidanceRevision: number;
 }
 
 export interface ProjectIcon {
@@ -46,4 +40,10 @@ export interface ProtocolStatus {
   schema: number | null;
   manifestStatus: ProjectConfigurationStatus;
   capabilities: ProtocolCapability[];
+}
+
+export interface GuidanceStatus {
+  revision: number | null;
+  needsUpdate: boolean;
+  needsSync: boolean;
 }

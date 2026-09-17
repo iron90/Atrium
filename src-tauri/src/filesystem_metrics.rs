@@ -45,7 +45,16 @@ impl PathMetricsCache {
             return (PathMetrics::default(), false);
         };
         if metadata.file_type().is_symlink() {
-            return (PathMetrics::default(), false);
+            // Symlinks are intentionally not followed: their targets may be
+            // outside the project or point back into an already scanned tree.
+            // Skipping one is a complete metrics result, not a read failure.
+            return (
+                PathMetrics {
+                    is_complete: true,
+                    ..PathMetrics::default()
+                },
+                false,
+            );
         }
         if metadata.is_file() {
             return (
@@ -150,6 +159,29 @@ mod tests {
         let _ = fs::remove_dir_all(&path);
 
         assert!(!measure_path(&path).is_complete);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn skips_symlinks_without_marking_the_parent_scan_incomplete() {
+        use std::os::unix::fs::symlink;
+
+        let root = std::env::temp_dir().join(format!(
+            "atrium-filesystem-metrics-symlink-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create metrics fixture");
+        fs::write(root.join("real-file"), b"metrics").expect("write metrics fixture");
+        symlink(root.join("real-file"), root.join("shortcut")).expect("create symlink fixture");
+
+        let metrics = measure_path(&root);
+
+        assert_eq!(metrics.bytes, 7);
+        assert_eq!(metrics.file_count, 1);
+        assert!(metrics.is_complete);
+
+        fs::remove_dir_all(root).expect("remove metrics fixture");
     }
 
     #[test]

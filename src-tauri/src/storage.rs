@@ -1,14 +1,14 @@
 mod cleanup;
 mod inspection;
 
-pub use cleanup::clean_project_artifacts_selected;
+pub use cleanup::clean_project_artifacts_selected_with_progress;
 pub use inspection::inspect_project_storage;
 
 #[cfg(test)]
 mod tests {
-    use super::cleanup::clean_project_artifacts;
-    use super::{clean_project_artifacts_selected, inspect_project_storage};
-    use crate::model::CleanupDeclaration;
+    use super::cleanup::{clean_project_artifacts, clean_project_artifacts_selected};
+    use super::{clean_project_artifacts_selected_with_progress, inspect_project_storage};
+    use crate::model::{CleanupDeclaration, CleanupProgressPhase};
     use std::fs;
 
     fn fixture_root(name: &str) -> std::path::PathBuf {
@@ -81,6 +81,48 @@ mod tests {
         assert!(result.removed_entries.is_empty());
         assert!(root.join("cache/item").exists());
         assert!(root.join("source/item").exists());
+
+        fs::remove_dir_all(root).expect("remove storage fixture");
+    }
+
+    #[test]
+    fn cleanup_reports_file_progress() {
+        let root = fixture_root("progress");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("build/nested")).expect("create build fixture");
+        fs::write(root.join("build/app.js"), b"12345").expect("write build fixture");
+        fs::write(root.join("build/nested/map"), b"123").expect("write build fixture");
+
+        let cleanup = CleanupDeclaration {
+            cache: Vec::new(),
+            build: vec!["build".to_string()],
+        };
+        let selected = vec!["build".to_string()];
+        let mut progress = Vec::new();
+        let result = clean_project_artifacts_selected_with_progress(
+            &root,
+            &cleanup,
+            Some(&selected),
+            |event| progress.push(event),
+        )
+        .expect("clean project fixture");
+
+        assert!(result.failed_entries.is_empty());
+        assert_eq!(
+            progress.first().map(|event| &event.phase),
+            Some(&CleanupProgressPhase::Preparing)
+        );
+        assert_eq!(
+            progress.last().map(|event| &event.phase),
+            Some(&CleanupProgressPhase::Finalizing)
+        );
+        let final_progress = progress.last().expect("final cleanup progress");
+        assert_eq!(final_progress.percent, 100);
+        assert_eq!(final_progress.total_bytes, 8);
+        assert_eq!(final_progress.completed_bytes, 8);
+        assert_eq!(final_progress.total_files, 2);
+        assert_eq!(final_progress.completed_files, 2);
+        assert!(!root.join("build").exists());
 
         fs::remove_dir_all(root).expect("remove storage fixture");
     }

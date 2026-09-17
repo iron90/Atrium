@@ -1,5 +1,6 @@
 import type { Facet } from "../../bridge";
 import { useI18n } from "../../i18n";
+import { EyeIcon } from "./ProjectActionIcons";
 import type { ProjectSort } from "./project-list-model";
 
 export interface ProjectFilterBarProps {
@@ -71,17 +72,20 @@ export function ProjectFilterBar({
           setProjectSort(event.target.value as typeof projectSort)
         }
       >
-        <option value="manual">{t("manualOrder")}</option>
         <option value="modified">{t("sortModified")}</option>
+        <option value="recent">{t("sortRecentModified")}</option>
         <option value="storage">{t("sortStorage")}</option>
         <option value="name">{t("sortName")}</option>
       </select>
       <button
         type="button"
         className={`toolbar-control ${showHidden ? "is-toggle-active" : ""}`}
+        aria-label={showHidden ? t("hideHidden") : t("showHidden")}
+        aria-pressed={showHidden}
+        title={showHidden ? t("hideHidden") : t("showHidden")}
         onClick={() => setShowHidden(!showHidden)}
       >
-        {showHidden ? t("hideHidden") : t("showHidden")}
+        <EyeIcon slashed={!showHidden} />
       </button>
     </div>
   );

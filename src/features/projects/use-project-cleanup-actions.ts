@@ -1,7 +1,11 @@
 import { useCallback, useState } from "react";
 import { bridge } from "../../bridge";
-import type { ProjectSnapshot, ProjectStorage } from "../../bridge";
-import { translate, type Language } from "../../i18n";
+import type {
+  CleanupProgress,
+  ProjectSnapshot,
+  ProjectStorage,
+} from "../../bridge";
+import { subscribeToCleanupProgress } from "../../bridge/events";
 import { errorMessage } from "../../shared/errors";
 
 export interface CleanupFeedback {
@@ -12,14 +16,17 @@ export interface CleanupFeedback {
 export interface ProjectCleanupActions {
   cleanupFeedback: CleanupFeedback | null;
   cleanupSelection: string[];
+  cleanupConfirmation: string[] | null;
+  cleanupProgress: CleanupProgress | null;
   setCleanupSelection: (paths: string[]) => void;
   isCleaningArtifacts: boolean;
   reset: () => void;
-  cleanArtifacts: (project: ProjectSnapshot) => Promise<void>;
+  cleanArtifacts: (project: ProjectSnapshot) => void;
+  cancelCleanup: () => void;
+  confirmCleanup: () => Promise<void>;
 }
 
 export interface UseProjectCleanupActionsOptions {
-  language: Language;
   inspectorProject?: ProjectSnapshot;
   onError: (message: string | null) => void;
   updateInspectorProject: (
@@ -38,7 +45,6 @@ export const cleanupPathsForProject = (
     : (storage?.entries.map((entry) => entry.relativePath) ?? []);
 
 export function useProjectCleanupActions({
-  language,
   inspectorProject,
   onError,
   updateInspectorProject,
@@ -46,16 +52,24 @@ export function useProjectCleanupActions({
   const [cleanupFeedback, setCleanupFeedback] =
     useState<CleanupFeedback | null>(null);
   const [cleanupSelection, setCleanupSelection] = useState<string[]>([]);
+  const [pendingCleanup, setPendingCleanup] = useState<{
+    project: ProjectSnapshot;
+    selectedPaths: string[];
+  } | null>(null);
+  const [cleanupProgress, setCleanupProgress] =
+    useState<CleanupProgress | null>(null);
   const [isCleaningArtifacts, setIsCleaningArtifacts] = useState(false);
 
   const reset = useCallback(() => {
     setCleanupFeedback(null);
     setCleanupSelection([]);
+    setPendingCleanup(null);
+    setCleanupProgress(null);
     setIsCleaningArtifacts(false);
   }, []);
 
   const cleanArtifacts = useCallback(
-    async (project: ProjectSnapshot) => {
+    (project: ProjectSnapshot) => {
       const storage =
         inspectorProject?.id === project.id
           ? inspectorProject.storage
@@ -68,48 +82,74 @@ export function useProjectCleanupActions({
       ) {
         return;
       }
-      if (!window.confirm(translate(language, "confirmCleanArtifacts"))) return;
-
-      setIsCleaningArtifacts(true);
       setCleanupFeedback(null);
       onError(null);
-      try {
-        const result = await bridge.cleanProjectArtifacts(
-          project.path,
-          selectedPaths,
-        );
-        updateInspectorProject((current) =>
-          current?.id === project.id
-            ? { ...current, storage: result.storage }
-            : current,
-        );
-        setCleanupFeedback({
-          removedBytes: result.removedBytes,
-          failedCount: result.failedEntries.length,
-        });
-        setCleanupSelection([]);
-      } catch (error) {
-        onError(errorMessage(error));
-      } finally {
-        setIsCleaningArtifacts(false);
-      }
+      setPendingCleanup({ project, selectedPaths });
     },
-    [
-      cleanupSelection,
-      inspectorProject,
-      isCleaningArtifacts,
-      language,
-      onError,
-      updateInspectorProject,
-    ],
+    [cleanupSelection, inspectorProject, isCleaningArtifacts, onError],
   );
+
+  const cancelCleanup = useCallback(() => {
+    setPendingCleanup(null);
+  }, []);
+
+  const confirmCleanup = useCallback(async () => {
+    if (!pendingCleanup || isCleaningArtifacts) return;
+
+    const { project, selectedPaths } = pendingCleanup;
+    setPendingCleanup(null);
+    setIsCleaningArtifacts(true);
+    setCleanupProgress({
+      phase: "preparing",
+      relativePath: null,
+      completedBytes: 0,
+      totalBytes: 0,
+      completedFiles: 0,
+      totalFiles: 0,
+      percent: 0,
+    });
+    setCleanupFeedback(null);
+    onError(null);
+    let unsubscribe: (() => void) | undefined;
+    try {
+      try {
+        unsubscribe = await subscribeToCleanupProgress(setCleanupProgress);
+      } catch {
+        // Cleanup remains available if the optional progress channel fails.
+      }
+      const result = await bridge.cleanProjectArtifacts(
+        project.path,
+        selectedPaths,
+      );
+      updateInspectorProject((current) =>
+        current?.id === project.id
+          ? { ...current, storage: result.storage }
+          : current,
+      );
+      setCleanupFeedback({
+        removedBytes: result.removedBytes,
+        failedCount: result.failedEntries.length,
+      });
+      setCleanupSelection([]);
+    } catch (error) {
+      onError(errorMessage(error));
+    } finally {
+      unsubscribe?.();
+      setIsCleaningArtifacts(false);
+      setCleanupProgress(null);
+    }
+  }, [isCleaningArtifacts, onError, pendingCleanup, updateInspectorProject]);
 
   return {
     cleanupFeedback,
     cleanupSelection,
+    cleanupConfirmation: pendingCleanup?.selectedPaths ?? null,
+    cleanupProgress,
     setCleanupSelection,
     isCleaningArtifacts,
     reset,
     cleanArtifacts,
+    cancelCleanup,
+    confirmCleanup,
   };
 }

@@ -1,16 +1,16 @@
 use std::path::Path;
 
+use tauri::{AppHandle, Emitter, State};
+
 use crate::command_boundary::run_blocking;
-use crate::guidance::{
-    write_icon_conformance_report, write_project_configuration_report,
-    write_project_guidance_reports,
-};
+use crate::guidance::{write_project_configuration_report, write_project_guidance_reports};
 use crate::model::{
-    CleanupResult, IconConformanceReport, ProjectConfigurationReport, ProjectGuidanceReport,
-    ProjectSnapshot, WorkspaceSnapshot,
+    CleanupResult, ProjectConfigurationReport, ProjectGuidanceReport, ProjectSnapshot,
+    WorkspaceSnapshot,
 };
 use crate::scanner::{scan_project, scan_project_with_storage, scan_workspace_with_exclusions};
-use crate::storage::clean_project_artifacts_selected;
+use crate::state::AppState;
+use crate::storage::clean_project_artifacts_selected_with_progress;
 
 #[tauri::command]
 pub fn default_workspace_path_command() -> String {
@@ -38,8 +38,19 @@ pub async fn scan_workspace_command(
 }
 
 #[tauri::command]
-pub async fn inspect_project_command(project_path: String) -> Result<ProjectSnapshot, String> {
+pub async fn inspect_project_command(
+    state: State<'_, AppState>,
+    project_path: String,
+) -> Result<ProjectSnapshot, String> {
+    let inspection_permit = state
+        .inner()
+        .project_inspection_gate
+        .clone()
+        .acquire_owned()
+        .await
+        .map_err(|_| "Project inspection gate is unavailable".to_string())?;
     run_blocking("Project inspection", move || {
+        let _inspection_permit = inspection_permit;
         scan_project_with_storage(Path::new(&project_path), true)
             .ok_or_else(|| "Project path cannot be scanned".to_string())
     })
@@ -48,27 +59,32 @@ pub async fn inspect_project_command(project_path: String) -> Result<ProjectSnap
 
 #[tauri::command]
 pub async fn clean_project_artifacts_command(
+    app: AppHandle,
+    state: State<'_, AppState>,
     project_path: String,
     selected_paths: Option<Vec<String>>,
 ) -> Result<CleanupResult, String> {
+    let inspection_permit = state
+        .inner()
+        .project_inspection_gate
+        .clone()
+        .acquire_owned()
+        .await
+        .map_err(|_| "Project inspection gate is unavailable".to_string())?;
     run_blocking("Project cleanup", move || {
+        let _inspection_permit = inspection_permit;
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        clean_project_artifacts_selected(
+        clean_project_artifacts_selected_with_progress(
             Path::new(&project_path),
             &project.cleanup,
             selected_paths.as_deref(),
+            |progress| {
+                if let Err(error) = app.emit("cleanup-progress", &progress) {
+                    eprintln!("Atrium could not emit cleanup progress: {error}");
+                }
+            },
         )
-    })
-    .await
-}
-
-#[tauri::command]
-pub async fn generate_icon_conformance_report_command(
-    project_path: String,
-) -> Result<IconConformanceReport, String> {
-    run_blocking("Icon conformance report", move || {
-        write_icon_conformance_report(Path::new(&project_path))
     })
     .await
 }

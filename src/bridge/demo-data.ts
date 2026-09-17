@@ -104,20 +104,27 @@ const demoIconConformance = (
 ): IconConformance => ({
   status,
   manifestPath: ".atrium/manifest.toml",
-  reportPath: ".atrium/reports/icon-conformance.md",
   declaredIcon: status === "compliant" ? "assets/icon.png" : null,
   resolvedIcon: status === "compliant" ? "assets/icon.png" : null,
 });
 
 const demoProjectDefaults: Pick<
   ProjectSnapshot,
-  "tools" | "links" | "cleanup" | "storage" | "artifacts"
+  | "tools"
+  | "links"
+  | "cleanup"
+  | "storage"
+  | "artifacts"
+  | "guidance"
+  | "modifiedAt"
 > = {
   tools: { terminal: null },
   links: [],
   cleanup: { cache: [], build: [] },
   storage: null,
   artifacts: null,
+  guidance: { revision: 1, needsUpdate: false, needsSync: false },
+  modifiedAt: now,
 };
 
 const withProjectWorkingDirectory = (

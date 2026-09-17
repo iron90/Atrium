@@ -197,7 +197,6 @@ build = ["dist"]
             &IconConformance {
                 status: IconConformanceStatus::Compliant,
                 manifest_path: ".atrium/manifest.toml".to_string(),
-                report_path: ".atrium/reports/icon-conformance.md".to_string(),
                 declared_icon: Some("icon.png".to_string()),
                 resolved_icon: Some("icon.png".to_string()),
             },

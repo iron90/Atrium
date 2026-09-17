@@ -18,12 +18,12 @@ or any framework's build and release configuration.
 
 ## Capability status
 
-Atrium evaluates the manifest and the icon contract into four independent
-capabilities. The result is stored in the scan snapshot and is never inferred
-from guidance Markdown:
+Atrium evaluates the manifest and the project icon declaration into four
+independent capabilities. The result is stored in the scan snapshot and is
+never inferred from guidance Markdown:
 
 ```text
-identity       → manifest identity/icon declaration and icon.v1 conformance
+identity       → manifest identity/icon declaration and a readable project icon
 context        → [[platforms]] and [[channels]]
 build_profiles → [[build_profiles]] and existing command references
 cleanup        → [cleanup].cache and [cleanup].build
@@ -38,9 +38,12 @@ Each capability has one of these deterministic statuses:
 - `legacy`: a compatibility detector found an older convention that is not an
   Atrium declaration.
 
-The manifest status itself is `configured`, `missing`, or `invalid`, and its
-`schema` value is shown alongside the capability results. Platform/channel
-details and profile actions are gated by the relevant capabilities. Cleanup is
+The manifest status itself is `configured`, `missing`, or `invalid`. Atrium
+keeps the `schema` value for internal validation and compatibility decisions;
+the product UI exposes the connection status and user-facing actions without
+showing protocol versions. The protocol details continue to expose capability
+results and their relevant evidence for inspection. Platform/channel details
+and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
@@ -50,9 +53,9 @@ from a newer protocol version from looking configured while silently having no
 effect. A future protocol revision must introduce a new schema number before
 adding fields.
 
-## `icon.v1`
+## Project icon
 
-The first protocol field is the project-board preview icon:
+The identity section points Atrium at the icon already used by the project:
 
 ```toml
 schema = 1
@@ -62,36 +65,23 @@ profile = "tauri-react"
 icon = "src-tauri/icons/icon.png"
 ```
 
-Rules:
+Atrium keeps the project's existing icon convention. It does not impose a
+universal size, shape, asset layout, or replacement icon. The path must be
+relative to the project and resolve to a readable image that Atrium can show in
+the board preview. Native platform icon sets remain in their normal framework
+locations, and the manifest can point to the source image the project already
+uses.
 
-- `schema` must be `1`.
-- `identity.icon` must be a relative path inside the project.
-- The file must be tracked source material, not a generated `build/`, `dist/`,
-  or `target/` artifact.
-- Canonical formats are PNG, SVG, and WebP.
-- The file must be non-empty and no larger than 512 KiB.
-- Native platform icon sets remain in their normal framework locations. The
-  manifest may point to one of those source files, or to a small dedicated
-  preview icon.
+The internal reader still protects Atrium from loading an unreadable or
+unbounded file, but that safety limit is not an icon specification for the
+project.
 
 ## Legacy projects
 
 Projects without a manifest continue to use deterministic legacy detection so
 existing workspaces remain visible. Atrium marks those icons as `legacy` and
-offers a conformance report. It does not silently promote a legacy guess to a
+offers integration guidance. It does not silently promote a legacy guess to a
 declared project contract.
-
-## Conformance reports
-
-When requested from the project inspector, Atrium writes:
-
-```text
-.atrium/reports/icon-conformance.md
-```
-
-The report contains the fixed rule version, detected evidence, rejection
-reasons, and an actionable instruction for the project development Agent.
-Atrium does not modify the project's icon files or build configuration.
 
 ## Project profiles
 
@@ -132,6 +122,24 @@ target platform with a distribution channel and binds each action to a command
 already owned by the repository. A command reference may use the discovered
 command id or its structured source path. Atrium never replaces that command
 with its own build implementation.
+
+The command roles are framework-neutral:
+
+- `run` points to the project's primary local runtime entry. A web development
+  server is valid for a web target; desktop, CLI, game, and mobile targets use
+  their existing project-owned run entry. It must not point only to a
+  subordinate service required by another runtime. If no reliable entry exists,
+  the field is omitted rather than guessed.
+- `check` points to an existing project quality-validation command, such as
+  tests, lint, type checking, or another command with a meaningful exit result.
+- `build` points to the existing command that produces the profile's declared
+  distributable artifacts. Installation, replacement, and opening an installed
+  application are separate explicit actions; they are not implicit build
+  behavior.
+
+A framework command such as `tauri dev` is only an example for a repository that
+actually uses Tauri. Atrium does not require Tauri or any other framework and
+does not invent wrapper commands.
 
 Each build profile may also declare the files or directories it produces:
 
@@ -221,11 +229,49 @@ Future optional dimensions such as region and payment provider belong on the
 build profile, not on the generic platform or channel lists. They are not
 required by the current schema.
 
-The Atrium guidance action writes both agent-facing reports in one operation:
-`.atrium/reports/project-configuration.md` for the manifest and
-`.atrium/reports/icon-conformance.md` for the icon contract. These reports are
-instructions for the project development Agent; Atrium does not parse them
-back into project facts.
+The Atrium guidance action writes the agent-facing guidance bundle in one
+operation:
+
+```text
+.atrium/guidance.toml
+.atrium/reports/project-configuration.md
+```
+
+`guidance.toml` is machine-readable metadata containing the current
+`guidance_revision` and the manifest `protocol_schema`. Atrium uses it only to
+decide whether the agent-facing guidance bundle needs to be regenerated; it is
+not a project fact and does not replace `manifest.toml`.
+
+The project development Agent acknowledges that it has applied the guidance by
+updating the separate, machine-readable file:
+
+```text
+.atrium/guidance-sync.toml
+```
+
+The acknowledgement contains the same `guidance_revision` and
+`protocol_schema` values as `guidance.toml`. It must be written only after the
+Agent has synchronized `manifest.toml` and the marked Atrium rule in
+`AGENTS.md`. Atrium does not read `AGENTS.md`; it uses this acknowledgement to
+keep the Agent guidance action available across rescans and restarts until the
+project Agent has completed the handoff.
+
+The configuration report contains a marked, versioned rule block for the
+project development Agent to install or update in the repository's
+`AGENTS.md`. The rule asks that Agent to update `manifest.toml` whenever
+development changes an Atrium-relevant field such as the icon, supported
+platforms/channels, command bindings, artifacts, or cleanup declarations. It
+also asks the Agent to apply the migration instructions when a newer guidance
+revision is present. It also includes a complete `manifest.toml` template and
+the current project icon detection summary. Unrelated project instructions in
+`AGENTS.md` must be preserved.
+
+When Atrium changes the guidance contract, it increments `guidance_revision`
+and regenerates the bundle. The next project guidance action supplies the
+updated rule and prompt, allowing the project development Agent to migrate the
+manifest, its persistent rule, and the acknowledgement. These reports and
+metadata are instructions for the project development Agent; Atrium does not
+parse them back into project facts.
 
 If `.atrium/manifest.toml` is missing, Atrium reports the configuration as
 undeclared. It does not promote framework names, directory names, CI files, or

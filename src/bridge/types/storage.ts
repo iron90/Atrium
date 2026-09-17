@@ -28,6 +28,18 @@ export interface ProjectStorage {
   entries: StorageEntry[];
 }
 
+export type CleanupProgressPhase = "preparing" | "deleting" | "finalizing";
+
+export interface CleanupProgress {
+  phase: CleanupProgressPhase;
+  relativePath: string | null;
+  completedBytes: number;
+  totalBytes: number;
+  completedFiles: number;
+  totalFiles: number;
+  percent: number;
+}
+
 export interface StorageCleanupFailure {
   relativePath: string;
   message: string;

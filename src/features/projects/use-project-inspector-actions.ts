@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { ProjectSnapshot } from "../../bridge";
+import type { CleanupProgress, ProjectSnapshot } from "../../bridge";
 import {
   useProjectCleanupActions,
   type CleanupFeedback,
@@ -25,14 +25,19 @@ export interface ProjectInspectorActions {
   reset: () => void;
   guidanceMessage: string | null;
   agentPrompt: string | null;
+  isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   isWritingGuidance: boolean;
   cleanupFeedback: CleanupFeedback | null;
   cleanupSelection: string[];
+  cleanupConfirmation: string[] | null;
+  cleanupProgress: CleanupProgress | null;
   setCleanupSelection: (paths: string[]) => void;
   isCleaningArtifacts: boolean;
   generateGuidance: (project: ProjectSnapshot) => Promise<void>;
-  cleanArtifacts: (project: ProjectSnapshot) => Promise<void>;
+  cleanArtifacts: (project: ProjectSnapshot) => void;
+  cancelCleanup: () => void;
+  confirmCleanup: () => Promise<void>;
   copyAgentPrompt: () => Promise<void>;
 }
 
@@ -45,6 +50,7 @@ export function useProjectInspectorActions({
   const {
     guidanceMessage,
     agentPrompt,
+    isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
     isWritingGuidance,
     reset: resetGuidance,
@@ -54,12 +60,15 @@ export function useProjectInspectorActions({
   const {
     cleanupFeedback,
     cleanupSelection,
+    cleanupConfirmation,
+    cleanupProgress,
     setCleanupSelection,
     isCleaningArtifacts,
     reset: resetCleanup,
     cleanArtifacts,
+    cancelCleanup,
+    confirmCleanup,
   } = useProjectCleanupActions({
-    language,
     inspectorProject,
     onError,
     updateInspectorProject,
@@ -74,14 +83,19 @@ export function useProjectInspectorActions({
     reset,
     guidanceMessage,
     agentPrompt,
+    isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
     isWritingGuidance,
     cleanupFeedback,
     cleanupSelection,
+    cleanupConfirmation,
+    cleanupProgress,
     setCleanupSelection,
     isCleaningArtifacts,
     generateGuidance,
     cleanArtifacts,
+    cancelCleanup,
+    confirmCleanup,
     copyAgentPrompt,
   };
 }

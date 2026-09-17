@@ -58,6 +58,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "macOS": {
+      "bundleName": "Atrium"
+    },
     "icon": ["icons/icon.png"]
   }
 }

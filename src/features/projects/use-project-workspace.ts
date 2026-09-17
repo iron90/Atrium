@@ -83,7 +83,12 @@ export function useProjectWorkspace({
     onProjectRefreshed: handleProjectRefreshed,
   });
 
-  const { clearSelection, getSelectedProjectId, selectProject } = selection;
+  const {
+    clearSelection,
+    getSelectedProjectId,
+    selectProject,
+    updateInspectorProject,
+  } = selection;
 
   const applyWorkspaceSnapshot = useCallback(
     (nextSnapshot: WorkspaceSnapshot) => {
@@ -93,9 +98,25 @@ export function useProjectWorkspace({
       )
         ? currentProjectId
         : (nextSnapshot.projects[0]?.id ?? "");
+      const nextSelectedProject = nextSnapshot.projects.find(
+        (project) => project.id === currentProjectId,
+      );
 
       setSnapshot(nextSnapshot);
       onSnapshotApplied(nextSnapshot);
+      if (currentProjectId && nextSelectedProject) {
+        updateInspectorProject((current) =>
+          current?.id === currentProjectId
+            ? {
+                ...current,
+                ...nextSelectedProject,
+                // The workspace scan intentionally omits these expensive fields.
+                storage: current.storage,
+                artifacts: current.artifacts,
+              }
+            : current,
+        );
+      }
       if (nextProjectId !== currentProjectId) {
         if (nextProjectId) {
           selectProject(nextProjectId);
@@ -104,7 +125,13 @@ export function useProjectWorkspace({
         }
       }
     },
-    [clearSelection, getSelectedProjectId, onSnapshotApplied, selectProject],
+    [
+      clearSelection,
+      getSelectedProjectId,
+      onSnapshotApplied,
+      selectProject,
+      updateInspectorProject,
+    ],
   );
 
   const handleSnapshotTimestamp = useCallback((scannedAt: number) => {

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { subscribeToRunEvents } from "./events";
-import type { RunError, RunFinished, RunOutput, RunStarted } from "./types";
+import { subscribeToCleanupProgress, subscribeToRunEvents } from "./events";
+import type {
+  CleanupProgress,
+  RunError,
+  RunFinished,
+  RunOutput,
+  RunStarted,
+} from "./types";
 
 const listenMock = vi.hoisted(() => vi.fn());
 
@@ -127,5 +133,39 @@ describe("run event bridge", () => {
     expect(unlistenOutput).toHaveBeenCalledOnce();
     expect(unlistenFinished).toHaveBeenCalledOnce();
     expect(unlistenError).toHaveBeenCalledOnce();
+  });
+
+  it("forwards cleanup progress in the native runtime", async () => {
+    Object.defineProperty(window, tauriInternalsKey, {
+      configurable: true,
+      value: {},
+    });
+
+    const unlisten = vi.fn();
+    listenMock.mockResolvedValue(unlisten);
+    const onProgress = vi.fn();
+    const unsubscribe = await subscribeToCleanupProgress(onProgress);
+    const handler = listenMock.mock.calls[0]?.[1] as (event: {
+      payload: CleanupProgress;
+    }) => void;
+    const progress: CleanupProgress = {
+      phase: "deleting",
+      relativePath: "dist/app.js",
+      completedBytes: 10,
+      totalBytes: 20,
+      completedFiles: 1,
+      totalFiles: 2,
+      percent: 50,
+    };
+
+    handler({ payload: progress });
+    unsubscribe();
+
+    expect(listenMock).toHaveBeenCalledWith(
+      "cleanup-progress",
+      expect.any(Function),
+    );
+    expect(onProgress).toHaveBeenCalledWith(progress);
+    expect(unlisten).toHaveBeenCalledOnce();
   });
 });

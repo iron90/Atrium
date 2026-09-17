@@ -1,11 +1,8 @@
-import type {
-  DragEvent as ReactDragEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-} from "react";
 import type { Facet, ProjectSnapshot } from "../../bridge";
 import { useI18n, localizedFacetLabel } from "../../i18n";
 import { FacetMark } from "./FacetMark";
 import { facetTitle } from "./facets";
+import { EyeIcon, StarIcon } from "./ProjectActionIcons";
 import type { ProjectMeta } from "./project-list-model";
 import {
   hasTrustedContext,
@@ -19,46 +16,13 @@ import { ProjectIconView } from "./ProjectIconView";
 
 export function ProjectIdentityCell({
   project,
-  dragEnabled,
   onSelect,
-  onDragStart,
-  onDragEnd,
-  onKeyboardMove,
 }: {
   project: ProjectSnapshot;
-  dragEnabled: boolean;
   onSelect: (projectId: string) => void;
-  onDragStart: (
-    event: ReactDragEvent<HTMLButtonElement>,
-    projectId: string,
-  ) => void;
-  onDragEnd: () => void;
-  onKeyboardMove: (
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-    projectId: string,
-  ) => void;
 }) {
-  const { t } = useI18n();
-
   return (
     <div className="project-select">
-      <button
-        className="project-drag-handle"
-        type="button"
-        draggable={dragEnabled}
-        disabled={!dragEnabled}
-        aria-label={t("dragProject")}
-        title={dragEnabled ? t("dragProject") : t("dragRequiresManual")}
-        onClick={(event) => event.stopPropagation()}
-        onDragStart={(event) => {
-          event.stopPropagation();
-          onDragStart(event, project.id);
-        }}
-        onDragEnd={onDragEnd}
-        onKeyDown={(event) => onKeyboardMove(event, project.id)}
-      >
-        ⠿
-      </button>
       <button
         className="project-select-button"
         type="button"
@@ -149,9 +113,11 @@ export function ProjectRowActions({
           event.stopPropagation();
           onToggleFavorite(project.id);
         }}
+        aria-label={t("favorite")}
+        aria-pressed={meta.favorite}
         title={t("favorite")}
       >
-        {meta.favorite ? "★" : "☆"}
+        <StarIcon active={meta.favorite} />
       </button>
       <button
         type="button"
@@ -159,9 +125,11 @@ export function ProjectRowActions({
           event.stopPropagation();
           onToggleHidden(project.id);
         }}
+        aria-label={meta.hidden ? t("restoreProject") : t("hideProject")}
+        aria-pressed={meta.hidden}
         title={meta.hidden ? t("restoreProject") : t("hideProject")}
       >
-        {meta.hidden ? "◉" : "◌"}
+        <EyeIcon slashed={!meta.hidden} />
       </button>
     </div>
   );

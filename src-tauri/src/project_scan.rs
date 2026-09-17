@@ -1,9 +1,12 @@
+use std::fs;
 use std::path::Path;
+use std::time::UNIX_EPOCH;
 
 use crate::artifacts::inspect_project_artifacts;
 use crate::command_discovery::discover_commands;
 use crate::conformance::inspect_icon;
 use crate::git::read_git_snapshot;
+use crate::guidance::inspect_guidance_status;
 use crate::manifest::scan_project_configuration;
 use crate::model::ProjectSnapshot;
 use crate::project_metadata::{read_project_description, read_project_name};
@@ -33,6 +36,7 @@ pub fn scan_project_with_storage(
     let icon_inspection = inspect_icon(&path);
     let protocol = build_protocol_status(&configuration, &icon_inspection.conformance);
     let repo = read_git_snapshot(&path);
+    let modified_at = read_project_modified_at(&path);
     let description = read_project_description(&path);
     let path_string = path.to_string_lossy().to_string();
     let storage = include_storage.then(|| inspect_project_storage(&path, &configuration.cleanup));
@@ -43,10 +47,12 @@ pub fn scan_project_with_storage(
         id: path_string.clone(),
         name,
         path: path_string,
+        modified_at,
         description,
         icon: icon_inspection.icon,
         icon_conformance: icon_inspection.conformance,
         protocol,
+        guidance: inspect_guidance_status(&path),
         repo,
         tools: configuration.tools,
         links: configuration.links,
@@ -60,6 +66,18 @@ pub fn scan_project_with_storage(
         artifacts,
         scanned_at: now_millis(),
     })
+}
+
+fn read_project_modified_at(path: &Path) -> Option<i64> {
+    fs::metadata(path)
+        .ok()?
+        .modified()
+        .ok()?
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_millis()
+        .try_into()
+        .ok()
 }
 
 #[cfg(test)]

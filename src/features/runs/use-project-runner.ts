@@ -22,10 +22,12 @@ export interface UseProjectRunnerOptions {
   language: Language;
   onError: (message: string | null) => void;
   onMessage: (message: RunMessage) => void;
+  onFinished?: (finished: RunFinished) => void;
 }
 
 export interface UseProjectRunnerResult {
   activeRun?: RunStarted;
+  activeRuns: RunStarted[];
   outputLines: string[];
   runProjectCommand: (
     command: ProjectCommand,
@@ -33,6 +35,7 @@ export interface UseProjectRunnerResult {
     profileId?: string,
     profileAction?: ProfileAction,
   ) => Promise<void>;
+  stopRun: (runId: string) => Promise<void>;
   stopActiveRun: () => Promise<void>;
 }
 
@@ -42,6 +45,7 @@ export function useProjectRunner({
   language,
   onError,
   onMessage,
+  onFinished,
 }: UseProjectRunnerOptions): UseProjectRunnerResult {
   const handleRunError = useCallback(
     (error: RunError) => onError(error.message),
@@ -54,11 +58,12 @@ export function useProjectRunner({
         displayCommand: finished.displayCommand,
         status: finished.status,
       });
+      onFinished?.(finished);
     },
-    [onMessage],
+    [onFinished, onMessage],
   );
   const {
-    activeRuns,
+    activeRuns: activeRunMap,
     outputLinesFor,
     registerRun,
     completeRun,
@@ -87,12 +92,17 @@ export function useProjectRunner({
     demoTimers.current.delete(runId);
   }, []);
 
+  const activeRuns = useMemo(
+    () =>
+      Object.values(activeRunMap).sort(
+        (left, right) => right.startedAt - left.startedAt,
+      ),
+    [activeRunMap],
+  );
   const activeRun = useMemo(
     () =>
       selectedProject
-        ? Object.values(activeRuns).find(
-            (run) => run.projectId === selectedProject.id,
-          )
+        ? activeRuns.find((run) => run.projectId === selectedProject.id)
         : undefined,
     [activeRuns, selectedProject],
   );
@@ -154,17 +164,32 @@ export function useProjectRunner({
     ],
   );
 
+  const stopRun = useCallback(
+    async (runId: string) => {
+      if (!activeRunMap[runId]) return;
+      try {
+        await bridge.stopProjectCommand(runId);
+        cancelDemoTimer(runId);
+        completeRun(runId);
+        onMessage({ type: "cancelled" });
+      } catch (stopError) {
+        onError(errorMessage(stopError));
+      }
+    },
+    [activeRunMap, cancelDemoTimer, completeRun, onError, onMessage],
+  );
+
   const stopActiveRun = useCallback(async () => {
     if (!activeRun) return;
-    try {
-      await bridge.stopProjectCommand(activeRun.runId);
-      cancelDemoTimer(activeRun.runId);
-      completeRun(activeRun.runId);
-      onMessage({ type: "cancelled" });
-    } catch (stopError) {
-      onError(errorMessage(stopError));
-    }
-  }, [activeRun, cancelDemoTimer, completeRun, onError, onMessage]);
+    await stopRun(activeRun.runId);
+  }, [activeRun, stopRun]);
 
-  return { activeRun, outputLines, runProjectCommand, stopActiveRun };
+  return {
+    activeRun,
+    activeRuns,
+    outputLines,
+    runProjectCommand,
+    stopRun,
+    stopActiveRun,
+  };
 }

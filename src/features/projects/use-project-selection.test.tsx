@@ -122,4 +122,96 @@ describe("project selection state", () => {
     expect(result.current.selectedProject?.id).toBe(projects[0].id);
     expect(inspectProject).not.toHaveBeenCalled();
   });
+
+  it("does not reload details when the selected project receives a workspace update", async () => {
+    const projects = demoSnapshot("/workspace").projects;
+    const inspectProject = vi.fn(
+      async (path: string) =>
+        projects.find((project) => project.path === path) ?? projects[0],
+    );
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    const onProjectSelected = vi.fn();
+    const onProjectRefreshed = vi.fn();
+    const { rerender } = renderHook(
+      ({ currentProjects }: { currentProjects: typeof projects }) =>
+        useProjectSelection({
+          nativeRuntime: true,
+          projects: currentProjects,
+          onError,
+          onMessage,
+          onProjectSelected,
+          onProjectRefreshed,
+          inspectProject,
+        }),
+      { initialProps: { currentProjects: projects } },
+    );
+
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(projects[0].path),
+    );
+    inspectProject.mockClear();
+
+    rerender({
+      currentProjects: projects.map((project, index) =>
+        index === 0
+          ? {
+              ...project,
+              protocol: {
+                ...project.protocol,
+                schema: 1,
+                manifestStatus: "configured",
+              },
+            }
+          : project,
+      ),
+    });
+
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+    expect(inspectProject).not.toHaveBeenCalled();
+  });
+
+  it("still reloads a project after returning to it following a manual refresh", async () => {
+    const projects = demoSnapshot("/workspace").projects;
+    const inspectProject = vi.fn(
+      async (path: string) =>
+        projects.find((project) => project.path === path) ?? projects[0],
+    );
+    const onError = vi.fn();
+    const onMessage = vi.fn();
+    const onProjectSelected = vi.fn();
+    const onProjectRefreshed = vi.fn();
+    const { result } = renderHook(() =>
+      useProjectSelection({
+        nativeRuntime: true,
+        projects,
+        onError,
+        onMessage,
+        onProjectSelected,
+        onProjectRefreshed,
+        inspectProject,
+      }),
+    );
+
+    const firstProject = projects[0];
+    const nextProject = projects[1];
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(firstProject.path),
+    );
+
+    inspectProject.mockClear();
+    await act(async () => {
+      await result.current.refreshProject(firstProject);
+    });
+    act(() => result.current.selectProject(nextProject.id));
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(nextProject.path),
+    );
+
+    inspectProject.mockClear();
+    act(() => result.current.selectProject(firstProject.id));
+    await waitFor(() =>
+      expect(inspectProject).toHaveBeenCalledWith(firstProject.path),
+    );
+  });
 });

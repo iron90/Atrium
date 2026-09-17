@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     git::GitSnapshot,
-    protocol::{IconConformance, ProtocolStatus},
+    protocol::{GuidanceStatus, IconConformance, ProtocolStatus},
     storage::{BuildArtifact, CleanupDeclaration, ProjectStorage},
 };
 
@@ -21,10 +21,12 @@ pub struct ProjectSnapshot {
     pub id: String,
     pub name: String,
     pub path: String,
+    pub modified_at: Option<i64>,
     pub description: Option<String>,
     pub icon: Option<ProjectIcon>,
     pub icon_conformance: IconConformance,
     pub protocol: ProtocolStatus,
+    pub guidance: GuidanceStatus,
     pub repo: Option<GitSnapshot>,
     pub tools: ProjectTools,
     pub links: Vec<ProjectLink>,

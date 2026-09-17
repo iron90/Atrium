@@ -5,10 +5,12 @@ import { createConfigurationAgentPrompt } from "./guidance-prompt";
 import { translate, type Language } from "../../i18n";
 import { fill } from "../../shared/format";
 import { errorMessage } from "../../shared/errors";
+import { protocolViewModel } from "./protocol-presentation";
 
 export interface ProjectGuidanceActions {
   guidanceMessage: string | null;
   agentPrompt: string | null;
+  isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   isWritingGuidance: boolean;
   reset: () => void;
@@ -27,12 +29,15 @@ export function useProjectGuidanceActions({
 }: UseProjectGuidanceActionsOptions): ProjectGuidanceActions {
   const [guidanceMessage, setGuidanceMessage] = useState<string | null>(null);
   const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
+  const [isAgentPromptForGuidanceUpdate, setIsAgentPromptForGuidanceUpdate] =
+    useState(false);
   const [isAgentPromptCopied, setIsAgentPromptCopied] = useState(false);
   const [isWritingGuidance, setIsWritingGuidance] = useState(false);
 
   const reset = useCallback(() => {
     setGuidanceMessage(null);
     setAgentPrompt(null);
+    setIsAgentPromptForGuidanceUpdate(false);
     setIsAgentPromptCopied(false);
   }, []);
 
@@ -47,11 +52,15 @@ export function useProjectGuidanceActions({
           fill(
             translate(language, "guidanceGenerated"),
             "path",
-            report.paths.join(" · "),
+            report.paths.map((path) => `• ${path}`).join("\n"),
           ),
         );
         setAgentPrompt(
           createConfigurationAgentPrompt(project, report.paths, language),
+        );
+        setIsAgentPromptForGuidanceUpdate(
+          (project.guidance.needsUpdate || project.guidance.needsSync) &&
+            protocolViewModel(project).isReady,
         );
         setIsAgentPromptCopied(false);
       } catch (error) {
@@ -79,6 +88,7 @@ export function useProjectGuidanceActions({
   return {
     guidanceMessage,
     agentPrompt,
+    isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
     isWritingGuidance,
     reset,

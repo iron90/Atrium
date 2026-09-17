@@ -13,6 +13,14 @@ pub struct ProtocolStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GuidanceStatus {
+    pub revision: Option<u32>,
+    pub needs_update: bool,
+    pub needs_sync: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProtocolCapability {
     pub id: String,
     pub status: ProtocolCapabilityStatus,
@@ -35,7 +43,6 @@ pub enum ProtocolCapabilityStatus {
 pub struct IconConformance {
     pub status: IconConformanceStatus,
     pub manifest_path: String,
-    pub report_path: String,
     pub declared_icon: Option<String>,
     pub resolved_icon: Option<String>,
 }
@@ -51,13 +58,6 @@ pub enum IconConformanceStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IconConformanceReport {
-    pub path: String,
-    pub status: IconConformanceStatus,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct ProjectConfigurationReport {
     pub path: String,
     pub status: ProjectConfigurationStatus,
@@ -68,5 +68,5 @@ pub struct ProjectConfigurationReport {
 pub struct ProjectGuidanceReport {
     pub paths: Vec<String>,
     pub configuration_status: ProjectConfigurationStatus,
-    pub icon_status: IconConformanceStatus,
+    pub guidance_revision: u32,
 }

@@ -1,22 +1,34 @@
+import atriumIcon from "../../src-tauri/icons/icon.png";
+import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
+import { LocalActivityPanel } from "./LocalActivityPanel";
 import type { PageId } from "./navigation";
 import { navigationItems } from "./navigation";
 
 export function AppSidebar({
   activePage,
-  nativeRuntime,
   onPageChange,
+  activity,
 }: {
   activePage: PageId;
-  nativeRuntime: boolean;
   onPageChange: (page: PageId) => void;
+  activity: {
+    activeRun?: RunStarted;
+    onStop: () => Promise<void> | void;
+    projectName?: string;
+  };
 }) {
   const { t } = useI18n();
 
   return (
     <aside className="sidebar">
       <div className="brand-block">
-        <div className="brand-mark">A</div>
+        <img
+          className="brand-mark"
+          src={atriumIcon}
+          alt=""
+          aria-hidden="true"
+        />
         <div>
           <div className="brand-name">Atrium</div>
           <div className="brand-subtitle">{t("localProjectBoard")}</div>
@@ -39,15 +51,11 @@ export function AppSidebar({
         ))}
       </nav>
 
-      <div className="sidebar-note">
-        <span className="note-kicker">{t("localFirst")}</span>
-        <p>{t("localFirstBody")}</p>
-      </div>
-
-      <div className="sidebar-footer">
-        <span className="connection-dot" />
-        <span>{nativeRuntime ? t("nativeSession") : t("previewSession")}</span>
-      </div>
+      <LocalActivityPanel
+        activeRun={activity.activeRun}
+        onStop={activity.onStop}
+        projectName={activity.projectName}
+      />
     </aside>
   );
 }

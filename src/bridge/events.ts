@@ -1,6 +1,12 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { isTauriRuntime } from "./runtime";
-import type { RunError, RunFinished, RunOutput, RunStarted } from "./types";
+import type {
+  CleanupProgress,
+  RunError,
+  RunFinished,
+  RunOutput,
+  RunStarted,
+} from "./types";
 
 export interface RunEventHandlers {
   onStarted: (started: RunStarted) => void;
@@ -32,4 +38,16 @@ export async function subscribeToRunEvents(
   return () => {
     unlisteners.forEach((unlisten) => unlisten());
   };
+}
+
+export async function subscribeToCleanupProgress(
+  onProgress: (progress: CleanupProgress) => void,
+): Promise<UnlistenFn> {
+  if (!isTauriRuntime()) {
+    return () => undefined;
+  }
+
+  return listen<CleanupProgress>("cleanup-progress", (event) =>
+    onProgress(event.payload),
+  );
 }

@@ -36,8 +36,8 @@ describe("local preferences", () => {
       workspaces: ["/one"],
       excludeNames: ["node_modules"],
       projectMeta: {
-        alpha: { favorite: true, hidden: false, order: 3 },
-        beta: { favorite: false, hidden: false, order: 1 },
+        alpha: { favorite: true, hidden: false },
+        beta: { favorite: false, hidden: false },
       },
     });
   });

@@ -38,7 +38,6 @@ pub fn run() {
             workspace_commands::default_workspace_path_command,
             workspace_commands::scan_workspace_command,
             workspace_commands::inspect_project_command,
-            workspace_commands::generate_icon_conformance_report_command,
             workspace_commands::generate_project_configuration_report_command,
             workspace_commands::generate_project_guidance_command,
             workspace_commands::clean_project_artifacts_command,

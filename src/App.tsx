@@ -12,7 +12,6 @@ import {
   type ProjectAction,
 } from "./features/projects/project-actions";
 import { useProjectInspectorActions } from "./features/projects/use-project-inspector-actions";
-import { metaForProject } from "./features/projects/project-list-model";
 import { emptySnapshot } from "./features/projects/workspace-snapshot";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
@@ -22,18 +21,13 @@ import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
-import type {
-  ActivityMessage,
-  RunMessage,
-  WorkspaceMessage,
-} from "./shared/activity";
 import { errorMessage } from "./shared/errors";
 import {
   persistLocalPreferences,
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import type { ProjectSnapshot, WorkspaceSnapshot } from "./bridge";
+import type { ProjectSnapshot, RunFinished, WorkspaceSnapshot } from "./bridge";
 import "./app.css";
 
 export default function App() {
@@ -59,36 +53,22 @@ export default function App() {
   const [excludeNames, setExcludeNames] = useState<string[]>(
     preferences.excludeNames ?? [],
   );
-  const {
-    projectMeta,
-    ensureProjectMeta,
-    updateProjectMeta,
-    reorderProjects,
-    moveProjectByKeyboard,
-  } = useProjectMetaState(preferences.projectMeta ?? {});
+  const { projectMeta, ensureProjectMeta, updateProjectMeta } =
+    useProjectMetaState(preferences.projectMeta ?? {});
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
     nativeRuntime
       ? emptySnapshot(initialRootPath)
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
-  const [runMessage, setRunMessage] = useState<ActivityMessage>({
-    type: "ready",
-  });
   const inspectorResetRef = useRef<() => void>(() => undefined);
 
   const handleWorkspaceError = useCallback(
     (message: string | null) => setError(message),
     [],
   );
-  const handleWorkspaceMessage = useCallback(
-    (message: WorkspaceMessage) => setRunMessage(message),
-    [],
-  );
-  const handleRunMessage = useCallback(
-    (message: RunMessage) => setRunMessage(message),
-    [],
-  );
+  const handleWorkspaceMessage = useCallback(() => undefined, []);
+  const handleRunMessage = useCallback(() => undefined, []);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
   }, []);
@@ -119,19 +99,39 @@ export default function App() {
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
   });
+  const handleRunFinished = useCallback(
+    (finished: RunFinished) => {
+      if (
+        finished.status !== "succeeded" ||
+        finished.profileAction !== "build"
+      ) {
+        return;
+      }
+      const project = snapshot.projects.find(
+        (candidate) => candidate.id === finished.projectId,
+      );
+      if (project) void refreshProject(project);
+    },
+    [refreshProject, snapshot.projects],
+  );
 
   const {
     reset: resetProjectInspectionState,
     guidanceMessage,
     agentPrompt,
+    isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
     isWritingGuidance,
     cleanupFeedback,
     cleanupSelection,
+    cleanupConfirmation,
+    cleanupProgress,
     setCleanupSelection,
     isCleaningArtifacts,
     generateGuidance: handleGenerateGuidance,
     cleanArtifacts: handleCleanArtifacts,
+    cancelCleanup,
+    confirmCleanup,
     copyAgentPrompt: handleCopyAgentPrompt,
   } = useProjectInspectorActions({
     language,
@@ -145,8 +145,10 @@ export default function App() {
 
   const {
     activeRun,
+    activeRuns,
     outputLines,
     runProjectCommand: handleRun,
+    stopRun: handleStopRun,
     stopActiveRun: handleStop,
   } = useProjectRunner({
     nativeRuntime,
@@ -154,6 +156,7 @@ export default function App() {
     language,
     onError: handleWorkspaceError,
     onMessage: handleRunMessage,
+    onFinished: handleRunFinished,
   });
 
   useEffect(() => {
@@ -249,6 +252,12 @@ export default function App() {
             title: t("projectsInView"),
             body: t("factsSubtitle"),
           };
+  const globalActiveRun = activeRuns[0];
+  const globalActiveRunProject = globalActiveRun
+    ? snapshot.projects.find(
+        (project) => project.id === globalActiveRun.projectId,
+      )
+    : undefined;
 
   const projectList: ProjectListProps = {
     projects: visibleProjects,
@@ -267,30 +276,13 @@ export default function App() {
     filterOptions,
     projectMeta,
     onToggleFavorite: (id) =>
-      updateProjectMeta(
-        id,
-        {
-          favorite: !metaForProject(projectMeta, id, 0).favorite,
-        },
-        snapshot.projects.length,
-      ),
+      updateProjectMeta(id, {
+        favorite: !projectMeta[id]?.favorite,
+      }),
     onToggleHidden: (id) =>
-      updateProjectMeta(
-        id,
-        {
-          hidden: !metaForProject(projectMeta, id, 0).hidden,
-        },
-        snapshot.projects.length,
-      ),
-    onReorder: (orderedVisibleIds) =>
-      reorderProjects(snapshot.projects, orderedVisibleIds),
-    onKeyboardMove: (projectId, direction) =>
-      moveProjectByKeyboard(
-        snapshot.projects,
-        visibleProjects,
-        projectId,
-        direction,
-      ),
+      updateProjectMeta(id, {
+        hidden: !projectMeta[id]?.hidden,
+      }),
   };
 
   const inspector: ProjectInspectorProps = {
@@ -310,14 +302,19 @@ export default function App() {
     onGenerateGuidance: (project) => void handleGenerateGuidance(project),
     guidanceMessage,
     agentPrompt,
+    isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
     onCopyAgentPrompt: () => void handleCopyAgentPrompt(),
     isWritingGuidance,
     cleanupFeedback,
     cleanupSelection,
+    cleanupConfirmation,
+    cleanupProgress,
     onCleanupSelectionChange: setCleanupSelection,
     isCleaningArtifacts,
     onCleanArtifacts: (project) => void handleCleanArtifacts(project),
+    onCancelCleanup: cancelCleanup,
+    onConfirmCleanup: () => void confirmCleanup(),
     onOpenArtifact: handleOpenArtifact,
     onOpenProjectAction: (action, project, linkId) =>
       void handleOpenProjectAction(action, project, linkId),
@@ -328,8 +325,15 @@ export default function App() {
       <div className="app-shell" data-theme={theme} data-layout={layout}>
         <AppSidebar
           activePage={activePage}
-          nativeRuntime={nativeRuntime}
           onPageChange={setActivePage}
+          activity={{
+            activeRun: globalActiveRun,
+            onStop: () =>
+              globalActiveRun
+                ? handleStopRun(globalActiveRun.runId)
+                : undefined,
+            projectName: globalActiveRunProject?.name,
+          }}
         />
 
         <main className="main-column">
@@ -374,11 +378,6 @@ export default function App() {
               snapshot={snapshot}
               visibleProjects={visibleProjects}
               projectList={projectList}
-              activity={{
-                activeRun,
-                message: runMessage,
-                onStop: handleStop,
-              }}
               inspector={inspector}
             />
           )}

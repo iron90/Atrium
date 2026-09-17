@@ -90,4 +90,28 @@ describe("project runner", () => {
 
     expect(runProjectCommandMock).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps global run status when the selected project changes", async () => {
+    runProjectCommandMock.mockResolvedValue(started);
+    const secondProject = demoSnapshot("/workspace").projects[1];
+    const { result, rerender } = renderHook(
+      ({ selectedProject }) =>
+        useProjectRunner({
+          nativeRuntime: false,
+          selectedProject,
+          language: "en",
+          onError: vi.fn(),
+          onMessage: vi.fn(),
+        }),
+      { initialProps: { selectedProject: project } },
+    );
+
+    await act(async () => {
+      await result.current.runProjectCommand(command);
+    });
+    rerender({ selectedProject: secondProject });
+
+    expect(result.current.activeRun).toBeUndefined();
+    expect(result.current.activeRuns).toEqual([started]);
+  });
 });

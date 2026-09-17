@@ -37,10 +37,13 @@ export function BuildProfileCard({
   ) => void;
 }) {
   const { language, t } = useI18n();
-  const actions: ProfileAction[] = ["run", "check", "build"];
+  const actions: ProfileAction[] = ["check", "build", "run"];
   const profileReady = canExecute && profile.issues.length === 0;
   const profileArtifacts = artifacts.filter(
     (artifact) => artifact.profileId === profile.id,
+  );
+  const hasAvailableArtifact = profileArtifacts.some(
+    (artifact) => artifact.kind === "file" || artifact.kind === "directory",
   );
 
   return (
@@ -70,20 +73,25 @@ export function BuildProfileCard({
         {actions.map((action) => {
           const command = commandForProfile(profile, action, commands);
           if (!command) return null;
-          return (
+          const runBlockedUntilBuild =
+            action === "run" && profileReady && !hasAvailableArtifact;
+          const actionDisabled =
+            Boolean(activeRun) || !profileReady || runBlockedUntilBuild;
+          const actionTitle = !canExecute
+            ? t("configurationMissing")
+            : profile.issues.length
+              ? t("profileUnavailable")
+              : runBlockedUntilBuild
+                ? t("buildRequiredToRun")
+                : command.displayCommand;
+          const actionButton = (
             <button
               className={`profile-action command-${action}`}
               type="button"
               key={action}
               onClick={() => onRun(command, profile.id, action)}
-              disabled={Boolean(activeRun) || !profileReady}
-              title={
-                !canExecute
-                  ? t("configurationMissing")
-                  : profile.issues.length
-                    ? t("profileUnavailable")
-                    : command.displayCommand
-              }
+              disabled={actionDisabled}
+              title={actionTitle}
             >
               {action === "run"
                 ? t("run")
@@ -91,6 +99,17 @@ export function BuildProfileCard({
                   ? t("check")
                   : t("build")}
             </button>
+          );
+          return runBlockedUntilBuild ? (
+            <span
+              className="profile-action-hint"
+              key={action}
+              title={t("buildRequiredToRun")}
+            >
+              {actionButton}
+            </span>
+          ) : (
+            actionButton
           );
         })}
       </div>

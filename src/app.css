@@ -182,24 +182,21 @@ button:disabled {
   padding: 0 8px;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  border-radius: 12px 12px 12px 4px;
-  color: var(--accent-strong);
-  font-family: Georgia, serif;
-  font-size: 22px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  display: block;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 13px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--bg) 35%, transparent);
 }
 .brand-name {
   letter-spacing: 0.01em;
   font-size: 20px;
 }
 .brand-subtitle,
-.eyebrow,
-.note-kicker {
+.eyebrow {
   color: var(--muted);
   font-family: "DM Mono", ui-monospace, monospace;
   font-size: 9px;
@@ -242,30 +239,6 @@ button:disabled {
   text-align: center;
   font-size: 15px;
 }
-.sidebar-note {
-  margin-top: auto;
-  padding: 14px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel-soft);
-}
-.sidebar-note p {
-  margin: 9px 0 1px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-}
-.sidebar-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px;
-  color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
-}
-.connection-dot,
 .state-dot,
 .facet-source,
 .activity-pulse {
@@ -273,13 +246,6 @@ button:disabled {
   flex: 0 0 auto;
   border-radius: 50%;
 }
-.connection-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--good);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 14%, transparent);
-}
-
 .main-column {
   height: 100%;
   min-width: 0;
@@ -509,6 +475,16 @@ button:disabled {
   justify-content: center;
   cursor: pointer;
 }
+.project-action-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  overflow: visible;
+}
+.project-filters > button .project-action-icon {
+  width: 18px;
+  height: 18px;
+}
 .project-filters > input:focus,
 .project-filters > input:focus-visible,
 .project-filters > select:focus,
@@ -522,17 +498,6 @@ button:disabled {
 .project-filters > button.is-toggle-active {
   border-color: var(--accent);
   color: var(--accent-strong);
-}
-.project-order-hint {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 20px;
-  margin: 0 0 7px 2px;
-  color: var(--faint);
-  font:
-    10px "DM Mono",
-    monospace;
 }
 .project-list-head {
   min-height: 39px;
@@ -560,42 +525,8 @@ button:disabled {
 .project-row.is-selected {
   background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
-.project-list.is-reorderable .project-row {
-  user-select: none;
-}
 .project-row.is-selected {
   box-shadow: inset 3px 0 var(--accent);
-}
-.project-row.is-dragging {
-  z-index: 2;
-  opacity: 0.95;
-  outline: 1px solid color-mix(in srgb, var(--accent) 72%, transparent);
-  background: color-mix(in srgb, var(--accent) 11%, var(--panel));
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--bg) 55%, transparent);
-  transform: translateY(-2px);
-}
-.project-row.is-dragging .project-drag-handle {
-  color: var(--accent-strong);
-}
-.project-row.is-drop-target {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
-.project-row.is-drop-target::before,
-.project-row.is-drop-target::after {
-  position: absolute;
-  right: 0;
-  left: 0;
-  height: 3px;
-  content: "";
-  background: var(--accent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
-  pointer-events: none;
-}
-.project-row.is-drop-before::before {
-  top: -2px;
-}
-.project-row.is-drop-after::after {
-  bottom: -2px;
 }
 .project-select {
   display: flex;
@@ -619,38 +550,6 @@ button:disabled {
 .project-select-button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-}
-.project-drag-handle {
-  display: grid;
-  place-items: center;
-  width: 13px;
-  flex: 0 0 13px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  color: var(--faint);
-  background: transparent;
-  font-size: 15px;
-  line-height: 1;
-  cursor: grab;
-}
-.project-drag-handle:active {
-  cursor: grabbing;
-}
-.project-drag-handle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  color: var(--accent-strong);
-}
-.project-drag-handle:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
-.project-order-hint .project-drag-handle {
-  width: auto;
-  border: 0;
-  cursor: default;
-  color: var(--accent);
 }
 .project-glyph,
 .inspector-glyph {
@@ -1042,12 +941,6 @@ button:disabled {
   color: var(--faint);
   font-size: 9px;
 }
-.storage-warning {
-  margin: 0;
-  color: var(--warning);
-  font-size: 10px;
-  line-height: 1.45;
-}
 .storage-entry-list {
   display: grid;
   gap: 5px;
@@ -1115,6 +1008,121 @@ button:disabled {
 .cleanup-button:focus-visible:not(:disabled) {
   border-color: var(--warning);
   background: color-mix(in srgb, var(--warning) 20%, transparent);
+}
+.cleanup-button-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.cleanup-button-progress-label strong {
+  color: var(--text);
+  font-weight: 500;
+}
+.cleanup-progress {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning) 5%, var(--panel));
+}
+.cleanup-progress-heading,
+.cleanup-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  min-width: 0;
+  color: var(--muted);
+  font:
+    8px/1.35 "DM Mono",
+    monospace;
+}
+.cleanup-progress-heading span,
+.cleanup-progress-meta span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cleanup-progress-heading strong {
+  flex: 0 0 auto;
+  color: var(--warning);
+  font-size: 9px;
+}
+.cleanup-progress-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--warning) 16%, var(--panel));
+}
+.cleanup-progress-value {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--warning), var(--accent));
+  transition: width 0.15s ease;
+}
+.cleanup-progress-meta {
+  color: var(--faint);
+}
+.cleanup-progress-meta span:last-child {
+  flex: 0 0 auto;
+}
+.cleanup-confirmation {
+  display: grid;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--warning) 68%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning) 8%, var(--panel));
+}
+.cleanup-confirmation strong {
+  color: var(--warning);
+  font-size: 10px;
+}
+.cleanup-confirmation p,
+.cleanup-confirmation ul {
+  margin: 0;
+  color: var(--muted);
+  font:
+    8px/1.45 "DM Mono",
+    monospace;
+}
+.cleanup-confirmation ul {
+  padding-left: 16px;
+  color: var(--text);
+}
+.cleanup-confirmation-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.cleanup-confirmation-actions button {
+  padding: 5px 7px;
+  border-radius: 5px;
+  font:
+    8px "DM Mono",
+    monospace;
+}
+.cleanup-cancel-button {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--panel-soft);
+}
+.cleanup-confirm-button {
+  border: 1px solid color-mix(in srgb, var(--warning) 68%, transparent);
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+.cleanup-cancel-button:hover,
+.cleanup-cancel-button:focus-visible,
+.cleanup-confirm-button:hover,
+.cleanup-confirm-button:focus-visible {
+  border-color: var(--warning);
 }
 .cleanup-message {
   margin: 0;
@@ -1355,10 +1363,12 @@ button:disabled {
 }
 .protocol-message {
   margin: 8px 0 0;
+  overflow-wrap: anywhere;
   color: var(--accent-strong);
   font:
     9px/1.4 "DM Mono",
     monospace;
+  white-space: pre-line;
 }
 .protocol-prerequisite {
   display: grid;
@@ -1905,7 +1915,7 @@ button:disabled {
 }
 .activity-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 .activity-card {
@@ -1936,22 +1946,38 @@ button:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.activity-icon {
-  color: var(--accent);
-  font-size: 17px;
-}
 .activity-card button {
   margin-left: auto;
   padding: 5px 8px;
   font-size: 10px;
 }
-.activity-result {
-  margin-left: auto;
-  color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
+.activity-project {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 9px;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sidebar .local-activity {
+  margin-top: auto;
+  padding: 0 2px;
+}
+.sidebar .activity-heading {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.sidebar .activity-heading > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar .activity-card {
+  padding: 10px;
+}
+.sidebar .activity-card button {
+  align-self: center;
 }
 
 .matrix-view {

@@ -55,7 +55,7 @@ const readProjectMeta = (
   const result: Record<string, ProjectMeta> = {};
   Object.entries(value)
     .slice(0, MAX_PROJECT_META_ENTRIES)
-    .forEach(([projectId, rawMeta], index) => {
+    .forEach(([projectId, rawMeta]) => {
       if (!isBoundedNonEmptyString(projectId)) return;
       if (!rawMeta || typeof rawMeta !== "object" || Array.isArray(rawMeta)) {
         return;
@@ -64,10 +64,6 @@ const readProjectMeta = (
       result[projectId] = {
         favorite: meta.favorite === true,
         hidden: meta.hidden === true,
-        order:
-          typeof meta.order === "number" && Number.isFinite(meta.order)
-            ? meta.order
-            : index,
       };
     });
   return result;

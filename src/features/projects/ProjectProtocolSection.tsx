@@ -5,8 +5,9 @@ import { InspectorSection } from "./InspectorPrimitives";
 import {
   capabilityLabel,
   capabilityStatusLabel,
+  protocolStatusDescription,
+  protocolStatusLabel,
   protocolViewModel,
-  protocolManifestLabel,
 } from "./presentation";
 
 export interface ProjectProtocolSectionProps {
@@ -14,6 +15,7 @@ export interface ProjectProtocolSectionProps {
   inspectedProject: ProjectSnapshot;
   guidanceMessage: string | null;
   agentPrompt: string | null;
+  isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   onCopyAgentPrompt: () => void;
   isWritingGuidance: boolean;
@@ -25,6 +27,7 @@ export function ProjectProtocolSection({
   inspectedProject,
   guidanceMessage,
   agentPrompt,
+  isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
   onCopyAgentPrompt,
   isWritingGuidance,
@@ -32,8 +35,16 @@ export function ProjectProtocolSection({
 }: ProjectProtocolSectionProps) {
   const { t } = useI18n();
   const protocol = inspectedProject.protocol;
-  const iconConformance = inspectedProject.iconConformance;
   const protocolView = protocolViewModel(inspectedProject);
+  const guidanceNeedsAction =
+    inspectedProject.guidance.needsUpdate ||
+    inspectedProject.guidance.needsSync;
+  const shouldShowGuidanceAction =
+    protocolView.shouldShowGuidance || guidanceNeedsAction;
+  const shouldShowAgentGuidance =
+    protocolView.shouldShowGuidance ||
+    (isAgentPromptForGuidanceUpdate && guidanceNeedsAction);
+  const isUpdatingGuidance = guidanceNeedsAction && protocolView.isReady;
   const protocolDetailsSummary = fill(
     t("protocolDetailsSummary"),
     "count",
@@ -46,10 +57,10 @@ export function ProjectProtocolSection({
         className={`protocol-card protocol-status-${protocolView.cardStatus}`}
       >
         <div>
-          <strong>{protocolManifestLabel(protocol.manifestStatus, t)}</strong>
-          <span>{t("iconConformanceDescription")}</span>
+          <strong>{protocolStatusLabel(protocolView.cardStatus, t)}</strong>
+          <span>{protocolStatusDescription(protocolView.cardStatus, t)}</span>
         </div>
-        {protocolView.shouldShowGuidance ? (
+        {shouldShowGuidanceAction ? (
           <button
             className="protocol-action"
             type="button"
@@ -58,7 +69,9 @@ export function ProjectProtocolSection({
           >
             {isWritingGuidance
               ? t("generatingGuidance")
-              : t("generateGuidance")}
+              : isUpdatingGuidance
+                ? t("updateAgentGuidance")
+                : t("generateGuidance")}
           </button>
         ) : null}
       </div>
@@ -70,11 +83,6 @@ export function ProjectProtocolSection({
         <div className="protocol-details-body">
           <div className="protocol-path">
             <span>{protocol.manifestPath}</span>
-            <span>
-              {protocol.schema
-                ? fill(t("protocolSchema"), "version", String(protocol.schema))
-                : t("protocolSchemaUnavailable")}
-            </span>
           </div>
           <div
             className="protocol-capabilities"
@@ -96,18 +104,12 @@ export function ProjectProtocolSection({
               </div>
             ))}
           </div>
-          <div className="protocol-path protocol-icon-path">
-            <span>{iconConformance.manifestPath}</span>
-            <span>
-              {iconConformance.resolvedIcon ?? t("iconStatusMissing")}
-            </span>
-          </div>
         </div>
       </details>
-      {guidanceMessage ? (
+      {guidanceMessage && shouldShowGuidanceAction ? (
         <p className="protocol-message">{guidanceMessage}</p>
       ) : null}
-      {agentPrompt ? (
+      {agentPrompt && shouldShowAgentGuidance ? (
         <div className="agent-prompt-card">
           <div className="agent-prompt-heading">
             <div>

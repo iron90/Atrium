@@ -28,6 +28,26 @@ pub struct StorageEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CleanupProgress {
+    pub phase: CleanupProgressPhase,
+    pub relative_path: Option<String>,
+    pub completed_bytes: u64,
+    pub total_bytes: u64,
+    pub completed_files: u64,
+    pub total_files: u64,
+    pub percent: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CleanupProgressPhase {
+    Preparing,
+    Deleting,
+    Finalizing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BuildArtifact {
     pub profile_id: String,
     pub profile_label: String,

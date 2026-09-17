@@ -8,6 +8,7 @@ describe("project list view state", () => {
     const projects = demoSnapshot("/workspace").projects;
     const { result } = renderHook(() => useProjectListViewState(projects, {}));
 
+    expect(result.current.projectSort).toBe("name");
     expect(result.current.filterOptions.platforms.length).toBeGreaterThan(0);
     expect(result.current.visibleProjects).toHaveLength(projects.length);
 

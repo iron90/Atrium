@@ -163,7 +163,7 @@ fn icon_capability(icon: &IconConformance) -> ProtocolCapability {
             vec!["The manifest does not declare a valid identity.icon path.".to_string()]
         }
         IconConformanceStatus::Invalid => {
-            vec!["The declared icon does not satisfy the icon.v1 contract.".to_string()]
+            vec!["The declared icon cannot be read or displayed by Atrium.".to_string()]
         }
     };
     let mut evidence = vec![icon.manifest_path.clone()];

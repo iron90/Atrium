@@ -1,12 +1,11 @@
 import type { Facet, ProjectSnapshot } from "../../bridge";
 import { hasTrustedContext } from "./protocol-presentation";
 
-export type ProjectSort = "manual" | "modified" | "storage" | "name";
+export type ProjectSort = "modified" | "recent" | "storage" | "name";
 
 export interface ProjectMeta {
   favorite: boolean;
   hidden: boolean;
-  order: number;
 }
 
 export interface ProjectListFilters {
@@ -25,12 +24,10 @@ export interface ProjectFilterOptions {
 export const metaForProject = (
   projectMeta: Record<string, ProjectMeta>,
   projectId: string,
-  fallbackOrder: number,
 ): ProjectMeta =>
   projectMeta[projectId] ?? {
     favorite: false,
     hidden: false,
-    order: fallbackOrder,
   };
 
 export const collectFilterOptions = (
@@ -64,16 +61,9 @@ export const filterAndSortProjects = (
   filters: ProjectListFilters,
 ): ProjectSnapshot[] => {
   const query = filters.search.trim().toLowerCase();
-  const fallbackOrders = new Map(
-    projects.map((project, index) => [project.id, index]),
-  );
   return projects
     .filter((project) => {
-      const meta = metaForProject(
-        projectMeta,
-        project.id,
-        fallbackOrders.get(project.id) ?? 0,
-      );
+      const meta = metaForProject(projectMeta, project.id);
       if (meta.hidden && !filters.showHidden) return false;
       if (
         query &&
@@ -100,22 +90,8 @@ export const filterAndSortProjects = (
       return true;
     })
     .sort((left, right) => {
-      const leftMeta = metaForProject(
-        projectMeta,
-        left.id,
-        fallbackOrders.get(left.id) ?? 0,
-      );
-      const rightMeta = metaForProject(
-        projectMeta,
-        right.id,
-        fallbackOrders.get(right.id) ?? 0,
-      );
-      if (filters.sort === "manual") {
-        return (
-          leftMeta.order - rightMeta.order ||
-          compareProjectIdentity(left, right)
-        );
-      }
+      const leftMeta = metaForProject(projectMeta, left.id);
+      const rightMeta = metaForProject(projectMeta, right.id);
       if (leftMeta.favorite !== rightMeta.favorite) {
         return leftMeta.favorite ? -1 : 1;
       }
@@ -123,6 +99,12 @@ export const filterAndSortProjects = (
         return (
           (right.repo?.lastCommit?.timestamp ?? 0) -
             (left.repo?.lastCommit?.timestamp ?? 0) ||
+          compareProjectIdentity(left, right)
+        );
+      }
+      if (filters.sort === "recent") {
+        return (
+          (right.modifiedAt ?? 0) - (left.modifiedAt ?? 0) ||
           compareProjectIdentity(left, right)
         );
       }
@@ -134,48 +116,4 @@ export const filterAndSortProjects = (
       }
       return compareProjectIdentity(left, right);
     });
-};
-
-export const reorderProjectMeta = (
-  projects: ProjectSnapshot[],
-  projectMeta: Record<string, ProjectMeta>,
-  orderedVisibleIds: string[],
-): Record<string, ProjectMeta> | null => {
-  const projectById = new Map(projects.map((project) => [project.id, project]));
-  if (
-    orderedVisibleIds.length < 2 ||
-    new Set(orderedVisibleIds).size !== orderedVisibleIds.length ||
-    orderedVisibleIds.some((projectId) => !projectById.has(projectId))
-  ) {
-    return null;
-  }
-
-  const visibleIds = new Set(orderedVisibleIds);
-  const fallbackOrders = new Map(
-    projects.map((project, index) => [project.id, index]),
-  );
-  const manualOrder = [...projects].sort(
-    (left, right) =>
-      metaForProject(projectMeta, left.id, fallbackOrders.get(left.id) ?? 0)
-        .order -
-        metaForProject(projectMeta, right.id, fallbackOrders.get(right.id) ?? 0)
-          .order || compareProjectIdentity(left, right),
-  );
-  let nextVisibleIndex = 0;
-  const orderedIds = manualOrder.map((project) => {
-    if (!visibleIds.has(project.id)) return project.id;
-    const nextId = orderedVisibleIds[nextVisibleIndex];
-    nextVisibleIndex += 1;
-    return nextId;
-  });
-  if (nextVisibleIndex !== orderedVisibleIds.length) return null;
-
-  const next = { ...projectMeta };
-  orderedIds.forEach((projectId, index) => {
-    next[projectId] = {
-      ...metaForProject(projectMeta, projectId, index),
-      order: index,
-    };
-  });
-  return next;
 };

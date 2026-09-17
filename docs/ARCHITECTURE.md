@@ -47,7 +47,7 @@ React UI
   ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
   ├─ app                   应用层持久化、消息格式化、外壳和页面组合
   │  ├─ AppSidebar          应用导航
-  │  ├─ LocalActivityPanel  本地活动摘要
+  │  ├─ LocalActivityPanel  左侧栏全局运行状态摘要
   │  └─ ProjectsPage        项目页布局组合
   ├─ features/projects      项目列表、详情、工作区扫描和项目交互
   │  ├─ project-list-model    列表筛选、排序和项目显示元数据
@@ -72,8 +72,6 @@ React UI
   │  ├─ scan-request-gate         最新扫描请求优先的并发闸门
   │  ├─ ProjectListRow             列表行事件边界
   │  ├─ ProjectListRowCells        项目、Git、上下文和操作单元
-  │  ├─ use-project-reorder        排序门面与预览顺序投影
-  │  ├─ use-project-drag-session   HTML5 拖拽会话与落点反馈
   │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
   ├─ features/git           Git 历史页和提交列表
   │  ├─ GitHistoryView       Git 页面组合
@@ -332,15 +330,11 @@ the stop registry or persisted history is accessed.
 ```text
 workspaces: string[]
 excludeNames: string[]
-projectMeta[path]: favorite | hidden | order
+projectMeta[path]: favorite | hidden
 ```
 
-项目手动顺序是看板本地偏好中的显式事实。Projects 页面只有项目行左侧的拖拽手柄
-可以启动排序；项目内容区域仍然只负责选中项目。拖拽过程中，UI 先在当前可见列表中
-实时预览插入位置，用上下插入线提示 before/after；只有松手落在另一项目行上时才一次性
-提交新的 `order`，落到列表外则取消预览，不会修改仓库文件。筛选后的项目重排只改变
-这些可见项目之间的相对顺序，未显示项目会保留在完整手动顺序中的位置。非手动排序
-模式不提供拖拽提交入口。
+收藏和隐藏只是看板本地显示偏好，不写回项目仓库。项目列表排序由当前扫描快照派生，
+支持名称、Git 状态、最近修改和占用空间；排序不会修改项目文件，也不会改变 Git 历史。
 
 扫描器分别读取每个工作区，按 canonical project path 合并重复项目；无效工作区
 不会阻塞其他工作区，重叠路径会作为扫描警告显示。工作区一级目录的符号链接只有在
@@ -382,18 +376,19 @@ path 会再次去重。
 - Atrium 生成的协议引导报告也经过同一项目路径边界写入；会逐级创建并校验普通目录，拒绝
   通过符号链接写入项目外部，避免报告生成意外覆盖仓库之外的文件。
 
-Atrium 协议是项目上下文的上游接入门槛。只有 icon.v1 声明处于 compliant 状态时，
+Atrium 协议是项目上下文的上游接入门槛。只有 manifest 和项目图标声明处于可用状态时，
 界面才把平台、渠道和构建 Profile 作为已接入项目事实展示；协议未就绪时只显示等待
-接入的说明，不把扫描结果伪装成可信配置。
+接入的说明，不把扫描结果伪装成可信配置。图标沿用项目自身的格式和规格，不强制统一
+icon 规范。
 
 没有 manifest 或没有有效 build profile 时显示未声明/无效，并提供生成结构化配置说明的
 操作；不猜测商店、支付或发布渠道。仓库命令仍然可以从项目文件中确定性发现，默认
 隐藏具体列表，用户明确确认后可执行；它们不能被当作平台/渠道操作。命令执行失败
 由项目和当前运行环境决定，Atrium 只负责返回执行结果。
 
-引导操作一次生成项目配置说明和图标协议说明两个 Agent-facing 文件，界面只暴露一个
-统一入口，避免用户理解两个独立修复流程。生成成功后，Atrium 同时生成一段固定模板的
-项目开发 Agent 提示词，用户可以复制该提示词，让 Agent 读取这两个引导文件并完成项目配置。
+引导操作一次生成包含项目配置和图标说明的单个 Agent-facing 配置文件，另生成一份内部
+版本元数据。生成成功后，Atrium 同时生成一段固定模板的项目开发 Agent 提示词，用户可以
+复制该提示词，让 Agent 读取这两份引导文件并完成项目配置。
 
 项目存储统计和清理同样遵循项目声明：`[cleanup]` 中的 `cache` 与 `build`
 数组由项目开发 Agent 根据真实模板补齐。Rust 核心只统计项目目录中的文件大小，

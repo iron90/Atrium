@@ -54,7 +54,7 @@ pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf,
     Ok(resolved)
 }
 
-pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<ProjectIcon, String> {
+pub(super) fn load_icon(root: &Path, path: &Path) -> Result<ProjectIcon, String> {
     let canonical_root = root
         .canonicalize()
         .map_err(|error| format!("cannot resolve project root: {error}"))?;
@@ -65,18 +65,8 @@ pub(super) fn load_icon(root: &Path, path: &Path, canonical: bool) -> Result<Pro
         return Err("icon path resolves outside the project".to_string());
     }
 
-    let mime = if canonical {
-        canonical_icon_mime(&resolved_path)
-    } else {
-        icon_mime(&resolved_path)
-    }
-    .ok_or_else(|| {
-        if canonical {
-            "icon.v1 accepts only .png, .svg, and .webp files".to_string()
-        } else {
-            "file extension is not a supported image format".to_string()
-        }
-    })?;
+    let mime = icon_mime(&resolved_path)
+        .ok_or_else(|| "file extension is not a supported displayable image format".to_string())?;
     let bytes = read_bounded_icon(&resolved_path)?;
     validate_icon_bytes(mime, &bytes)?;
 
@@ -240,15 +230,6 @@ fn icon_mime(path: &Path) -> Option<&'static str> {
     }
 }
 
-fn canonical_icon_mime(path: &Path) -> Option<&'static str> {
-    match path.extension()?.to_str()?.to_ascii_lowercase().as_str() {
-        "png" => Some("image/png"),
-        "svg" => Some("image/svg+xml"),
-        "webp" => Some("image/webp"),
-        _ => None,
-    }
-}
-
 fn is_ignored_name(name: &str) -> bool {
     IGNORED_DIRECTORIES.contains(&name)
 }
@@ -281,7 +262,7 @@ mod tests {
         let icon = outside.join("icon.png");
         fs::write(&icon, b"\x89PNG\r\n\x1a\npng fixture").expect("write outside icon");
 
-        assert!(load_icon(&root, &icon, false).is_err());
+        assert!(load_icon(&root, &icon).is_err());
 
         fs::remove_dir_all(root).expect("remove root fixture");
         fs::remove_dir_all(outside).expect("remove outside fixture");

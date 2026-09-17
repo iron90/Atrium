@@ -4,10 +4,12 @@ const projectFingerprintData = (project: ProjectSnapshot) => ({
   id: project.id,
   name: project.name,
   path: project.path,
+  modifiedAt: project.modifiedAt,
   description: project.description,
   iconSource: project.icon?.source ?? null,
   iconStatus: project.iconConformance.status,
   protocol: project.protocol,
+  guidance: project.guidance,
   repo: project.repo
     ? {
         branch: project.repo.branch,

@@ -9,10 +9,10 @@ mod icon_assets;
 use self::icon_assets::{legacy_icon_candidates, load_icon, relative_path, resolve_declared_icon};
 
 pub const MANIFEST_PATH: &str = ".atrium/manifest.toml";
-pub const REPORT_PATH: &str = ".atrium/reports/icon-conformance.md";
-pub const ICON_SPEC: &str = "icon.v1";
 
-pub const MAX_ICON_BYTES: u64 = 512 * 1024;
+// This is a resource-safety bound for loading a preview into the UI, not an
+// icon format or dimension requirement imposed on projects.
+pub const MAX_ICON_BYTES: u64 = 8 * 1024 * 1024;
 
 #[derive(Debug)]
 pub struct IconInspection {
@@ -50,7 +50,7 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
                 None,
                 vec![format!("Cannot parse {MANIFEST_PATH}: {error}")],
                 vec![format!(
-                    "Fix {MANIFEST_PATH} so it declares schema = 1 and [identity] icon."
+                    "Fix {MANIFEST_PATH} so it can be read and declares [identity] icon."
                 )],
             );
         }
@@ -64,7 +64,7 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
                 "Unsupported Atrium manifest schema: {}. Expected schema 1.",
                 manifest.schema
             )],
-            vec!["Update the manifest to the supported icon.v1 schema.".to_string()],
+            vec!["Update the manifest to the supported schema and icon declaration.".to_string()],
         );
     }
 
@@ -77,7 +77,7 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
             None,
             vec![format!("{MANIFEST_PATH} does not declare identity.icon.")],
             vec![format!(
-                "Add [identity] icon = \"path/to/icon.png\" to {MANIFEST_PATH}."
+                "Add [identity] icon = \"path/to/existing-icon\" to {MANIFEST_PATH}."
             )],
         );
     };
@@ -90,13 +90,13 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
                 None,
                 vec![reason],
                 vec![format!(
-                    "Point identity.icon in {MANIFEST_PATH} to a tracked project file."
+                    "Point identity.icon in {MANIFEST_PATH} to the project's existing readable image file."
                 )],
             );
         }
     };
 
-    let icon = match load_icon(root, &resolved_path, true) {
+    let icon = match load_icon(root, &resolved_path) {
         Ok(icon) => icon,
         Err(reason) => {
             return invalid_inspection(
@@ -104,8 +104,7 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
                 Some(relative_path(root, &resolved_path)),
                 vec![reason],
                 vec![format!(
-                    "Export a square PNG, SVG, or WebP preview icon no larger than {} KiB, then update {MANIFEST_PATH}.",
-                    MAX_ICON_BYTES / 1024
+                    "Point identity.icon in {MANIFEST_PATH} to a readable image file that follows the project's existing icon convention."
                 )],
             );
         }
@@ -117,11 +116,10 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
         conformance: IconConformance {
             status: IconConformanceStatus::Compliant,
             manifest_path: MANIFEST_PATH.to_string(),
-            report_path: REPORT_PATH.to_string(),
             declared_icon: Some(declared_icon),
             resolved_icon: Some(source.clone()),
         },
-        findings: vec![format!("Validated {source} against {ICON_SPEC}.")],
+        findings: vec![format!("Using the project-provided icon at {source}.")],
         actions: vec!["No action required.".to_string()],
     }
 }
@@ -131,7 +129,7 @@ fn inspect_legacy_icons(root: &Path) -> IconInspection {
     let candidates = legacy_icon_candidates(root);
 
     for candidate in candidates {
-        match load_icon(root, &candidate, false) {
+        match load_icon(root, &candidate) {
             Ok(icon) => {
                 let source = icon.source.clone();
                 findings.push(format!(
@@ -142,13 +140,12 @@ fn inspect_legacy_icons(root: &Path) -> IconInspection {
                     conformance: IconConformance {
                         status: IconConformanceStatus::Legacy,
                         manifest_path: MANIFEST_PATH.to_string(),
-                        report_path: REPORT_PATH.to_string(),
                         declared_icon: None,
                         resolved_icon: Some(source),
                     },
                     findings,
                     actions: vec![format!(
-                        "Add {MANIFEST_PATH} and declare the selected icon under [identity]."
+                        "Add {MANIFEST_PATH} and declare the selected project icon under [identity]."
                     )],
                 };
             }
@@ -163,7 +160,7 @@ fn inspect_legacy_icons(root: &Path) -> IconInspection {
         None,
         findings,
         vec![format!(
-            "Add a tracked PNG, SVG, or WebP preview icon and declare it in {MANIFEST_PATH}."
+            "Declare the project's existing icon under [identity] in {MANIFEST_PATH}."
         )],
     )
 }
@@ -179,7 +176,6 @@ fn invalid_inspection(
         conformance: IconConformance {
             status: IconConformanceStatus::Invalid,
             manifest_path: MANIFEST_PATH.to_string(),
-            report_path: REPORT_PATH.to_string(),
             declared_icon,
             resolved_icon,
         },
@@ -198,7 +194,6 @@ fn missing_inspection(
         conformance: IconConformance {
             status: IconConformanceStatus::Missing,
             manifest_path: MANIFEST_PATH.to_string(),
-            report_path: REPORT_PATH.to_string(),
             declared_icon: None,
             resolved_icon,
         },
@@ -245,6 +240,34 @@ mod tests {
         assert!(inspection.icon.is_some());
 
         fs::remove_dir_all(root).expect("remove fixture project");
+    }
+
+    #[test]
+    fn accepts_a_project_icon_format_without_a_canonical_icon_restriction() {
+        let root = temp_project("manifest-jpeg-icon");
+        let icon_path = root.join("assets/project-mark.jpg");
+        fs::create_dir_all(icon_path.parent().expect("icon parent")).expect("create assets");
+        fs::write(&icon_path, [0xff, 0xd8, 0xff, 0xd9]).expect("write jpeg icon");
+        fs::create_dir_all(root.join(".atrium")).expect("create Atrium directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            "schema = 1\n\n[identity]\nicon = \"assets/project-mark.jpg\"\n",
+        )
+        .expect("write manifest");
+
+        let inspection = inspect_icon(&root);
+
+        assert_eq!(
+            inspection.conformance.status,
+            IconConformanceStatus::Compliant
+        );
+        assert_eq!(
+            inspection.conformance.resolved_icon.as_deref(),
+            Some("assets/project-mark.jpg")
+        );
+        assert!(inspection.icon.is_some());
+
+        fs::remove_dir_all(root).expect("remove project fixture");
     }
 
     #[test]

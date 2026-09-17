@@ -1,6 +1,11 @@
 import type { CommandKind, Facet, ProjectConfigurationStatus } from "./common";
 import type { GitSnapshot } from "./git";
-import type { IconConformance, ProjectIcon, ProtocolStatus } from "./protocol";
+import type {
+  GuidanceStatus,
+  IconConformance,
+  ProjectIcon,
+  ProtocolStatus,
+} from "./protocol";
 import type { BuildArtifact, ProjectStorage } from "./storage";
 
 export interface ProjectTools {
@@ -55,10 +60,12 @@ export interface ProjectSnapshot {
   id: string;
   name: string;
   path: string;
+  modifiedAt: number | null;
   description: string | null;
   icon: ProjectIcon | null;
   iconConformance: IconConformance;
   protocol: ProtocolStatus;
+  guidance: GuidanceStatus;
   repo: GitSnapshot | null;
   tools: ProjectTools;
   links: ProjectLink[];

@@ -1,6 +1,4 @@
-import type { ActivityMessage } from "./activity-message";
-import { LocalActivityPanel } from "./LocalActivityPanel";
-import type { ProjectSnapshot, RunStarted, WorkspaceSnapshot } from "../bridge";
+import type { ProjectSnapshot, WorkspaceSnapshot } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill, formatTime } from "../shared/format";
 import type { LayoutId } from "../features/settings/model";
@@ -19,11 +17,6 @@ export interface ProjectsPageProps {
   snapshot: WorkspaceSnapshot;
   visibleProjects: ProjectSnapshot[];
   projectList: ProjectListProps;
-  activity: {
-    activeRun?: RunStarted;
-    message: ActivityMessage;
-    onStop: () => Promise<void> | void;
-  };
   inspector: ProjectInspectorProps;
 }
 
@@ -32,7 +25,6 @@ export function ProjectsPage({
   snapshot,
   visibleProjects,
   projectList,
-  activity,
   inspector,
 }: ProjectsPageProps) {
   const { language, t } = useI18n();
@@ -83,13 +75,6 @@ export function ProjectsPage({
         ) : (
           <ProjectList {...projectList} />
         )}
-
-        <LocalActivityPanel
-          activeRun={activity.activeRun}
-          message={activity.message}
-          onStop={activity.onStop}
-          snapshot={snapshot}
-        />
       </div>
 
       <ProjectInspector {...inspector} />

@@ -13,8 +13,15 @@ describe("configuration Agent prompt", () => {
     );
 
     expect(prompt).toContain(`项目「${project.name}」`);
+    expect(prompt).toContain(".atrium/guidance.toml");
     expect(prompt).toContain(".atrium/reports/project-configuration.md");
-    expect(prompt).toContain(".atrium/reports/icon-conformance.md");
+    expect(prompt).toContain("项目现有图标规则");
+    expect(prompt).toContain("AGENTS.md");
+    expect(prompt).toContain(".atrium/guidance-sync.toml");
+    expect(prompt).toContain("主要运行目标");
+    expect(prompt).toContain("不要把只服务于另一个运行时的底层服务");
+    expect(prompt).toContain("安装必须是用户明确触发的独立操作");
+    expect(prompt).toContain("不要启动、控制或终止 Atrium");
     expect(prompt).toContain("不要修改 Git 历史");
   });
 
@@ -22,8 +29,17 @@ describe("configuration Agent prompt", () => {
     const prompt = createConfigurationAgentPrompt(project, [], "en");
 
     expect(prompt).toContain(`project "${project.name}"`);
+    expect(prompt).toContain(".atrium/guidance.toml");
     expect(prompt).toContain(".atrium/reports/project-configuration.md");
-    expect(prompt).toContain(".atrium/reports/icon-conformance.md");
+    expect(prompt).toContain("existing icon convention");
+    expect(prompt).toContain("AGENTS.md");
+    expect(prompt).toContain(".atrium/guidance-sync.toml");
+    expect(prompt).toContain("primary runnable target");
+    expect(prompt).toContain("subordinate service");
+    expect(prompt).toContain(
+      "installation is a separate, explicit user action",
+    );
+    expect(prompt).toContain("do not launch, control, or terminate Atrium");
     expect(prompt).toContain("Do not rewrite Git history");
   });
 });

@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import App from "./App";
 
 afterEach(() => {
@@ -42,6 +42,27 @@ describe("Atrium board", () => {
         control.classList.contains("toolbar-control"),
       ),
     ).toBe(true);
+    expect(
+      projectFilters?.querySelector('[data-icon="eye-off"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('.project-row-actions [data-icon="star"]'),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('.project-row-actions [data-icon="eye-off"]'),
+    ).toBeInTheDocument();
+    const showHiddenButton = screen.getByRole("button", {
+      name: "Show hidden",
+    });
+    expect(showHiddenButton).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(showHiddenButton);
+    expect(screen.getByRole("button", { name: "Hide hidden" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      projectFilters?.querySelector('[data-icon="eye"]'),
+    ).toBeInTheDocument();
     const macosChip = document.querySelector(
       '.facet-chip .platform-mark[data-platform="macos"]',
     )?.parentElement;
@@ -50,6 +71,13 @@ describe("Atrium board", () => {
     expect(document.querySelector(".protocol-details")).not.toHaveAttribute(
       "open",
     );
+    expect(screen.getByText("Identity & icon")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Schema 1", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Schema unavailable", { exact: true }),
+    ).not.toBeInTheDocument();
   });
 
   it("switches visual modes without changing the scanned data", () => {
@@ -160,6 +188,27 @@ describe("Atrium board", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("keeps the global run status in the sidebar without duplicating scan status", () => {
+    render(<App />);
+
+    expect(
+      document.querySelector(".sidebar .local-activity"),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".board-pane .local-activity")).toBeNull();
+    expect(
+      screen.queryByText("Recent scan", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("LOCAL FIRST", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Native session", { exact: true }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Preview session", { exact: true }),
+    ).not.toBeInTheDocument();
+  });
+
   it("persists display preferences locally across a remount", () => {
     const firstRender = render(<App />);
 
@@ -209,83 +258,6 @@ describe("Atrium board", () => {
       target: { value: "windows" },
     });
     expect(screen.getAllByText("SnapCutout").length).toBeGreaterThan(0);
-  });
-
-  it("reorders projects with a drag gesture in manual order", () => {
-    render(<App />);
-
-    const mockPipelineRow = screen
-      .getAllByText("SampleForge", { exact: true })
-      .find((element) => element.closest(".project-row"))
-      ?.closest(".project-row");
-    const cognitiveRhythmRow = screen
-      .getByText("Cognitive Rhythm", { exact: true })
-      .closest(".project-row");
-
-    expect(mockPipelineRow).not.toBeNull();
-    expect(cognitiveRhythmRow).not.toBeNull();
-    const initialNames = Array.from(
-      document.querySelectorAll(".project-list .project-row"),
-    ).map((row) => row.querySelector(".project-copy strong")?.textContent);
-    const initialSampleForgeIndex = initialNames.indexOf("SampleForge");
-    vi.spyOn(cognitiveRhythmRow!, "getBoundingClientRect").mockReturnValue({
-      top: 100,
-      height: 80,
-      bottom: 180,
-      left: 0,
-      right: 500,
-      width: 500,
-      x: 0,
-      y: 100,
-      toJSON: () => ({}),
-    });
-    const dragHandle = mockPipelineRow!.querySelector(".project-drag-handle");
-    expect(dragHandle).not.toBeNull();
-    const dataTransfer = {
-      dropEffect: "none",
-      effectAllowed: "none",
-      setData: vi.fn(),
-      setDragImage: vi.fn(),
-    };
-    fireEvent.dragStart(dragHandle!, {
-      dataTransfer,
-    });
-    expect(mockPipelineRow).toHaveClass("is-dragging");
-    expect(dataTransfer.setDragImage).toHaveBeenCalled();
-    expect(cognitiveRhythmRow!.getBoundingClientRect().top).toBe(100);
-    fireEvent.dragOver(cognitiveRhythmRow!, {
-      clientX: 20,
-      clientY: 0,
-      dataTransfer,
-    });
-    expect(cognitiveRhythmRow).toHaveClass("is-drop-target");
-    const previewNames = Array.from(
-      document.querySelectorAll(".project-list .project-row"),
-    ).map((row) => row.querySelector(".project-copy strong")?.textContent);
-    const previewSampleForgeIndex = previewNames.indexOf("SampleForge");
-    const previewCalmCadenceIndex =
-      previewNames.indexOf("Cognitive Rhythm");
-    expect(previewSampleForgeIndex).not.toBe(initialSampleForgeIndex);
-    expect(previewSampleForgeIndex).toBeLessThan(previewCalmCadenceIndex);
-    fireEvent.drop(cognitiveRhythmRow!, {
-      clientY: 0,
-      dataTransfer,
-    });
-    fireEvent.dragEnd(dragHandle!, {
-      dataTransfer,
-    });
-
-    const rows = Array.from(
-      document.querySelectorAll(".project-list .project-row"),
-    );
-    const names = rows.map(
-      (row) => row.querySelector(".project-copy strong")?.textContent,
-    );
-    const cognitiveRhythmIndex = names.indexOf("Cognitive Rhythm");
-    expect(cognitiveRhythmIndex).toBeGreaterThan(0);
-    expect(names[cognitiveRhythmIndex - 1]).toBe("SampleForge");
-    expect(screen.queryByTitle("Move up")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("Move down")).not.toBeInTheDocument();
   });
 
   it("exposes settings-only workspace scanning and the Git history page", () => {

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   collectFilterOptions,
   filterAndSortProjects,
-  reorderProjectMeta,
   type ProjectMeta,
 } from "./project-list-model";
 import { mergeWorkspaceSnapshots } from "./workspace-snapshot";
@@ -16,6 +15,7 @@ const project = (
     id,
     name: id,
     path: `/workspace/${id}`,
+    modifiedAt: null,
     description: null,
     icon: null,
     protocol: {
@@ -35,6 +35,7 @@ const project = (
     },
     commands: [],
     cleanup: { cache: [], build: [] },
+    guidance: { revision: null, needsUpdate: true, needsSync: true },
     scannedAt: 1,
     ...overrides,
   }) as ProjectSnapshot;
@@ -143,59 +144,38 @@ describe("project domain model", () => {
         search: "",
         platform: "ios",
         channel: "all",
-        sort: "manual",
+        sort: "name",
         showHidden: false,
       },
     );
     expect(visible).toEqual([]);
   });
 
-  it("filters hidden projects and applies manual metadata ordering", () => {
+  it("filters hidden projects and sorts by name", () => {
     const projects = [project("alpha"), project("beta"), project("gamma")];
     const projectMeta: Record<string, ProjectMeta> = {
-      alpha: { favorite: false, hidden: false, order: 2 },
-      beta: { favorite: false, hidden: true, order: 0 },
-      gamma: { favorite: false, hidden: false, order: 1 },
+      alpha: { favorite: false, hidden: false },
+      beta: { favorite: false, hidden: true },
+      gamma: { favorite: false, hidden: false },
     };
 
     const visible = filterAndSortProjects(projects, projectMeta, {
       search: "",
       platform: "all",
       channel: "all",
-      sort: "manual",
+      sort: "name",
       showHidden: false,
     });
     const all = filterAndSortProjects(projects, projectMeta, {
       search: "",
       platform: "all",
       channel: "all",
-      sort: "manual",
+      sort: "name",
       showHidden: true,
     });
 
-    expect(visible.map(({ id }) => id)).toEqual(["gamma", "alpha"]);
-    expect(all.map(({ id }) => id)).toEqual(["beta", "gamma", "alpha"]);
-  });
-
-  it("reorders only the supplied visible ids and preserves other projects", () => {
-    const projects = [project("alpha"), project("beta"), project("gamma")];
-    const projectMeta: Record<string, ProjectMeta> = {
-      alpha: { favorite: false, hidden: false, order: 0 },
-      beta: { favorite: false, hidden: true, order: 1 },
-      gamma: { favorite: false, hidden: false, order: 2 },
-    };
-
-    const result = reorderProjectMeta(projects, projectMeta, [
-      "gamma",
-      "alpha",
-    ]);
-
-    expect(result?.gamma.order).toBe(0);
-    expect(result?.beta.order).toBe(1);
-    expect(result?.alpha.order).toBe(2);
-    expect(
-      reorderProjectMeta(projects, projectMeta, ["unknown", "alpha"]),
-    ).toBe(null);
+    expect(visible.map(({ id }) => id)).toEqual(["alpha", "gamma"]);
+    expect(all.map(({ id }) => id)).toEqual(["alpha", "beta", "gamma"]);
   });
 
   it("uses stable identity tie-breakers for equal sort values", () => {
@@ -210,40 +190,31 @@ describe("project domain model", () => {
       showHidden: false,
     };
 
-    for (const sort of ["modified", "storage", "name"] as const) {
+    for (const sort of ["modified", "recent", "storage", "name"] as const) {
       const result = filterAndSortProjects(projects, {}, { ...filters, sort });
       expect(result.map(({ id }) => id)).toEqual(["alpha", "zeta"]);
     }
   });
 
-  it("keeps filtered manual reorders stable when metadata orders collide", () => {
-    const metadata: Record<string, ProjectMeta> = {
-      alpha: { favorite: false, hidden: false, order: 0 },
-      beta: { favorite: false, hidden: true, order: 0 },
-      zeta: { favorite: false, hidden: false, order: 0 },
-    };
-    const orderedVisibleIds = ["zeta", "alpha"];
-    const first = reorderProjectMeta(
-      [project("zeta"), project("beta"), project("alpha")],
-      metadata,
-      orderedVisibleIds,
-    );
-    const second = reorderProjectMeta(
-      [project("alpha"), project("beta"), project("zeta")],
-      metadata,
-      orderedVisibleIds,
+  it("sorts projects by most recent filesystem modification", () => {
+    const projects = [
+      project("alpha", { modifiedAt: 100 }),
+      project("beta", { modifiedAt: 300 }),
+      project("gamma", { modifiedAt: null }),
+    ];
+
+    const result = filterAndSortProjects(
+      projects,
+      {},
+      {
+        search: "",
+        platform: "all",
+        channel: "all",
+        sort: "recent",
+        showHidden: false,
+      },
     );
 
-    expect(
-      first &&
-        Object.entries(first).sort(([left], [right]) =>
-          left.localeCompare(right),
-        ),
-    ).toEqual(
-      second &&
-        Object.entries(second).sort(([left], [right]) =>
-          left.localeCompare(right),
-        ),
-    );
+    expect(result.map(({ id }) => id)).toEqual(["beta", "alpha", "gamma"]);
   });
 });

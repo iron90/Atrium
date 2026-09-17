@@ -15,7 +15,8 @@ export {
   hasTrustedContext,
   capabilityLabel,
   capabilityStatusLabel,
+  protocolStatusDescription,
+  protocolStatusLabel,
   protocolViewModel,
-  protocolManifestLabel,
 } from "./protocol-presentation";
 export { storageKindLabel, artifactKindLabel } from "./storage-presentation";
