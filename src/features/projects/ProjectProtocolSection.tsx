@@ -5,7 +5,6 @@ import { InspectorSection } from "./InspectorPrimitives";
 import {
   capabilityLabel,
   capabilityStatusLabel,
-  protocolStatusDescription,
   protocolStatusLabel,
   protocolViewModel,
 } from "./presentation";
@@ -58,7 +57,9 @@ export function ProjectProtocolSection({
       >
         <div>
           <strong>{protocolStatusLabel(protocolView.cardStatus, t)}</strong>
-          <span>{protocolStatusDescription(protocolView.cardStatus, t)}</span>
+          <div className="protocol-path">
+            <span>{protocol.manifestPath}</span>
+          </div>
         </div>
         {shouldShowGuidanceAction ? (
           <button
@@ -81,9 +82,6 @@ export function ProjectProtocolSection({
           <span>{protocolDetailsSummary}</span>
         </summary>
         <div className="protocol-details-body">
-          <div className="protocol-path">
-            <span>{protocol.manifestPath}</span>
-          </div>
           <div
             className="protocol-capabilities"
             aria-label={t("protocolCapabilities")}

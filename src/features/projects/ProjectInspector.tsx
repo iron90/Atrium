@@ -16,7 +16,6 @@ import { ProjectProtocolSection } from "./ProjectProtocolSection";
 import { ProjectRepositorySection } from "./ProjectRepositorySection";
 import { ProjectRunSection } from "./ProjectRunSection";
 import { ProjectStorageSection } from "./ProjectStorageSection";
-import { ProjectToolsSection } from "./ProjectToolsSection";
 import type { ProjectAction } from "./project-actions";
 import type { CleanupFeedback } from "./StoragePanel";
 import { protocolViewModel } from "./protocol-presentation";
@@ -121,9 +120,6 @@ export function ProjectInspector({
         project={project}
         inspectedProject={inspectedProject}
         isLoading={isLoading}
-      />
-      <ProjectToolsSection
-        project={inspectedProject}
         onOpenProjectAction={onOpenProjectAction}
       />
       <ProjectProtocolSection
@@ -176,9 +172,6 @@ export function ProjectInspector({
         onStop={onStop}
       />
       <ProjectCommitsSection project={inspectedProject} isLoading={isLoading} />
-      <div className="inspector-footnote">
-        <span className="fact-key" /> {t("detectedFacts")}
-      </div>
     </aside>
   );
 }

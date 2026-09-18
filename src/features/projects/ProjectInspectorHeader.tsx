@@ -17,7 +17,6 @@ export function ProjectInspectorHeader({
     <div className="inspector-header">
       <ProjectIconView project={project} variant="inspector" />
       <div>
-        <span className="eyebrow">{t("selectedProject")}</span>
         <h2>{project.name}</h2>
         <p>{project.description ?? t("descriptionMissing")}</p>
       </div>

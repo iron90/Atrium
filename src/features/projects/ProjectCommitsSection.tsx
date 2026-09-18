@@ -28,7 +28,7 @@ export function ProjectCommitsSection({
       {isLoading ? (
         <DetailLoading />
       ) : repo?.recentCommits.length ? (
-        <CommitList commits={repo.recentCommits.slice(0, 5)} />
+        <CommitList commits={repo.recentCommits} />
       ) : (
         <p className="empty-copy">{t("gitHistoryUnavailable")}</p>
       )}

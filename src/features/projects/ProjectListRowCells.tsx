@@ -50,10 +50,6 @@ export function ProjectGitCell({ project }: { project: ProjectSnapshot }) {
         <span aria-hidden="true">⑂</span>
         {project.repo?.branch ?? t("noRepository")}
       </span>
-      <span className={statusClass(project)}>
-        <span className="state-dot" />
-        {statusLabel(project, language)}
-      </span>
       {project.repo ? (
         <span
           className={`git-sync ${syncStatusClass(project.repo)}`}
@@ -65,6 +61,10 @@ export function ProjectGitCell({ project }: { project: ProjectSnapshot }) {
           </span>
         </span>
       ) : null}
+      <span className={statusClass(project)}>
+        <span className="state-dot" />
+        {statusLabel(project, language)}
+      </span>
     </div>
   );
 }

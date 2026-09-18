@@ -53,6 +53,8 @@ button:disabled {
   --warning: #f2b577;
   --danger: #f18d83;
   --good: #83d9a0;
+  --console-bg: #071017;
+  --console-text: #b1eee4;
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.18);
   --control-height: 32px;
   --control-radius: 7px;
@@ -125,6 +127,8 @@ button:disabled {
   --warning: #bc752f;
   --danger: #ba554d;
   --good: #37835c;
+  --console-bg: #e7eff1;
+  --console-text: #296872;
   --shadow: 0 20px 55px rgba(46, 72, 80, 0.1);
   background: linear-gradient(135deg, #f4f7f7 0%, var(--bg) 62%);
 }
@@ -145,6 +149,8 @@ button:disabled {
   --warning: #bd7a32;
   --danger: #b64f46;
   --good: #4b895e;
+  --console-bg: #f1e6d7;
+  --console-text: #83452b;
   --shadow: 0 20px 55px rgba(87, 65, 48, 0.12);
   font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   background:
@@ -803,14 +809,14 @@ button:disabled {
   display: grid;
   place-items: center;
   align-self: flex-start;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--accent-strong);
   background: transparent;
-  font-size: 15px;
+  font-size: 20px;
 }
 .inspector-refresh:hover:not(:disabled),
 .inspector-refresh:focus-visible:not(:disabled) {
@@ -827,7 +833,7 @@ button:disabled {
   font-size: 21px;
 }
 .inspector-header h2 {
-  margin: 5px 0 3px;
+  margin: 0 0 4px;
   font-size: 19px;
   letter-spacing: -0.02em;
 }
@@ -862,19 +868,61 @@ button:disabled {
     monospace;
   text-align: right;
 }
-.repo-path,
-.remote-line {
+.repository-path-list {
+  display: grid;
+  gap: 10px;
+}
+.repository-path-row {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+}
+.repository-path-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  min-height: 39px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+.repository-path-label {
+  color: var(--faint);
+  font:
+    9px "DM Mono",
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.repository-path-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  align-self: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+.repo-path {
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
+  padding: 10px 11px 12px;
   color: var(--muted);
   font:
     10px "DM Mono",
     monospace;
+  line-height: normal;
 }
-.repo-path > span:last-child,
-.remote-line > span:last-child {
+.repo-path > span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -882,14 +930,18 @@ button:disabled {
 .repo-path > span:first-child {
   color: var(--accent);
 }
+.remote-path > span:first-child {
+  color: var(--faint);
+}
 .repo-facts {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
+  gap: 7px;
   margin: 12px 0;
 }
-.repo-facts span {
+.repo-fact {
   display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
   gap: 4px;
   padding: 8px;
   border-radius: 6px;
@@ -899,21 +951,37 @@ button:disabled {
     10px "DM Mono",
     monospace;
 }
-.repo-facts strong {
+.repo-fact-label {
   color: var(--faint);
-  font-size: 8px;
-  font-weight: 400;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.repo-facts em {
-  font-style: normal;
+.repo-fact-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  color: var(--muted);
+  font:
+    11px "DM Mono",
+    monospace;
+  text-align: right;
 }
-.remote-line {
-  padding-top: 2px;
+.repo-fact-value.status-good {
+  color: var(--good);
 }
-.remote-line > span:first-child {
-  color: var(--faint);
+.repo-fact-value.status-warning {
+  color: var(--warning);
+}
+.repo-fact-value.status-muted {
+  color: var(--muted);
+}
+.repo-fact-value.git-sync {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .storage-panel {
   display: grid;
@@ -1156,6 +1224,26 @@ button:disabled {
   border-color: var(--accent);
   color: var(--accent-strong);
 }
+.repository-path-actions button {
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font:
+    9px "DM Mono",
+    monospace;
+}
+.repository-path-actions button:hover,
+.repository-path-actions button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
 .project-links {
   margin-top: 7px;
 }
@@ -1292,7 +1380,7 @@ button:disabled {
 .protocol-path {
   display: grid;
   gap: 3px;
-  margin-top: 8px;
+  margin-top: 2px;
   color: var(--faint);
   font:
     9px "DM Mono",
@@ -1304,7 +1392,7 @@ button:disabled {
 }
 .protocol-capabilities {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 5px;
   margin-top: 8px;
 }
@@ -1778,8 +1866,8 @@ button:disabled {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  color: var(--accent-strong);
-  background: #071017;
+  color: var(--console-text);
+  background: var(--console-bg);
   font:
     9px/1.55 "DM Mono",
     monospace;
@@ -1798,8 +1886,11 @@ button:disabled {
   text-decoration: underline;
 }
 .commit-list {
+  max-height: 320px;
+  overflow-y: auto;
   display: grid;
   gap: 11px;
+  padding-right: 6px;
 }
 .commit-row {
   display: grid;
@@ -1831,21 +1922,6 @@ button:disabled {
 }
 .commit-row time {
   white-space: nowrap;
-}
-.inspector-footnote {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding-top: 14px;
-  color: var(--faint);
-  font-size: 9px;
-  line-height: 1.45;
-}
-.fact-key {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 .empty-inspector {
   display: grid;
