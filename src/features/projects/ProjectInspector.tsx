@@ -35,7 +35,6 @@ export interface ProjectInspectorProps {
   isRefreshing: boolean;
   onStop: () => void;
   onGenerateGuidance: (project: ProjectSnapshot) => void;
-  guidanceMessage: string | null;
   agentPrompt: string | null;
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
@@ -73,7 +72,6 @@ export function ProjectInspector({
   isRefreshing,
   onStop,
   onGenerateGuidance,
-  guidanceMessage,
   agentPrompt,
   isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
@@ -125,7 +123,6 @@ export function ProjectInspector({
       <ProjectProtocolSection
         project={project}
         inspectedProject={inspectedProject}
-        guidanceMessage={guidanceMessage}
         agentPrompt={agentPrompt}
         isAgentPromptForGuidanceUpdate={isAgentPromptForGuidanceUpdate}
         isAgentPromptCopied={isAgentPromptCopied}

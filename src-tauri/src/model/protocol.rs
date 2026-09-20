@@ -7,6 +7,7 @@ use super::project::ProjectConfigurationStatus;
 pub struct ProtocolStatus {
     pub manifest_path: String,
     pub schema: Option<u32>,
+    pub needs_update: bool,
     pub manifest_status: ProjectConfigurationStatus,
     pub capabilities: Vec<ProtocolCapability>,
 }

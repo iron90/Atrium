@@ -56,13 +56,14 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
         }
     };
 
-    if manifest.schema != 1 {
+    if !manifest_schema::is_supported_schema(manifest.schema) {
         return invalid_inspection(
             None,
             None,
             vec![format!(
-                "Unsupported Atrium manifest schema: {}. Expected schema 1.",
-                manifest.schema
+                "Unsupported Atrium manifest schema: {}. Expected schema 1 or {}.",
+                manifest.schema,
+                manifest_schema::CURRENT_SCHEMA
             )],
             vec!["Update the manifest to the supported schema and icon declaration.".to_string()],
         );

@@ -40,11 +40,11 @@ export function ProjectBuildProfilesSection({
     <InspectorSection
       title={t("buildProfiles")}
       trailing={
-        !protocolReady
-          ? t("protocolRequired")
-          : canExecuteProfiles
+        protocolReady
+          ? canExecuteProfiles
             ? fill(t("profileCount"), "count", String(buildProfiles.length))
             : t("configurationMissing")
+          : undefined
       }
     >
       {protocolReady && buildProfiles.length ? (

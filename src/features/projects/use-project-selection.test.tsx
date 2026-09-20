@@ -160,6 +160,7 @@ describe("project selection state", () => {
               protocol: {
                 ...project.protocol,
                 schema: 1,
+                needsUpdate: true,
                 manifestStatus: "configured",
               },
             }

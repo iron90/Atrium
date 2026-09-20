@@ -40,6 +40,12 @@ const buildProfile = (
   runCommandId: commands.runCommandId ?? null,
   checkCommandId: commands.checkCommandId ?? null,
   buildCommandId: commands.buildCommandId ?? null,
+  hostRequirements: {
+    run: null,
+    check: null,
+    build: null,
+  },
+  unsupportedActions: [],
   source: ".atrium/manifest.toml#build_profiles",
   region: null,
   payment: null,
@@ -89,7 +95,8 @@ const protocolStatus = (
   >,
 ): ProtocolStatus => ({
   manifestPath: ".atrium/manifest.toml",
-  schema: manifestStatus === "missing" ? null : 1,
+  schema: manifestStatus === "missing" ? null : 2,
+  needsUpdate: false,
   manifestStatus,
   capabilities: [
     protocolCapability("identity", statuses.identity ?? "missing"),

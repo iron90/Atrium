@@ -16,7 +16,7 @@ describe("protocol view model", () => {
     expect(view.shouldShowGuidance).toBe(true);
   });
 
-  it("surfaces legacy icon detection as a separate integration state", () => {
+  it("uses the not-connected state for an incomplete integration", () => {
     const view = protocolViewModel({
       ...baseProject,
       protocol: {
@@ -30,7 +30,7 @@ describe("protocol view model", () => {
     });
 
     expect(view.isReady).toBe(false);
-    expect(view.cardStatus).toBe("legacy");
+    expect(view.cardStatus).toBe("missing");
     expect(view.shouldShowGuidance).toBe(true);
   });
 
@@ -48,7 +48,45 @@ describe("protocol view model", () => {
 
     expect(view.isReady).toBe(true);
     expect(view.cardStatus).toBe("configured");
+    expect(view.needsUpdate).toBe(false);
     expect(view.shouldShowGuidance).toBe(false);
+  });
+
+  it("marks an older protocol schema for update", () => {
+    const view = protocolViewModel({
+      ...baseProject,
+      protocol: {
+        ...baseProject.protocol,
+        needsUpdate: true,
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status: "configured",
+        })),
+      },
+    });
+
+    expect(view.isReady).toBe(true);
+    expect(view.cardStatus).toBe("needs-update");
+    expect(view.needsUpdate).toBe(true);
+    expect(view.shouldShowGuidance).toBe(true);
+  });
+
+  it("marks a complete protocol for update when Agent guidance is stale", () => {
+    const view = protocolViewModel({
+      ...baseProject,
+      guidance: { revision: 0, needsUpdate: true, needsSync: true },
+      protocol: {
+        ...baseProject.protocol,
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status: "configured",
+        })),
+      },
+    });
+
+    expect(view.isReady).toBe(true);
+    expect(view.cardStatus).toBe("needs-update");
+    expect(view.shouldShowGuidance).toBe(true);
   });
 
   it("keeps the protocol ready but asks for guidance when cleanup is invalid", () => {
@@ -64,7 +102,7 @@ describe("protocol view model", () => {
     });
 
     expect(view.isReady).toBe(true);
-    expect(view.cardStatus).toBe("partial");
+    expect(view.cardStatus).toBe("missing");
     expect(view.shouldShowGuidance).toBe(true);
   });
 });

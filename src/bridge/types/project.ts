@@ -1,4 +1,9 @@
-import type { CommandKind, Facet, ProjectConfigurationStatus } from "./common";
+import type {
+  CommandKind,
+  Facet,
+  ProfileAction,
+  ProjectConfigurationStatus,
+} from "./common";
 import type { GitSnapshot } from "./git";
 import type {
   GuidanceStatus,
@@ -35,6 +40,14 @@ export interface CleanupDeclaration {
   build: string[];
 }
 
+export type HostOs = "macos" | "windows" | "linux";
+
+export interface BuildHostRequirements {
+  run: HostOs[] | null;
+  check: HostOs[] | null;
+  build: HostOs[] | null;
+}
+
 export interface BuildProfile {
   id: string;
   label: string;
@@ -43,6 +56,8 @@ export interface BuildProfile {
   runCommandId: string | null;
   checkCommandId: string | null;
   buildCommandId: string | null;
+  hostRequirements: BuildHostRequirements;
+  unsupportedActions: ProfileAction[];
   source: string;
   region: string | null;
   payment: string | null;

@@ -50,11 +50,29 @@ pub fn scan_project_configuration(
         }
     };
 
-    if document.schema != 1 {
+    if !manifest_schema::is_supported_schema(document.schema) {
         return invalid_configuration(
             vec![format!(
-                "Unsupported Atrium manifest schema: {}. Expected schema 1.",
-                document.schema
+                "Unsupported Atrium manifest schema: {}. Expected schema 1 or {}.",
+                document.schema,
+                manifest_schema::CURRENT_SCHEMA
+            )],
+            Some(document.schema),
+        );
+    }
+
+    if document.schema == manifest_schema::LEGACY_SCHEMA
+        && document.build_profiles.as_ref().is_some_and(|profiles| {
+            profiles
+                .iter()
+                .any(|profile| profile.host_requirements.is_some())
+        })
+    {
+        return invalid_configuration(
+            vec![format!(
+                "Host requirements require Atrium manifest schema {}. Update schema = {} before declaring build host requirements.",
+                manifest_schema::CURRENT_SCHEMA,
+                manifest_schema::CURRENT_SCHEMA
             )],
             Some(document.schema),
         );
@@ -105,7 +123,7 @@ fn unavailable_configuration(
 mod tests {
     use super::scan_project_configuration;
     use crate::model::{
-        CommandKind, IconConformance, IconConformanceStatus, ProjectCommand,
+        CommandKind, HostOs, IconConformance, IconConformanceStatus, ProjectCommand,
         ProjectConfigurationStatus, ProtocolCapabilityStatus,
     };
     use crate::protocol::build_protocol_status;
@@ -206,6 +224,7 @@ build = ["dist"]
             ProjectConfigurationStatus::Configured
         );
         assert_eq!(protocol.schema, Some(1));
+        assert!(protocol.needs_update);
         assert_eq!(
             protocol
                 .capabilities
@@ -245,6 +264,89 @@ build = ["dist"]
         assert!(result.build_profiles.is_empty());
 
         fs::remove_dir_all(root).expect("remove project");
+    }
+
+    #[test]
+    fn schema_two_keeps_host_limits_separate_from_profile_validity() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-host-requirements-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 2
+
+[[platforms]]
+id = "windows"
+label = "Windows"
+
+[[channels]]
+id = "direct"
+label = "Direct"
+
+[[build_profiles]]
+id = "windows-direct"
+platform = "windows"
+channel = "direct"
+
+[build_profiles.commands]
+check = "package.json#scripts.check"
+build = "package.json#scripts.build:windows"
+
+[build_profiles.host_requirements]
+check = ["macos", "windows", "linux"]
+build = ["windows"]
+"#,
+        )
+        .expect("write manifest");
+        let commands = vec![
+            command(
+                "npm:check",
+                "package.json#scripts.check",
+                CommandKind::Check,
+            ),
+            command(
+                "npm:build:windows",
+                "package.json#scripts.build:windows",
+                CommandKind::Build,
+            ),
+        ];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(result.manifest_schema, Some(2));
+        let protocol = build_protocol_status(
+            &result,
+            &IconConformance {
+                status: IconConformanceStatus::Compliant,
+                manifest_path: ".atrium/manifest.toml".to_string(),
+                declared_icon: Some("icon.png".to_string()),
+                resolved_icon: Some("icon.png".to_string()),
+            },
+        );
+        assert!(!protocol.needs_update);
+        assert_eq!(
+            result.build_profiles[0].host_requirements.build,
+            Some(vec![HostOs::Windows])
+        );
+        assert_eq!(
+            result.build_profiles[0].host_requirements.check.as_deref(),
+            Some([HostOs::Macos, HostOs::Windows, HostOs::Linux].as_slice())
+        );
+        assert_eq!(
+            result.build_profiles[0]
+                .unsupported_actions
+                .contains(&CommandKind::Build),
+            HostOs::current() != Some(HostOs::Windows)
+        );
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
     }
 
     #[test]

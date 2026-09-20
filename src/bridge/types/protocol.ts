@@ -38,6 +38,7 @@ export interface ProtocolCapability {
 export interface ProtocolStatus {
   manifestPath: string;
   schema: number | null;
+  needsUpdate: boolean;
   manifestStatus: ProjectConfigurationStatus;
   capabilities: ProtocolCapability[];
 }

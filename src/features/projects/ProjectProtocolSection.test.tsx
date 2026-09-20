@@ -15,7 +15,6 @@ const renderSection = (
     <ProjectProtocolSection
       project={project}
       inspectedProject={project}
-      guidanceMessage={null}
       agentPrompt="Generated agent prompt"
       isAgentPromptForGuidanceUpdate={isAgentPromptForGuidanceUpdate}
       isAgentPromptCopied={false}
@@ -86,6 +85,21 @@ describe("project protocol section", () => {
 
     renderSection(staleGuidanceProject, true);
 
+    expect(screen.getByText("Protocol needs update")).toBeInTheDocument();
+    expect(
+      screen.getByText("Agent guidance").closest(".protocol-capability"),
+    ).toHaveClass("capability-needs-update");
+    expect(
+      Array.from(document.querySelectorAll(".protocol-capability strong")).map(
+        (title) => title.textContent,
+      ),
+    ).toEqual([
+      "Agent guidance",
+      "Identity & icon",
+      "Platform & channel context",
+      "Check / Build / Run",
+      "Cleanup directories",
+    ]);
     expect(
       screen.getByRole("button", { name: "Update Agent guidance" }),
     ).toBeInTheDocument();

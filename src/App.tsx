@@ -117,7 +117,6 @@ export default function App() {
 
   const {
     reset: resetProjectInspectionState,
-    guidanceMessage,
     agentPrompt,
     isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
@@ -300,7 +299,6 @@ export default function App() {
     isRefreshing: refreshingProjectId === selectedProject?.id,
     onStop: () => void handleStop(),
     onGenerateGuidance: (project) => void handleGenerateGuidance(project),
-    guidanceMessage,
     agentPrompt,
     isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,

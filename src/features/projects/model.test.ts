@@ -21,6 +21,7 @@ const project = (
     protocol: {
       manifestPath: ".atrium/manifest.toml",
       schema: null,
+      needsUpdate: false,
       manifestStatus: "missing",
       capabilities: [],
     },
@@ -49,7 +50,8 @@ const facet = (key: string, label = key): Facet => ({
 
 const trustedContext = {
   manifestPath: ".atrium/manifest.toml",
-  schema: 1,
+  schema: 2,
+  needsUpdate: false,
   manifestStatus: "configured" as const,
   capabilities: [
     {

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::model::{
-    CommandKind, Facet, ProjectCommand, ProjectConfigurationStatus, ProjectSnapshot,
+    CommandKind, Facet, HostOs, ProjectCommand, ProjectConfigurationStatus, ProjectSnapshot,
 };
 use crate::scanner::scan_project;
 
@@ -91,6 +91,37 @@ fn resolve_profile(
             "Build profile {} is invalid: {}",
             profile.id,
             profile.issues.join(" ")
+        ));
+    }
+    if !profile.action_supported_on_current_host(action) {
+        if matches!(action, CommandKind::Run) {
+            if let Some(target) = HostOs::parse(&profile.platform.key) {
+                if HostOs::current() != Some(target) {
+                    return Err(format!(
+                        "Run for {} requires a matching {} host.",
+                        profile.id,
+                        target.as_str()
+                    ));
+                }
+            }
+        }
+        let allowed_hosts = profile
+            .host_requirements_for_action(action)
+            .map(|hosts| {
+                hosts
+                    .iter()
+                    .map(|host| host.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_else(|| "an unknown host".to_string());
+        let current_host = HostOs::current()
+            .map(HostOs::as_str)
+            .unwrap_or(std::env::consts::OS);
+        return Err(format!(
+            "Build profile {} action {} is not supported on the current host ({current_host}); allowed hosts: {allowed_hosts}.",
+            profile.id,
+            format_command_kind(action)
         ));
     }
 

@@ -23,7 +23,6 @@ export interface ProjectInspectorActionsOptions {
 
 export interface ProjectInspectorActions {
   reset: () => void;
-  guidanceMessage: string | null;
   agentPrompt: string | null;
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
@@ -48,7 +47,6 @@ export function useProjectInspectorActions({
   updateInspectorProject,
 }: ProjectInspectorActionsOptions): ProjectInspectorActions {
   const {
-    guidanceMessage,
     agentPrompt,
     isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,
@@ -81,7 +79,6 @@ export function useProjectInspectorActions({
 
   return {
     reset,
-    guidanceMessage,
     agentPrompt,
     isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,

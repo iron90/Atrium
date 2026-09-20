@@ -26,6 +26,7 @@ const snapshot = (rootPath: string, projectId: string): WorkspaceSnapshot => ({
       protocol: {
         manifestPath: ".atrium/manifest.toml",
         schema: null,
+        needsUpdate: false,
         manifestStatus: "missing",
         capabilities: [],
       },

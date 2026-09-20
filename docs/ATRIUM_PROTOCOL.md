@@ -47,18 +47,20 @@ and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
-Schema 1 is strict: unknown fields at any manifest level make the manifest
-invalid instead of being ignored. This prevents a misspelled field or a field
-from a newer protocol version from looking configured while silently having no
-effect. A future protocol revision must introduce a new schema number before
-adding fields.
+Schema 1 and schema 2 are strict: unknown fields at any manifest level make the
+manifest invalid instead of being ignored. This prevents a misspelled field or
+a field from a newer protocol version from looking configured while silently
+having no effect. Schema 1 remains readable for compatibility and has no host
+requirements; schema 2 is the current schema and adds per-action execution
+host declarations. A future protocol revision must introduce a new schema
+number before adding fields.
 
 ## Project icon
 
 The identity section points Atrium at the icon already used by the project:
 
 ```toml
-schema = 1
+schema = 2
 profile = "tauri-react"
 
 [identity]
@@ -125,6 +127,20 @@ with its own build implementation.
 
 The command roles are framework-neutral:
 
+- `run` must execute the actual platform and channel target of its profile.
+  A generic dev command starting a macOS app is not evidence that Windows Run
+  works. Cross-building Windows artifacts on macOS does not establish Run
+  support. Record the running target platform, channel configuration, and
+  readiness before declaring Run hosts. Atrium requires matching host and target
+  systems for Run on `macos`, `windows`, and `linux` desktop profiles, in addition
+  to the declared host allowlist. Cross-system desktop Run is not supported,
+  including through compatibility layers or remote launchers. Other target IDs
+  retain their declared host requirements. This restriction is applied both to
+  button availability and native execution validation (revision 8).
+  Check and Build have independent host requirements. Revision 7 requires
+  re-auditing existing Run bindings, including previously accepted host lists.
+  Missing target hosts or environments remain verification blockers and must
+  not be acknowledged in guidance-sync.
 - `run` points to the project's primary local runtime entry. A web development
   server is valid for a web target; desktop, CLI, game, and mobile targets use
   their existing project-owned run entry. It must not point only to a
@@ -136,6 +152,75 @@ The command roles are framework-neutral:
   distributable artifacts. Installation, replacement, and opening an installed
   application are separate explicit actions; they are not implicit build
   behavior.
+
+The target platform and the operating system that executes a command are
+separate facts. A profile can declare the host systems where each action has
+actually been verified:
+
+```toml
+[build_profiles.host_requirements]
+run = ["macos", "windows"]
+check = ["macos", "windows", "linux"]
+build = ["windows"]
+```
+
+Host values are limited to `macos`, `windows`, and `linux`. The three actions
+may use different lists. Omit an action only when it is genuinely unrestricted;
+do not infer host support from the target `platform`. For cross-compilation,
+declare the host where the repository's command and toolchain are verified.
+Atrium disables the corresponding profile action in the UI and rejects it
+before process execution when the current host is not listed. Schema 1
+profiles remain unrestricted for backward compatibility until their project
+Agent migrates them to schema 2.
+
+`host_requirements` is a verified-success allowlist, not a compatibility or
+process-launch allowlist. Before adding a host, the project Agent must inspect
+the exact program, arguments, working directory, expanded scripts, SDKs, and
+toolchain, then run the exact command bound in the manifest on that host. The
+evidence is action-specific:
+
+- `run` must start the primary target and pass an available readiness or smoke
+  check; seeing a process spawn is not enough;
+- `check` must finish with exit code `0`;
+- `build` must finish with exit code `0` and create every required declared
+  artifact during that run; each artifact must exist, be non-empty, and have
+  the expected path and type. A stale artifact or an intermediate successful
+  sub-step is not evidence.
+
+The target platform, target triple, runner name, installed executable, CI
+configuration, or a command that merely reaches its first step does not prove
+host support. A cross-build host is supported only after its complete toolchain
+and the actual target artifact have been verified. If verification fails, a
+dependency is missing, or a host has not been tested, the Agent must not list
+that host. If no host passes for an action, the Agent should omit that command
+binding and report the blocker. Omitting a host field is allowed only when the
+command has been established to be host-independent; omission must not mean
+that the action was not checked.
+
+Before validation, the Agent must inspect fixed ports, background services,
+credentials, SDKs, and other environment dependencies. It must not terminate or
+reconfigure Atrium or another external process. A port collision is an
+environment blocker, not proof that the project command is invalid. An
+alternate port may be used only through a project-supported environment
+variable, command-line option, or test configuration, and the actual port must
+be recorded in the verification report. The Agent must not temporarily edit or
+commit project configuration just to avoid the collision. If safe isolation is
+unavailable, the action remains unverified.
+
+The Agent must choose the project's real quality gate before running `check`.
+After a full check fails, it must not silently replace it with a narrower
+passing command just to obtain exit code `0`; a narrower command is valid only
+when the project already defines it as the explicit scope for that profile.
+Port, dependency, credential, and toolchain failures remain blockers.
+
+`guidance-sync.toml` is a completion acknowledgement, not a partial-progress
+marker. It may be created or updated only after every remaining profile/action
+is verified successfully or repository facts explicitly prove it is out of
+scope, with no unresolved environment blocker. If a blocker remains, an
+existing acknowledgement stays unchanged (or no acknowledgement is created),
+and the Agent reports the integration as incomplete. It must not confirm
+synchronization by deleting commands, narrowing the check scope, or inventing
+host support.
 
 A framework command such as `tauri dev` is only an example for a repository that
 actually uses Tauri. Atrium does not require Tauri or any other framework and
@@ -200,8 +285,9 @@ repository command list.
 
 Cache and build cleanup is also project-owned. Atrium does not infer cleanup
 directories from a framework name or delete a conventional directory merely
-because it exists. The project development Agent may declare directories that
-are safe to regenerate:
+because it exists. The project development Agent decides which project
+directories are safe to regenerate and may declare dependency or vendor
+subdirectories when that is the correct project-specific choice:
 
 ```toml
 [cleanup]
@@ -209,17 +295,19 @@ cache = ["node_modules/.cache", ".turbo"]
 build = ["dist", "src-tauri/target"]
 ```
 
-Paths must be relative to the repository, must not contain `..`, and must not
-declare protected roots such as `.git`, `.atrium`, `node_modules`, or `vendor`.
-Cleanup declarations must also not overlap: do not declare both a directory and
-one of its descendants. Path identity is compared without regard to letter
-case so the same manifest remains safe on case-sensitive and case-insensitive
-filesystems. Atrium marks overlapping declarations invalid so size metrics
-cannot double-count and cleanup cannot process the same files twice.
+Paths must be relative to the repository and must not contain `..`. At
+execution time, Atrium resolves each declared path and refuses anything that
+leaves the project or traverses a symbolic link outside it. `.git` and
+`.atrium` remain explicit protected roots because Atrium must not mutate Git
+history or its own project protocol data; dependency and vendor directories
+are not universal protected roots. The configuration guidance tells the
+project development Agent about these boundaries and leaves the project-specific
+cleanup decision to that Agent. Duplicate or nested declarations remain invalid
+only so storage metrics and cleanup targets stay deterministic; they are not a
+universal directory denylist.
 Atrium only displays and removes declared directories that currently exist and
 are real directories, never symlinks. Missing declarations produce no cleanup
-targets; the configuration guidance tells the project development Agent how to
-add them.
+targets.
 
 The board may let the user select a subset of the declared entries. The cleanup
 command still intersects that selection with the manifest declaration, so a UI
@@ -252,9 +340,11 @@ updating the separate, machine-readable file:
 The acknowledgement contains the same `guidance_revision` and
 `protocol_schema` values as `guidance.toml`. It must be written only after the
 Agent has synchronized `manifest.toml` and the marked Atrium rule in
-`AGENTS.md`. Atrium does not read `AGENTS.md`; it uses this acknowledgement to
-keep the Agent guidance action available across rescans and restarts until the
-project Agent has completed the handoff.
+`AGENTS.md`, completed the required command verification, and resolved all
+environment blockers. Atrium does not read `AGENTS.md`; it uses this
+acknowledgement to keep the Agent guidance action available across rescans and
+restarts until the project Agent has completed the handoff. A stale or missing
+acknowledgement is the correct state for an incomplete integration.
 
 The configuration report contains a marked, versioned rule block for the
 project development Agent to install or update in the repository's

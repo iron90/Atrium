@@ -3,8 +3,10 @@ use std::collections::{HashMap, HashSet};
 use super::facets::configured_facet;
 use super::path_policy::normalize_declared_path;
 use crate::conformance::MANIFEST_PATH;
-use crate::manifest_schema::ManifestBuildProfile;
-use crate::model::{BuildProfile, Facet, ProjectCommand};
+use crate::manifest_schema::{ManifestBuildProfile, ManifestHostRequirements};
+use crate::model::{
+    BuildHostRequirements, BuildProfile, CommandKind, Facet, HostOs, ProjectCommand,
+};
 
 pub(super) fn parse_build_profiles(
     declarations: Vec<ManifestBuildProfile>,
@@ -50,6 +52,24 @@ pub(super) fn parse_build_profiles(
             resolve_command_reference(bindings.build.as_deref(), commands, &mut profile_issues);
         let run_command_id =
             resolve_command_reference(bindings.run.as_deref(), commands, &mut profile_issues);
+        let host_requirements =
+            parse_host_requirements(manifest_profile.host_requirements, &id, &mut profile_issues);
+        let unsupported_actions = [
+            (CommandKind::Run, run_command_id.is_some()),
+            (CommandKind::Check, check_command_id.is_some()),
+            (CommandKind::Build, build_command_id.is_some()),
+        ]
+        .into_iter()
+        .filter_map(|(action, is_bound)| {
+            (is_bound
+                && !host_requirements.action_supported_for_platform(
+                    &action,
+                    &platform.key,
+                    HostOs::current(),
+                ))
+            .then_some(action)
+        })
+        .collect();
         let artifacts = parse_artifact_paths(
             manifest_profile.artifacts.unwrap_or_default(),
             &id,
@@ -66,6 +86,8 @@ pub(super) fn parse_build_profiles(
             run_command_id,
             check_command_id,
             build_command_id,
+            host_requirements,
+            unsupported_actions,
             source: profile_source,
             region: normalize_optional_text(manifest_profile.region),
             payment: normalize_optional_text(manifest_profile.payment),
@@ -75,6 +97,63 @@ pub(super) fn parse_build_profiles(
     }
 
     build_profiles
+}
+
+fn parse_host_requirements(
+    declaration: Option<ManifestHostRequirements>,
+    profile_id: &str,
+    issues: &mut Vec<String>,
+) -> BuildHostRequirements {
+    let Some(declaration) = declaration else {
+        return BuildHostRequirements::default();
+    };
+
+    BuildHostRequirements {
+        run: parse_host_list(declaration.run, profile_id, "run", issues),
+        check: parse_host_list(declaration.check, profile_id, "check", issues),
+        build: parse_host_list(declaration.build, profile_id, "build", issues),
+    }
+}
+
+fn parse_host_list(
+    values: Option<Vec<String>>,
+    profile_id: &str,
+    action: &str,
+    issues: &mut Vec<String>,
+) -> Option<Vec<HostOs>> {
+    let Some(values) = values else {
+        return None;
+    };
+    let mut seen = HashSet::new();
+    let mut hosts = Vec::new();
+    for raw in values {
+        let normalized = raw.trim().to_ascii_lowercase();
+        if normalized.is_empty() {
+            issues.push(format!(
+                "Build profile {profile_id} host requirement for {action} contains an empty host OS."
+            ));
+            continue;
+        }
+        let Some(host) = HostOs::parse(&normalized) else {
+            issues.push(format!(
+                "Build profile {profile_id} host requirement for {action} uses unsupported host OS {raw}; expected macos, windows, or linux."
+            ));
+            continue;
+        };
+        if !seen.insert(host) {
+            issues.push(format!(
+                "Build profile {profile_id} host requirement for {action} declares duplicate host OS: {normalized}."
+            ));
+            continue;
+        }
+        hosts.push(host);
+    }
+    if hosts.is_empty() {
+        issues.push(format!(
+            "Build profile {profile_id} host requirement for {action} must list at least one supported host OS."
+        ));
+    }
+    Some(hosts)
 }
 
 fn resolve_facet(

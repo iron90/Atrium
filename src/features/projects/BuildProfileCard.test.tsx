@@ -23,6 +23,12 @@ const profile: BuildProfile = {
   runCommandId: "npm:dev",
   checkCommandId: "npm:check",
   buildCommandId: "npm:build:macos",
+  hostRequirements: {
+    run: null,
+    check: null,
+    build: null,
+  },
+  unsupportedActions: [],
   source: ".atrium/manifest.toml#build_profiles.macos-direct",
   region: null,
   payment: null,
@@ -74,10 +80,13 @@ const availableArtifact: BuildArtifact = {
   isComplete: true,
 };
 
-const renderCard = (artifacts: BuildArtifact[] = []) =>
+const renderCard = (
+  artifacts: BuildArtifact[] = [],
+  profileOverride: BuildProfile = profile,
+) =>
   render(
     <BuildProfileCard
-      profile={profile}
+      profile={profileOverride}
       commands={commands}
       artifacts={artifacts}
       projectPath="/workspace/SnapCutout"
@@ -116,5 +125,26 @@ describe("build profile card", () => {
     renderCard([availableArtifact]);
 
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  });
+
+  it("disables actions that are not supported on the current host", () => {
+    renderCard([availableArtifact], {
+      ...profile,
+      hostRequirements: {
+        ...profile.hostRequirements,
+        build: ["windows"],
+      },
+      unsupportedActions: ["build"],
+    });
+
+    const buildButton = screen.getByRole("button", { name: "Build" });
+    expect(buildButton).toBeDisabled();
+    expect(buildButton).toHaveAttribute(
+      "title",
+      "This action requires one of these host OSes: Windows.",
+    );
+    expect(
+      screen.getByText("This action requires one of these host OSes: Windows."),
+    ).toBeInTheDocument();
   });
 });

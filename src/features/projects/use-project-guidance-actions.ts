@@ -2,13 +2,11 @@ import { useCallback, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
 import { createConfigurationAgentPrompt } from "./guidance-prompt";
-import { translate, type Language } from "../../i18n";
-import { fill } from "../../shared/format";
+import type { Language } from "../../i18n";
 import { errorMessage } from "../../shared/errors";
 import { protocolViewModel } from "./protocol-presentation";
 
 export interface ProjectGuidanceActions {
-  guidanceMessage: string | null;
   agentPrompt: string | null;
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
@@ -27,7 +25,6 @@ export function useProjectGuidanceActions({
   language,
   onError,
 }: UseProjectGuidanceActionsOptions): ProjectGuidanceActions {
-  const [guidanceMessage, setGuidanceMessage] = useState<string | null>(null);
   const [agentPrompt, setAgentPrompt] = useState<string | null>(null);
   const [isAgentPromptForGuidanceUpdate, setIsAgentPromptForGuidanceUpdate] =
     useState(false);
@@ -35,7 +32,6 @@ export function useProjectGuidanceActions({
   const [isWritingGuidance, setIsWritingGuidance] = useState(false);
 
   const reset = useCallback(() => {
-    setGuidanceMessage(null);
     setAgentPrompt(null);
     setIsAgentPromptForGuidanceUpdate(false);
     setIsAgentPromptCopied(false);
@@ -44,23 +40,15 @@ export function useProjectGuidanceActions({
   const generateGuidance = useCallback(
     async (project: ProjectSnapshot) => {
       setIsWritingGuidance(true);
-      setGuidanceMessage(null);
       onError(null);
       try {
         const report = await bridge.generateProjectGuidance(project.path);
-        setGuidanceMessage(
-          fill(
-            translate(language, "guidanceGenerated"),
-            "path",
-            report.paths.map((path) => `• ${path}`).join("\n"),
-          ),
-        );
         setAgentPrompt(
           createConfigurationAgentPrompt(project, report.paths, language),
         );
+        const protocolView = protocolViewModel(project);
         setIsAgentPromptForGuidanceUpdate(
-          (project.guidance.needsUpdate || project.guidance.needsSync) &&
-            protocolViewModel(project).isReady,
+          protocolView.needsUpdate && protocolView.isReady,
         );
         setIsAgentPromptCopied(false);
       } catch (error) {
@@ -86,7 +74,6 @@ export function useProjectGuidanceActions({
   }, [agentPrompt, onError]);
 
   return {
-    guidanceMessage,
     agentPrompt,
     isAgentPromptForGuidanceUpdate,
     isAgentPromptCopied,

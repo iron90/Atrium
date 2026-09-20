@@ -2,6 +2,7 @@ export type Language = "en" | "zh";
 
 export const en = {
   localProjectBoard: "LOCAL PROJECT BOARD",
+  appVersion: "Version {version}",
   projects: "Projects",
   gitHistory: "Git history",
   settings: "Settings",
@@ -76,28 +77,23 @@ export const en = {
   manifestMissing: "Manifest not declared",
   noBuildProfiles: "No build profiles declared",
   atriumProtocol: "Atrium protocol",
-  protocolStatusConfigured: "Protocol connected",
-  protocolStatusPartial: "Protocol partially connected",
+  protocolStatusConfigured: "Protocol up to date",
+  protocolStatusNeedsUpdate: "Protocol needs update",
   protocolStatusMissing: "Protocol not connected",
-  protocolStatusLegacy: "Legacy integration",
-  protocolStatusInvalid: "Protocol needs attention",
   protocolStatusDescriptionConfigured:
-    "Atrium can use this project's declared facts.",
-  protocolStatusDescriptionPartial:
-    "The connection is usable, but some project actions are not available yet.",
+    "The protocol is connected and uses the latest supported version.",
+  protocolStatusDescriptionNeedsUpdate:
+    "The protocol is connected, but its manifest or Agent guidance needs to be updated.",
   protocolStatusDescriptionMissing:
     "Connect the Atrium protocol to enable project-aware actions.",
-  protocolStatusDescriptionLegacy:
-    "An older icon convention was found. Connect the Atrium protocol to verify project facts.",
-  protocolStatusDescriptionInvalid:
-    "Fix the Atrium protocol connection to restore project-aware actions.",
   protocolDetails: "Protocol details",
   protocolDetailsSummary: "{count} capability checks",
   protocolCapabilities: "Capabilities",
   capabilityIdentity: "Identity & icon",
   capabilityContext: "Platform & channel context",
-  capabilityBuildProfiles: "Run / Check / Build",
+  capabilityBuildProfiles: "Check / Build / Run",
   capabilityCleanup: "Cleanup directories",
+  capabilityAgentGuidance: "Agent guidance",
   capabilityConfigured: "Configured",
   capabilityPartial: "Partially configured",
   capabilityMissing: "Not declared",
@@ -107,7 +103,6 @@ export const en = {
   generateGuidance: "Generate guidance files",
   updateAgentGuidance: "Update Agent guidance",
   generatingGuidance: "Writing guidance…",
-  guidanceGenerated: "Guidance files written: {path}",
   protocolRequired: "Atrium protocol required",
   protocolRequiredDescription:
     "Platform, channel, and build-profile facts will appear after the project completes the Atrium integration.",
@@ -117,8 +112,6 @@ export const en = {
   copyAgentPrompt: "Copy prompt",
   agentPromptCopied: "Copied",
   rawRepositoryCommands: "Discovered repository commands",
-  rawCommandDescription:
-    "These commands are discovered deterministically from project files.",
   discoveredCommandsCount: "{count} commands discovered from this repository",
   discoveredCommandCount: "{count} commands",
   discoveredCommandsWarning:
@@ -126,6 +119,12 @@ export const en = {
   revealDiscoveredCommands: "Confirm and show repository commands",
   profileUnavailable:
     "This profile has configuration issues and is unavailable.",
+  profileHostUnsupported:
+    "Some profile actions are not supported on this host OS.",
+  profileRunHostUnsupported:
+    "This target cannot run on the current system with this profile.",
+  profileHostUnsupportedWithHosts:
+    "This action requires one of these host OSes: {hosts}.",
   buildRequiredToRun: "Build the project before running it.",
   repositoryEntrypoints: "Repository entrypoints",
   source: "source: {value}",
@@ -274,6 +273,7 @@ export const en = {
 
 export const zh: Record<keyof typeof en, string> = {
   localProjectBoard: "本地项目看板",
+  appVersion: "版本 {version}",
   projects: "项目",
   gitHistory: "Git 历史",
   settings: "设置",
@@ -345,25 +345,21 @@ export const zh: Record<keyof typeof en, string> = {
   manifestMissing: "尚未声明清单",
   noBuildProfiles: "尚未声明构建配置",
   atriumProtocol: "Atrium 协议",
-  protocolStatusConfigured: "协议已接入",
-  protocolStatusPartial: "协议部分接入",
+  protocolStatusConfigured: "协议已是最新版本",
+  protocolStatusNeedsUpdate: "协议需要更新",
   protocolStatusMissing: "尚未接入协议",
-  protocolStatusLegacy: "旧式接入",
-  protocolStatusInvalid: "协议接入需要处理",
-  protocolStatusDescriptionConfigured: "Atrium 可以使用这个项目已声明的事实。",
-  protocolStatusDescriptionPartial: "协议连接可用，但部分项目操作暂不可用。",
+  protocolStatusDescriptionConfigured: "协议已接入，并且使用的是最新版本。",
+  protocolStatusDescriptionNeedsUpdate:
+    "协议已接入，但 manifest 或项目 Agent 引导需要更新。",
   protocolStatusDescriptionMissing: "接入 Atrium 协议后即可启用项目相关操作。",
-  protocolStatusDescriptionLegacy:
-    "发现旧式图标接入，但尚未接入 Atrium 协议；接入协议后才能验证项目事实。",
-  protocolStatusDescriptionInvalid:
-    "修复 Atrium 协议接入后即可恢复项目相关操作。",
   protocolDetails: "协议检查细则",
   protocolDetailsSummary: "共 {count} 项能力检查",
   protocolCapabilities: "能力",
   capabilityIdentity: "身份与图标",
   capabilityContext: "平台与渠道上下文",
-  capabilityBuildProfiles: "运行 / 检查 / 构建",
+  capabilityBuildProfiles: "检查 / 构建 / 运行",
   capabilityCleanup: "清理目录",
+  capabilityAgentGuidance: "Agent 引导",
   capabilityConfigured: "已配置",
   capabilityPartial: "部分配置",
   capabilityMissing: "未声明",
@@ -373,7 +369,6 @@ export const zh: Record<keyof typeof en, string> = {
   generateGuidance: "生成引导文件",
   updateAgentGuidance: "更新 Agent 引导",
   generatingGuidance: "正在写入说明…",
-  guidanceGenerated: "引导文件已生成：{path}",
   protocolRequired: "需要先接入 Atrium 协议",
   protocolRequiredDescription:
     "项目完成 Atrium 接入后，平台、渠道和构建配置事实才会在这里显示。",
@@ -382,13 +377,15 @@ export const zh: Record<keyof typeof en, string> = {
   copyAgentPrompt: "复制提示词",
   agentPromptCopied: "已复制",
   rawRepositoryCommands: "发现的仓库命令",
-  rawCommandDescription: "这些命令由程序从项目文件中确定性扫描得到。",
   discoveredCommandsCount: "从该仓库发现 {count} 条命令",
   discoveredCommandCount: "{count} 条命令",
   discoveredCommandsWarning:
     "它们可能修改文件、访问网络，也可能因当前运行环境不支持而失败。",
   revealDiscoveredCommands: "确认并显示仓库命令",
   profileUnavailable: "该配置存在问题，暂时无法执行。",
+  profileHostUnsupported: "当前系统不支持该配置中的部分操作。",
+  profileRunHostUnsupported: "当前系统无法通过此配置运行该目标。",
+  profileHostUnsupportedWithHosts: "此操作只能在以下宿主系统执行：{hosts}。",
   buildRequiredToRun: "请先构建项目，再运行。",
   repositoryEntrypoints: "仓库入口",
   source: "来源：{value}",

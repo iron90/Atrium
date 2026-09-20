@@ -43,6 +43,8 @@ const projectFingerprintData = (project: ProjectSnapshot) => ({
     run: profile.runCommandId,
     check: profile.checkCommandId,
     build: profile.buildCommandId,
+    hostRequirements: profile.hostRequirements,
+    unsupportedActions: profile.unsupportedActions,
     artifacts: profile.artifacts,
     issues: profile.issues,
   })),

@@ -245,6 +245,7 @@ BuildProfile
   runCommandId?
   checkCommandId?
   buildCommandId?
+  hostRequirements: { run?: HostOs[]; check?: HostOs[]; build?: HostOs[] }
   source: manifest key
   region? / payment?  (reserved for later variants)
   artifacts: string[]             # explicit files or directories produced by this profile
@@ -253,6 +254,11 @@ BuildProfile
 
 BuildProfile 是“平台 + 渠道 + 项目命令绑定”的组合。对于正式的目标操作，
 用户先选择配置，Atrium 再调用该配置绑定的仓库命令。
+
+`hostRequirements` 是按操作区分的“已验证成功宿主”允许列表，不是操作系统兼容性
+推断。项目 Agent 只有在对应宿主上完整执行同一条命令，并满足最终退出码、目标启动或
+实际构建产物等成功后置条件后，才能把该宿主写入 manifest。目标平台、目标三元组、
+runner 名称、工具存在或中间步骤成功都不能作为证明；没有通过验证的宿主不能声明。
 
 项目文件中自动发现的 `ProjectCommand` 则属于独立的仓库命令入口。它们不会
 因为是否被 Profile 引用而被合并或过滤；用户确认显示后，可以直接执行其中
@@ -368,8 +374,9 @@ path 会再次去重。
 - 脚本名和 Make target 只接受不含空白/控制字符、不以 `-` 开头且不超过 128 字节的
   标识符；异常键会被忽略，避免污染 UI、source 引用或 argv；
 - 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
-- Schema 1 的 manifest 结构严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，
-  不会被静默忽略。
+- Schema 1 和 Schema 2 的 manifest 结构都严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，
+  不会被静默忽略。Schema 1 继续兼容读取但不声明构建宿主限制，Schema 2 增加按 Run / Check /
+  Build 区分的宿主系统声明。
 - package.json、Cargo.toml、pyproject.toml、pubspec.yaml、Makefile 和
   `.atrium/manifest.toml` 等固定项目描述文件统一经过项目根路径边界读取；缺失、不可读和
   符号链接不是同一种状态，项目外部或经由符号链接到达的描述文件不会成为 Atrium 事实。
@@ -389,6 +396,11 @@ icon 规范。
 引导操作一次生成包含项目配置和图标说明的单个 Agent-facing 配置文件，另生成一份内部
 版本元数据。生成成功后，Atrium 同时生成一段固定模板的项目开发 Agent 提示词，用户可以
 复制该提示词，让 Agent 读取这两份引导文件并完成项目配置。
+
+项目 Agent 的验证可能受到端口占用、依赖、凭证或工具链状态影响。此类环境阻塞不能被
+当作项目不支持，也不能通过删除命令绑定、缩小检查范围或伪造宿主系统来绕过；在阻塞
+未解决前，`.atrium/guidance-sync.toml` 不得更新。Atrium 自身的开发端口与 Tauri 默认
+端口分离，避免项目 Agent 验证其他 Tauri 项目时产生无关冲突。
 
 项目存储统计和清理同样遵循项目声明：`[cleanup]` 中的 `cache` 与 `build`
 数组由项目开发 Agent 根据真实模板补齐。Rust 核心只统计项目目录中的文件大小，

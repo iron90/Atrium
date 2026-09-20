@@ -1,12 +1,12 @@
 import type { ProjectSnapshot } from "../../bridge";
 import type { TranslationKey } from "../../i18n";
 
-export type ProtocolCardStatus =
-  "configured" | "partial" | "missing" | "legacy" | "invalid";
+export type ProtocolCardStatus = "configured" | "needs-update" | "missing";
 
 export interface ProtocolViewModel {
   isReady: boolean;
   cardStatus: ProtocolCardStatus;
+  needsUpdate: boolean;
   shouldShowGuidance: boolean;
 }
 
@@ -20,34 +20,31 @@ export const protocolViewModel = (
     project.protocol.manifestStatus === "configured" &&
     coreCapabilities.length > 0 &&
     coreCapabilities.every((capability) => capability.status === "configured");
-  const hasLegacyIcon = project.protocol.capabilities.some(
-    (capability) =>
-      capability.id === "identity" && capability.status === "legacy",
-  );
-  const cardStatus: ProtocolCardStatus =
-    project.protocol.manifestStatus === "missing" && hasLegacyIcon
-      ? "legacy"
-      : project.protocol.manifestStatus !== "configured"
-        ? project.protocol.manifestStatus
-        : project.protocol.capabilities.some(
-              (capability) => capability.status !== "configured",
-            )
-          ? "partial"
-          : "configured";
+  const protocolIsConnected =
+    project.protocol.manifestStatus === "configured" &&
+    project.protocol.capabilities.length > 0 &&
+    project.protocol.capabilities.every(
+      (capability) => capability.status === "configured",
+    );
   const hasConfigurationGap =
     project.configuration.status !== "configured" ||
     project.buildProfiles.length === 0;
-  const cleanupCapability = project.protocol.capabilities.find(
-    (capability) => capability.id === "cleanup",
-  );
-
+  const guidanceNeedsUpdate =
+    project.guidance.needsUpdate || project.guidance.needsSync;
+  const needsUpdate =
+    project.protocol.needsUpdate ||
+    (protocolIsConnected && guidanceNeedsUpdate);
+  const cardStatus: ProtocolCardStatus = needsUpdate
+    ? "needs-update"
+    : !protocolIsConnected
+      ? "missing"
+      : "configured";
   return {
     isReady,
     cardStatus,
+    needsUpdate,
     shouldShowGuidance:
-      !isReady ||
-      hasConfigurationGap ||
-      cleanupCapability?.status === "invalid",
+      !protocolIsConnected || hasConfigurationGap || needsUpdate,
   };
 };
 
@@ -108,14 +105,10 @@ export const protocolStatusLabel = (
   switch (status) {
     case "configured":
       return t("protocolStatusConfigured");
-    case "partial":
-      return t("protocolStatusPartial");
+    case "needs-update":
+      return t("protocolStatusNeedsUpdate");
     case "missing":
       return t("protocolStatusMissing");
-    case "legacy":
-      return t("protocolStatusLegacy");
-    case "invalid":
-      return t("protocolStatusInvalid");
   }
 };
 
@@ -126,13 +119,9 @@ export const protocolStatusDescription = (
   switch (status) {
     case "configured":
       return t("protocolStatusDescriptionConfigured");
-    case "partial":
-      return t("protocolStatusDescriptionPartial");
+    case "needs-update":
+      return t("protocolStatusDescriptionNeedsUpdate");
     case "missing":
       return t("protocolStatusDescriptionMissing");
-    case "legacy":
-      return t("protocolStatusDescriptionLegacy");
-    case "invalid":
-      return t("protocolStatusDescriptionInvalid");
   }
 };

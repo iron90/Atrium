@@ -50,6 +50,12 @@ mod tests {
         assert!(configuration.contains("BEGIN ATRIUM MANAGED RULES"));
         assert!(configuration.contains("## manifest.toml template"));
         assert!(configuration.contains("[[build_profiles]]"));
+        assert!(configuration.contains("schema = 2"));
+        assert!(configuration.contains("[build_profiles.host_requirements]"));
+        assert!(configuration.contains("verified-success allowlist"));
+        assert!(configuration.contains("verification matrix"));
+        assert!(configuration.contains("Validation blockers and completion"));
+        assert!(configuration.contains("partial-progress marker"));
         assert!(configuration.contains("## Project icon"));
         assert!(!root.join(".atrium/reports/icon-conformance.md").exists());
         fs::remove_dir_all(root).expect("remove fixture project");

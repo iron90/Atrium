@@ -48,7 +48,6 @@ export function ProjectCommandsSection({
         <DetailLoading />
       ) : (
         <>
-          <p className="entrypoint-note">{t("rawCommandDescription")}</p>
           {!project.commands.length ? (
             <p className="empty-copy">{t("noKnownEntrypoint")}</p>
           ) : !rawCommandsRevealed ? (

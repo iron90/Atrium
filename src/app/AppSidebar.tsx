@@ -1,6 +1,8 @@
 import atriumIcon from "../../src-tauri/icons/icon.png";
 import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
+import { fill } from "../shared/format";
+import { APP_VERSION } from "./app-version";
 import { LocalActivityPanel } from "./LocalActivityPanel";
 import type { PageId } from "./navigation";
 import { navigationItems } from "./navigation";
@@ -32,6 +34,9 @@ export function AppSidebar({
         <div>
           <div className="brand-name">Atrium</div>
           <div className="brand-subtitle">{t("localProjectBoard")}</div>
+          <div className="brand-version">
+            {fill(t("appVersion"), "version", APP_VERSION)}
+          </div>
         </div>
       </div>
 

@@ -44,7 +44,7 @@ fn parse_cleanup_paths(
         .into_iter()
         .filter_map(|raw| {
             let Some(normalized) =
-                normalize_declared_path(&raw, &[".git", ".atrium", "node_modules", "vendor"])
+                normalize_declared_path(&raw, &[".git", ".atrium"])
             else {
                 issues.push(format!(
                     "Cleanup {category} path must be a relative, non-protected directory: {raw}."
@@ -153,5 +153,39 @@ mod tests {
         assert!(issues
             .iter()
             .any(|issue| issue.contains("Duplicate cleanup directory")));
+    }
+
+    #[test]
+    fn trusts_project_agent_for_dependency_and_vendor_cleanup_paths() {
+        let mut issues = Vec::new();
+        let cleanup = parse_cleanup(
+            Some(ManifestCleanup {
+                cache: Some(vec![
+                    "node_modules/.vite".to_string(),
+                    "vendor/cache".to_string(),
+                ]),
+                build: None,
+            }),
+            &mut issues,
+        );
+
+        assert_eq!(cleanup.cache, vec!["node_modules/.vite", "vendor/cache"]);
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn keeps_git_and_atrium_roots_protected() {
+        let mut issues = Vec::new();
+        let cleanup = parse_cleanup(
+            Some(ManifestCleanup {
+                cache: Some(vec![".git/objects".to_string()]),
+                build: Some(vec![".atrium/cache".to_string()]),
+            }),
+            &mut issues,
+        );
+
+        assert!(cleanup.cache.is_empty());
+        assert!(cleanup.build.is_empty());
+        assert_eq!(issues.len(), 2);
     }
 }

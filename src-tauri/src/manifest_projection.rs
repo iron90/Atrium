@@ -15,6 +15,7 @@ pub(crate) fn project(
     document: ManifestDocument,
     commands: &[ProjectCommand],
 ) -> ProjectConfigurationInspection {
+    let manifest_schema = document.schema;
     // The adapter hint is intentionally accepted for protocol compatibility, but it must not
     // alter deterministic fact discovery until a concrete adapter contract exists.
     let _adapter_profile = document.profile;
@@ -64,7 +65,7 @@ pub(crate) fn project(
         tools,
         links,
         manifest_status: ProjectConfigurationStatus::Configured,
-        manifest_schema: Some(1),
+        manifest_schema: Some(manifest_schema),
         cleanup_issues,
         configuration: ProjectConfiguration {
             status: if issues.is_empty() {

@@ -1,6 +1,7 @@
 import type {
   BuildArtifact,
   BuildProfile,
+  HostOs,
   ProfileAction,
   ProjectCommand,
   RunStarted,
@@ -8,6 +9,12 @@ import type {
 import { useI18n, localizedFacetLabel } from "../../i18n";
 import { fill, formatBytes, formatTime } from "../../shared/format";
 import { artifactKindLabel, commandForProfile } from "./presentation";
+
+const hostLabels: Record<HostOs, string> = {
+  macos: "macOS",
+  windows: "Windows",
+  linux: "Linux",
+};
 
 export function BuildProfileCard({
   profile,
@@ -45,6 +52,20 @@ export function BuildProfileCard({
   const hasAvailableArtifact = profileArtifacts.some(
     (artifact) => artifact.kind === "file" || artifact.kind === "directory",
   );
+  const unsupportedAction = profile.unsupportedActions[0];
+  const unsupportedHosts = unsupportedAction
+    ? profile.hostRequirements[unsupportedAction]
+    : null;
+  const profileHostMessage =
+    unsupportedAction === "run"
+      ? t("profileRunHostUnsupported")
+      : unsupportedHosts?.length
+        ? fill(
+            t("profileHostUnsupportedWithHosts"),
+            "hosts",
+            unsupportedHosts.map((host) => hostLabels[host]).join(" / "),
+          )
+        : t("profileHostUnsupported");
 
   return (
     <div className="profile-card">
@@ -75,15 +96,33 @@ export function BuildProfileCard({
           if (!command) return null;
           const runBlockedUntilBuild =
             action === "run" && profileReady && !hasAvailableArtifact;
+          const hostUnsupported = profile.unsupportedActions.includes(action);
+          const hostUnsupportedMessage =
+            action === "run"
+              ? t("profileRunHostUnsupported")
+              : profile.hostRequirements[action]?.length
+                ? fill(
+                    t("profileHostUnsupportedWithHosts"),
+                    "hosts",
+                    profile.hostRequirements[action]
+                      .map((host) => hostLabels[host])
+                      .join(" / "),
+                  )
+                : t("profileHostUnsupported");
           const actionDisabled =
-            Boolean(activeRun) || !profileReady || runBlockedUntilBuild;
+            Boolean(activeRun) ||
+            !profileReady ||
+            runBlockedUntilBuild ||
+            hostUnsupported;
           const actionTitle = !canExecute
             ? t("configurationMissing")
             : profile.issues.length
               ? t("profileUnavailable")
-              : runBlockedUntilBuild
-                ? t("buildRequiredToRun")
-                : command.displayCommand;
+              : hostUnsupported
+                ? hostUnsupportedMessage
+                : runBlockedUntilBuild
+                  ? t("buildRequiredToRun")
+                  : command.displayCommand;
           const actionButton = (
             <button
               className={`profile-action command-${action}`}
@@ -159,6 +198,8 @@ export function BuildProfileCard({
       </div>
       {profile.issues.length ? (
         <span className="profile-issue">{profile.issues[0]}</span>
+      ) : profile.unsupportedActions.length ? (
+        <span className="profile-issue">{profileHostMessage}</span>
       ) : null}
     </div>
   );

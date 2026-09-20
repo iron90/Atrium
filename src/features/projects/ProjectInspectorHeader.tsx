@@ -21,13 +21,16 @@ export function ProjectInspectorHeader({
         <p>{project.description ?? t("descriptionMissing")}</p>
       </div>
       <button
-        className="inspector-refresh"
+        className={`inspector-refresh ${isRefreshing ? "is-refreshing" : ""}`}
         type="button"
         onClick={() => onRefreshProject(project)}
         disabled={isRefreshing}
+        aria-busy={isRefreshing}
         title={t("refreshProject")}
       >
-        {isRefreshing ? "↻" : "⟳"}
+        <span className="inspector-refresh-glyph" aria-hidden="true">
+          ⟳
+        </span>
         <span className="sr-only">
           {isRefreshing ? t("refreshingProject") : t("refreshProject")}
         </span>

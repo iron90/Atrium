@@ -8,14 +8,16 @@ export default defineConfig({
   plugins: [react()],
   clearScreen: false,
   server: {
-    port: 1420,
+    // Keep Atrium away from Tauri's conventional 1420 dev port so project
+    // agents can validate other Tauri projects without a false port blocker.
+    port: 1430,
     strictPort: true,
     host: host || false,
     hmr: host
       ? {
           protocol: "ws",
           host,
-          port: 1421,
+          port: 1431,
         }
       : undefined,
     watch: {

@@ -213,6 +213,15 @@ button:disabled {
   font-size: 8px;
   color: var(--faint);
 }
+.brand-version {
+  margin-top: 5px;
+  color: var(--muted);
+  font:
+    8px "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+}
 
 .primary-nav {
   display: grid;
@@ -809,6 +818,7 @@ button:disabled {
   display: grid;
   place-items: center;
   align-self: flex-start;
+  flex: 0 0 34px;
   width: 34px;
   height: 34px;
   padding: 0;
@@ -817,6 +827,24 @@ button:disabled {
   color: var(--accent-strong);
   background: transparent;
   font-size: 20px;
+  line-height: 1;
+}
+.inspector-refresh-glyph {
+  display: block;
+  line-height: 1;
+}
+.inspector-refresh.is-refreshing .inspector-refresh-glyph {
+  animation: inspector-refresh-spin 0.9s linear infinite;
+}
+@keyframes inspector-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inspector-refresh.is-refreshing .inspector-refresh-glyph {
+    animation: none;
+  }
 }
 .inspector-refresh:hover:not(:disabled),
 .inspector-refresh:focus-visible:not(:disabled) {
@@ -1301,19 +1329,14 @@ button:disabled {
   font-size: 9px;
   line-height: 1.4;
 }
-.protocol-status-configured strong,
-.protocol-status-compliant strong {
+.protocol-status-configured strong {
   color: var(--good);
 }
-.protocol-status-partial strong {
+.protocol-status-needs-update strong {
   color: var(--warning);
 }
-.protocol-status-legacy strong,
 .protocol-status-missing strong {
   color: var(--warning);
-}
-.protocol-status-invalid strong {
-  color: var(--danger);
 }
 .protocol-details {
   margin-top: 8px;
@@ -1446,17 +1469,14 @@ button:disabled {
 .capability-invalid .capability-dot {
   background: var(--danger);
 }
+.capability-needs-update .capability-dot {
+  background: var(--warning);
+}
+.capability-needs-update strong {
+  color: var(--warning);
+}
 .protocol-icon-path {
   margin-top: 7px;
-}
-.protocol-message {
-  margin: 8px 0 0;
-  overflow-wrap: anywhere;
-  color: var(--accent-strong);
-  font:
-    9px/1.4 "DM Mono",
-    monospace;
-  white-space: pre-line;
 }
 .protocol-prerequisite {
   display: grid;
@@ -1703,13 +1723,6 @@ button:disabled {
 .entrypoint-list {
   display: grid;
   gap: 6px;
-}
-.entrypoint-note {
-  margin: 0 0 9px;
-  color: var(--faint);
-  font:
-    9px/1.45 "DM Mono",
-    monospace;
 }
 .command-disclosure {
   display: grid;

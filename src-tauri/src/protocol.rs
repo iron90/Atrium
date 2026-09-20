@@ -1,5 +1,6 @@
 use crate::conformance::MANIFEST_PATH;
 use crate::manifest::ProjectConfigurationInspection;
+use crate::manifest_schema;
 use crate::model::{
     IconConformance, IconConformanceStatus, ProjectConfigurationStatus, ProtocolCapability,
     ProtocolCapabilityStatus, ProtocolStatus,
@@ -134,6 +135,9 @@ pub fn build_protocol_status(
     ProtocolStatus {
         manifest_path: MANIFEST_PATH.to_string(),
         schema: inspection.manifest_schema,
+        needs_update: inspection
+            .manifest_schema
+            .is_some_and(|schema| schema < manifest_schema::CURRENT_SCHEMA),
         manifest_status,
         capabilities: vec![
             icon_capability,

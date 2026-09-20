@@ -12,7 +12,6 @@ import {
 export interface ProjectProtocolSectionProps {
   project: ProjectSnapshot;
   inspectedProject: ProjectSnapshot;
-  guidanceMessage: string | null;
   agentPrompt: string | null;
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
@@ -24,7 +23,6 @@ export interface ProjectProtocolSectionProps {
 export function ProjectProtocolSection({
   project,
   inspectedProject,
-  guidanceMessage,
   agentPrompt,
   isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
@@ -35,15 +33,12 @@ export function ProjectProtocolSection({
   const { t } = useI18n();
   const protocol = inspectedProject.protocol;
   const protocolView = protocolViewModel(inspectedProject);
-  const guidanceNeedsAction =
-    inspectedProject.guidance.needsUpdate ||
-    inspectedProject.guidance.needsSync;
   const shouldShowGuidanceAction =
-    protocolView.shouldShowGuidance || guidanceNeedsAction;
+    protocolView.shouldShowGuidance || protocolView.needsUpdate;
   const shouldShowAgentGuidance =
     protocolView.shouldShowGuidance ||
-    (isAgentPromptForGuidanceUpdate && guidanceNeedsAction);
-  const isUpdatingGuidance = guidanceNeedsAction && protocolView.isReady;
+    (isAgentPromptForGuidanceUpdate && protocolView.needsUpdate);
+  const isUpdatingGuidance = protocolView.needsUpdate && protocolView.isReady;
   const protocolDetailsSummary = fill(
     t("protocolDetailsSummary"),
     "count",
@@ -86,6 +81,18 @@ export function ProjectProtocolSection({
             className="protocol-capabilities"
             aria-label={t("protocolCapabilities")}
           >
+            <div
+              className={`protocol-capability ${
+                protocolView.needsUpdate
+                  ? "capability-needs-update"
+                  : "capability-configured"
+              }`}
+            >
+              <span className="capability-dot" />
+              <span>
+                <strong>{t("capabilityAgentGuidance")}</strong>
+              </span>
+            </div>
             {protocol.capabilities.map((capability) => (
               <div
                 className={`protocol-capability capability-${capability.status}`}
@@ -104,9 +111,6 @@ export function ProjectProtocolSection({
           </div>
         </div>
       </details>
-      {guidanceMessage && shouldShowGuidanceAction ? (
-        <p className="protocol-message">{guidanceMessage}</p>
-      ) : null}
       {agentPrompt && shouldShowAgentGuidance ? (
         <div className="agent-prompt-card">
           <div className="agent-prompt-heading">
