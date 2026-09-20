@@ -56,10 +56,17 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
               </datalist>
             </label>
             <button
+              className={isLoadingChanges ? "is-loading" : ""}
               type="button"
               disabled={isLoadingChanges || !fromRevision.trim()}
+              aria-busy={isLoadingChanges}
               onClick={loadChanges}
             >
+              {isLoadingChanges ? (
+                <span className="status-spinner is-active" aria-hidden="true">
+                  ◌
+                </span>
+              ) : null}
               {isLoadingChanges ? t("loadingChanges") : t("loadChanges")}
             </button>
           </div>

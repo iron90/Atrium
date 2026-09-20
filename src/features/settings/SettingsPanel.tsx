@@ -137,12 +137,18 @@ export function SettingsPanel({
               {t("workspaceExclusionDescription")}
             </p>
             <button
-              className="scan-button settings-scan"
+              className={`scan-button settings-scan ${isScanning ? "is-loading" : ""}`}
               type="button"
               onClick={onScan}
               disabled={isScanning}
+              aria-busy={isScanning}
             >
-              <span aria-hidden="true">{isScanning ? "◌" : "↻"}</span>
+              <span
+                className={`status-spinner ${isScanning ? "is-active" : ""}`}
+                aria-hidden="true"
+              >
+                {isScanning ? "◌" : "↻"}
+              </span>
               {isScanning ? t("scanning") : t("scanWorkspace")}
             </button>
           </div>

@@ -348,37 +348,39 @@ export default function App() {
             </div>
           ) : null}
 
-          {activePage === "settings" ? (
-            <SettingsPanel
-              theme={theme}
-              setTheme={setTheme}
-              layout={layout}
-              setLayout={handleLayoutChange}
-              language={language}
-              setLanguage={setLanguage}
-              workspacePaths={workspacePaths}
-              onWorkspacePathsChange={updateWorkspacePaths}
-              excludeNames={excludeNames}
-              setExcludeNames={setExcludeNames}
-              onScan={() => void scanWorkspace()}
-              isScanning={isScanning}
-            />
-          ) : activePage === "git" ? (
-            <GitHistoryView
-              key={selectedProject?.id ?? "none"}
-              projects={snapshot.projects}
-              selectedId={selectedProject?.id}
-              onSelect={selectProject}
-            />
-          ) : (
-            <ProjectsPage
-              layout={layout}
-              snapshot={snapshot}
-              visibleProjects={visibleProjects}
-              projectList={projectList}
-              inspector={inspector}
-            />
-          )}
+          <div className="page-view" data-page={activePage} key={activePage}>
+            {activePage === "settings" ? (
+              <SettingsPanel
+                theme={theme}
+                setTheme={setTheme}
+                layout={layout}
+                setLayout={handleLayoutChange}
+                language={language}
+                setLanguage={setLanguage}
+                workspacePaths={workspacePaths}
+                onWorkspacePathsChange={updateWorkspacePaths}
+                excludeNames={excludeNames}
+                setExcludeNames={setExcludeNames}
+                onScan={() => void scanWorkspace()}
+                isScanning={isScanning}
+              />
+            ) : activePage === "git" ? (
+              <GitHistoryView
+                key={selectedProject?.id ?? "none"}
+                projects={snapshot.projects}
+                selectedId={selectedProject?.id}
+                onSelect={selectProject}
+              />
+            ) : (
+              <ProjectsPage
+                layout={layout}
+                snapshot={snapshot}
+                visibleProjects={visibleProjects}
+                projectList={projectList}
+                inspector={inspector}
+              />
+            )}
+          </div>
         </main>
       </div>
     </I18nProvider>
