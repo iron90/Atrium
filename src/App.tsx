@@ -335,20 +335,20 @@ export default function App() {
         />
 
         <main className="main-column">
-          <header className="topbar">
-            <div className="page-heading">
-              <h1>{heading.title}</h1>
-              <p>{heading.body}</p>
-            </div>
-          </header>
-
-          {error ? (
-            <div className="error-banner" role="alert">
-              {error}
-            </div>
-          ) : null}
-
           <div className="page-view" data-page={activePage} key={activePage}>
+            <header className="topbar">
+              <div className="page-heading">
+                <h1>{heading.title}</h1>
+                <p>{heading.body}</p>
+              </div>
+            </header>
+
+            {error ? (
+              <div className="error-banner" role="alert">
+                {error}
+              </div>
+            ) : null}
+
             {activePage === "settings" ? (
               <SettingsPanel
                 theme={theme}

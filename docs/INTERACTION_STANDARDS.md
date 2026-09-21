@@ -6,10 +6,12 @@ layout or compete with the content.
 
 ## Shared rules
 
-- Hover changes color, border, or background only. Controls do not jump on hover.
+- Hover changes color, border, or background and may lift an interactive control
+  by 1px. The lift is reserved for interactive surfaces and does not change
+  layout.
 - Keyboard focus uses a 2px accent outline with a 2px offset.
-- A press gives enabled controls a 1px downward response. Disabled controls never
-  receive hover or press feedback.
+- A press gives enabled controls a 1px downward response with a slight scale
+  reduction. Disabled controls never receive hover or press feedback.
 - State changes use the shared easing and duration tokens in `src/app.css`.
 - Every repeating animation is disabled when `prefers-reduced-motion: reduce` is
   enabled.
@@ -18,12 +20,12 @@ layout or compete with the content.
 
 | Interaction                        | Feedback                                                                           | Timing        |
 | ---------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
-| Sidebar page switch                | Active navigation indicator plus a short page fade/translate-in                    | 220ms         |
-| Project, matrix, and Git list rows | Shared hover/selected background and border treatment; 1px press response          | 180ms / 120ms |
-| Protocol and command disclosures   | Chevron rotates 90 degrees; contents fade and move in by 4px                       | 180ms         |
-| Buttons and compact controls       | Border/background/color transition; consistent focus ring; 1px press response      | 120ms         |
+| Sidebar page switch                | Active navigation indicator plus a page-title and content fade/translate-in        | 420ms         |
+| Project, matrix, and Git list rows | Shared hover/selected background and 1px lift/press response                       | 300ms / 180ms |
+| Protocol and command disclosures   | Chevron rotates 90 degrees; contents fade and move in by 8px                       | 300ms         |
+| Buttons and compact controls       | Border/background/color transition; 1px hover lift; focus ring; pressed scale      | 180ms         |
 | Refresh, scan, and Git loading     | Busy state disables the control and shows a rotating glyph                         | 900ms loop    |
-| Cleanup progress                   | Progress bar interpolates between reported percentages; status panels enter softly | 280ms / 180ms |
+| Cleanup progress                   | Progress bar interpolates between reported percentages; status panels enter softly | 420ms / 300ms |
 | Active run                         | Accent status dot pulses while a command is running                                | 1.4s loop     |
 
 ## Implementation coverage
