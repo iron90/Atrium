@@ -1,4 +1,5 @@
 import type { ProjectSnapshot } from "../../bridge";
+import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { InspectorSection } from "./InspectorPrimitives";
@@ -71,46 +72,45 @@ export function ProjectProtocolSection({
           </button>
         ) : null}
       </div>
-      <details className="protocol-details" key={project.id}>
-        <summary>
-          <span>{t("protocolDetails")}</span>
-          <span>{protocolDetailsSummary}</span>
-        </summary>
-        <div className="protocol-details-body">
+      <AnimatedDisclosure
+        className="protocol-details"
+        key={project.id}
+        label={t("protocolDetails")}
+        meta={protocolDetailsSummary}
+      >
+        <div
+          className="protocol-capabilities"
+          aria-label={t("protocolCapabilities")}
+        >
           <div
-            className="protocol-capabilities"
-            aria-label={t("protocolCapabilities")}
+            className={`protocol-capability ${
+              protocolView.needsUpdate
+                ? "capability-needs-update"
+                : "capability-configured"
+            }`}
           >
+            <span className="capability-dot" />
+            <span>
+              <strong>{t("capabilityAgentGuidance")}</strong>
+            </span>
+          </div>
+          {protocol.capabilities.map((capability) => (
             <div
-              className={`protocol-capability ${
-                protocolView.needsUpdate
-                  ? "capability-needs-update"
-                  : "capability-configured"
-              }`}
+              className={`protocol-capability capability-${capability.status}`}
+              key={capability.id}
+              title={
+                capability.issues.join(" ") || capability.evidence.join(", ")
+              }
             >
               <span className="capability-dot" />
               <span>
-                <strong>{t("capabilityAgentGuidance")}</strong>
+                <strong>{capabilityLabel(capability.id, t)}</strong>
+                <small>{capabilityStatusLabel(capability.status, t)}</small>
               </span>
             </div>
-            {protocol.capabilities.map((capability) => (
-              <div
-                className={`protocol-capability capability-${capability.status}`}
-                key={capability.id}
-                title={
-                  capability.issues.join(" ") || capability.evidence.join(", ")
-                }
-              >
-                <span className="capability-dot" />
-                <span>
-                  <strong>{capabilityLabel(capability.id, t)}</strong>
-                  <small>{capabilityStatusLabel(capability.status, t)}</small>
-                </span>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
-      </details>
+      </AnimatedDisclosure>
       {agentPrompt && shouldShowAgentGuidance ? (
         <div className="agent-prompt-card">
           <div className="agent-prompt-heading">

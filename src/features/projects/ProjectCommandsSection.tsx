@@ -3,6 +3,7 @@ import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
 import { commandLabel } from "./presentation";
 import { fill } from "../../shared/format";
+import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 
 export interface ProjectCommandsSectionProps {
   project: ProjectSnapshot;
@@ -102,16 +103,17 @@ export function ProjectCommandsSection({
                 )}
               </div>
               {otherCommands.length ? (
-                <details className="other-commands">
-                  <summary>
-                    {fill(
-                      t("otherCommands"),
-                      "count",
-                      String(otherCommands.length),
-                    )}
-                  </summary>
+                <AnimatedDisclosure
+                  className="other-commands"
+                  label={fill(
+                    t("otherCommands"),
+                    "count",
+                    String(otherCommands.length),
+                  )}
+                >
                   {otherCommands.map((command) => (
                     <button
+                      className="other-command-item"
                       type="button"
                       key={command.id}
                       onClick={() => onRun(command)}
@@ -120,7 +122,7 @@ export function ProjectCommandsSection({
                       {command.displayCommand}
                     </button>
                   ))}
-                </details>
+                </AnimatedDisclosure>
               ) : null}
             </>
           )}

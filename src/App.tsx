@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppSidebar } from "./app/AppSidebar";
+import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
 import { bridge, isTauriRuntime } from "./bridge";
@@ -236,13 +237,13 @@ export default function App() {
     }
   };
 
-  const heading =
-    activePage === "settings"
+  const headingForPage = (page: PageId) =>
+    page === "settings"
       ? {
           title: t("settingsTitle"),
           body: t("settingsSubtitle"),
         }
-      : activePage === "git"
+      : page === "git"
         ? {
             title: t("gitHistoryTitle"),
             body: t("gitHistoryDescription"),
@@ -335,52 +336,59 @@ export default function App() {
         />
 
         <main className="main-column">
-          <div className="page-view" data-page={activePage} key={activePage}>
-            <header className="topbar">
-              <div className="page-heading">
-                <h1>{heading.title}</h1>
-                <p>{heading.body}</p>
-              </div>
-            </header>
+          <PageTransition pageKey={activePage}>
+            {(page) => {
+              const heading = headingForPage(page);
+              return (
+                <div className="page-view" data-page={page}>
+                  <header className="topbar">
+                    <div className="page-heading">
+                      <h1>{heading.title}</h1>
+                      <p>{heading.body}</p>
+                    </div>
+                  </header>
 
-            {error ? (
-              <div className="error-banner" role="alert">
-                {error}
-              </div>
-            ) : null}
+                  {error ? (
+                    <div className="error-banner" role="alert">
+                      {error}
+                    </div>
+                  ) : null}
 
-            {activePage === "settings" ? (
-              <SettingsPanel
-                theme={theme}
-                setTheme={setTheme}
-                layout={layout}
-                setLayout={handleLayoutChange}
-                language={language}
-                setLanguage={setLanguage}
-                workspacePaths={workspacePaths}
-                onWorkspacePathsChange={updateWorkspacePaths}
-                excludeNames={excludeNames}
-                setExcludeNames={setExcludeNames}
-                onScan={() => void scanWorkspace()}
-                isScanning={isScanning}
-              />
-            ) : activePage === "git" ? (
-              <GitHistoryView
-                key={selectedProject?.id ?? "none"}
-                projects={snapshot.projects}
-                selectedId={selectedProject?.id}
-                onSelect={selectProject}
-              />
-            ) : (
-              <ProjectsPage
-                layout={layout}
-                snapshot={snapshot}
-                visibleProjects={visibleProjects}
-                projectList={projectList}
-                inspector={inspector}
-              />
-            )}
-          </div>
+                  {page === "settings" ? (
+                    <SettingsPanel
+                      theme={theme}
+                      setTheme={setTheme}
+                      layout={layout}
+                      setLayout={handleLayoutChange}
+                      language={language}
+                      setLanguage={setLanguage}
+                      workspacePaths={workspacePaths}
+                      onWorkspacePathsChange={updateWorkspacePaths}
+                      excludeNames={excludeNames}
+                      setExcludeNames={setExcludeNames}
+                      onScan={() => void scanWorkspace()}
+                      isScanning={isScanning}
+                    />
+                  ) : page === "git" ? (
+                    <GitHistoryView
+                      key={selectedProject?.id ?? "none"}
+                      projects={snapshot.projects}
+                      selectedId={selectedProject?.id}
+                      onSelect={selectProject}
+                    />
+                  ) : (
+                    <ProjectsPage
+                      layout={layout}
+                      snapshot={snapshot}
+                      visibleProjects={visibleProjects}
+                      projectList={projectList}
+                      inspector={inspector}
+                    />
+                  )}
+                </div>
+              );
+            }}
+          </PageTransition>
         </main>
       </div>
     </I18nProvider>

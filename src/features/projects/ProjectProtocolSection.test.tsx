@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { demoSnapshot } from "../../bridge/fake-bridge";
 import { ProjectProtocolSection } from "./ProjectProtocolSection";
@@ -108,6 +108,24 @@ describe("project protocol section", () => {
         name: "Prompt for the project development Agent",
       }),
     ).toHaveValue("Generated agent prompt");
+  });
+
+  it("keeps disclosure content mounted while an open or close can be interrupted", () => {
+    renderSection(baseProject);
+
+    const trigger = screen.getByRole("button", { name: /Protocol details/ });
+    const disclosure = document.querySelector(".animated-disclosure");
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Agent guidance")).toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(disclosure).toHaveClass("is-open");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Agent guidance")).toBeInTheDocument();
   });
 
   it("hides a stale prompt after a refreshed project is synchronized", () => {

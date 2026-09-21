@@ -302,8 +302,33 @@ button[aria-busy="true"] {
   overflow-y: auto;
   padding: 38px 38px 34px;
 }
+.page-transition {
+  position: relative;
+  isolation: isolate;
+}
+.page-transition-stage {
+  transform: translateY(0) scale(1);
+  transform-origin: top center;
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    opacity var(--motion-page) var(--ease-emphasized),
+    transform var(--motion-page) var(--ease-emphasized),
+    filter var(--motion-page) var(--ease-emphasized);
+  will-change: opacity, transform, filter;
+}
+.page-transition-leaving .page-transition-stage {
+  transform: translateY(-12px) scale(0.992);
+  filter: blur(3px);
+  opacity: 0;
+}
+.page-transition-entering .page-transition-stage {
+  transform: translateY(18px) scale(0.985);
+  filter: blur(5px);
+  opacity: 0;
+}
 .page-view {
-  animation: page-view-enter var(--motion-page) var(--ease-emphasized) both;
+  min-width: 0;
 }
 .topbar {
   display: flex;
@@ -1413,66 +1438,123 @@ button[aria-busy="true"] {
 .protocol-status-missing strong {
   color: var(--warning);
 }
-.protocol-details {
+.animated-disclosure {
   margin-top: 8px;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--panel-soft);
+  transition:
+    background-color var(--motion-base) var(--ease-emphasized),
+    border-color var(--motion-base) var(--ease-emphasized),
+    box-shadow var(--motion-slow) var(--ease-emphasized);
 }
-.protocol-details summary {
+.animated-disclosure.is-expanded {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  background: color-mix(in srgb, var(--accent) 3%, var(--panel-soft));
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--bg) 26%, transparent);
+}
+.animated-disclosure-trigger {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
   padding: 8px 10px;
+  border: 0;
   color: var(--muted);
   cursor: pointer;
+  text-align: left;
+  background: transparent;
   font:
     9px "DM Mono",
     monospace;
-  list-style: none;
 }
-.protocol-details summary::-webkit-details-marker {
-  display: none;
+.animated-disclosure-trigger:hover,
+.animated-disclosure-trigger:focus-visible {
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  transform: none;
 }
-.protocol-details summary::before {
-  display: inline-block;
-  margin-right: 2px;
+.animated-disclosure-trigger:active {
+  transform: none;
+}
+.animated-disclosure-chevron {
+  display: grid;
+  flex: 0 0 12px;
+  place-items: center;
   color: var(--accent);
-  content: "▸";
   font-size: 11px;
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--motion-slow) var(--ease-emphasized),
+    color var(--motion-base) var(--ease-standard);
 }
-.protocol-details[open] summary::before {
+.animated-disclosure.is-open .animated-disclosure-chevron {
   transform: rotate(90deg);
 }
-.protocol-details summary:hover,
-.protocol-details summary:focus-visible {
-  color: var(--accent-strong);
-}
-.protocol-details summary span:first-of-type {
+.animated-disclosure-label {
+  min-width: 0;
   margin-right: auto;
 }
-.protocol-details summary span:last-of-type {
+.animated-disclosure-meta {
+  flex: 0 0 auto;
   color: var(--faint);
   white-space: nowrap;
 }
-.protocol-details-body {
+.animated-disclosure-shell {
+  display: grid;
+  grid-template-rows: 0fr;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid transparent;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--motion-slow) var(--ease-emphasized),
+    border-color var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-emphasized);
+}
+.animated-disclosure.is-expanded .animated-disclosure-shell {
+  grid-template-rows: 1fr;
+  border-color: var(--line);
+  opacity: 1;
+}
+.animated-disclosure-content {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 10px;
+  transform: translateY(-10px);
+  transition:
+    padding var(--motion-slow) var(--ease-emphasized),
+    transform var(--motion-slow) var(--ease-emphasized);
+}
+.animated-disclosure.is-expanded .animated-disclosure-content {
   padding: 0 10px 10px;
-  border-top: 1px solid var(--line);
+  transform: translateY(0);
 }
-.protocol-details[open] .protocol-details-body {
-  animation: disclosure-enter var(--motion-base) var(--ease-emphasized) both;
-}
-.protocol-details[open] .protocol-capability {
+.animated-disclosure.is-expanded .protocol-capability,
+.animated-disclosure.is-expanded .other-command-item {
   animation: disclosure-item-enter var(--motion-base) var(--ease-emphasized)
     both;
 }
-.protocol-details[open] .protocol-capability:nth-child(n + 2) {
-  animation-delay: 25ms;
-}
-.protocol-details[open] .protocol-capability:nth-child(n + 3) {
+.animated-disclosure.is-expanded .protocol-capability:nth-child(2),
+.animated-disclosure.is-expanded .other-command-item:nth-child(2) {
   animation-delay: 45ms;
+}
+.animated-disclosure.is-expanded .protocol-capability:nth-child(3),
+.animated-disclosure.is-expanded .other-command-item:nth-child(3) {
+  animation-delay: 90ms;
+}
+.animated-disclosure.is-expanded .protocol-capability:nth-child(4),
+.animated-disclosure.is-expanded .other-command-item:nth-child(4) {
+  animation-delay: 135ms;
+}
+.animated-disclosure.is-expanded .protocol-capability:nth-child(5),
+.animated-disclosure.is-expanded .other-command-item:nth-child(5) {
+  animation-delay: 180ms;
+}
+.protocol-details {
+  margin-top: 8px;
 }
 .protocol-action {
   flex: 0 0 auto;
@@ -1916,29 +1998,7 @@ button[aria-busy="true"] {
   color: var(--muted);
   font-size: 10px;
 }
-.other-commands summary {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  list-style: none;
-}
-.other-commands summary::-webkit-details-marker {
-  display: none;
-}
-.other-commands summary::before {
-  display: inline-block;
-  color: var(--accent);
-  content: "▸";
-  transition: transform var(--motion-fast) var(--ease-standard);
-}
-.other-commands[open] summary::before {
-  transform: rotate(90deg);
-}
-.other-commands[open] > :not(summary) {
-  animation: disclosure-enter var(--motion-base) var(--ease-emphasized) both;
-}
-.other-commands button {
+.other-commands .other-command-item {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -1981,30 +2041,10 @@ button[aria-busy="true"] {
     transform: scale(0.75);
   }
 }
-@keyframes page-view-enter {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 @keyframes status-enter {
   from {
     opacity: 0;
     transform: translateY(7px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes disclosure-enter {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
   }
   to {
     opacity: 1;

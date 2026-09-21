@@ -30,11 +30,12 @@ layout or compete with the content.
 
 ## Implementation coverage
 
-- Navigation is mounted inside `.page-view`, keyed by page, so switching pages
-  gets the same entrance treatment without affecting the persistent sidebar.
-- Native `<details>` remains the source of truth for disclosure semantics. CSS
-  adds the shared chevron and entrance treatment without replacing keyboard or
-  screen-reader behavior.
+- Navigation is rendered through `PageTransition`, which keeps one stage alive
+  while switching pages. A requestAnimationFrame handoff lets the current
+  transition reverse or continue instead of losing the next page's entrance.
+- Disclosures use `AnimatedDisclosure`, which keeps the trigger semantic,
+  animates the outer grid track and container shell, and delays unmounting until
+  the closing transition has finished.
 - `aria-busy`, `role="status"`, and `role="progressbar"` continue to describe
   asynchronous states independently of the visual animation.
 - `@media (prefers-reduced-motion: reduce)` collapses all transitions and
