@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
-pub(crate) const CURRENT_SCHEMA: u32 = 2;
+pub(crate) const CURRENT_SCHEMA: u32 = 3;
 pub(crate) const LEGACY_SCHEMA: u32 = 1;
 
 pub(crate) fn is_supported_schema(schema: u32) -> bool {
-    matches!(schema, LEGACY_SCHEMA | CURRENT_SCHEMA)
+    (LEGACY_SCHEMA..=CURRENT_SCHEMA).contains(&schema)
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +43,7 @@ pub(crate) struct ManifestBuildProfile {
     pub(crate) channel: String,
     pub(crate) commands: Option<ManifestCommands>,
     pub(crate) host_requirements: Option<ManifestHostRequirements>,
+    pub(crate) verification: Option<ManifestHostRequirements>,
     pub(crate) region: Option<String>,
     pub(crate) payment: Option<String>,
     pub(crate) artifacts: Option<Vec<String>>,

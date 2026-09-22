@@ -61,7 +61,7 @@ fn inspect_manifest(root: &Path, raw: &str) -> IconInspection {
             None,
             None,
             vec![format!(
-                "Unsupported Atrium manifest schema: {}. Expected schema 1 or {}.",
+                "Unsupported Atrium manifest schema: {}. Expected schema 1 through {}.",
                 manifest.schema,
                 manifest_schema::CURRENT_SCHEMA
             )],

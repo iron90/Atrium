@@ -102,6 +102,7 @@ export const en = {
   iconStatusMissing: "Icon declaration missing",
   generateGuidance: "Generate guidance files",
   updateAgentGuidance: "Update Agent guidance",
+  prepareHostVerification: "Prepare host verification",
   generatingGuidance: "Writing guidance…",
   protocolRequired: "Atrium protocol required",
   protocolRequiredDescription:
@@ -120,11 +121,13 @@ export const en = {
   profileUnavailable:
     "This profile has configuration issues and is unavailable.",
   profileHostUnsupported:
-    "Some profile actions are not supported on this host OS.",
+    "Some profile actions are unavailable on this host OS.",
   profileRunHostUnsupported:
-    "This target cannot run on the current system with this profile.",
+    "This target requires a matching host OS for this profile.",
   profileHostUnsupportedWithHosts:
-    "This action requires one of these host OSes: {hosts}.",
+    "This action is unavailable here; it requires one of these host OSes: {hosts}.",
+  profileHostVerificationPending:
+    "This action has not been verified on the current host.",
   buildRequiredToRun: "Build the project before running it.",
   repositoryEntrypoints: "Repository entrypoints",
   source: "source: {value}",
@@ -368,6 +371,7 @@ export const zh: Record<keyof typeof en, string> = {
   iconStatusMissing: "缺少图标声明",
   generateGuidance: "生成引导文件",
   updateAgentGuidance: "更新 Agent 引导",
+  prepareHostVerification: "准备宿主验证",
   generatingGuidance: "正在写入说明…",
   protocolRequired: "需要先接入 Atrium 协议",
   protocolRequiredDescription:
@@ -383,9 +387,11 @@ export const zh: Record<keyof typeof en, string> = {
     "它们可能修改文件、访问网络，也可能因当前运行环境不支持而失败。",
   revealDiscoveredCommands: "确认并显示仓库命令",
   profileUnavailable: "该配置存在问题，暂时无法执行。",
-  profileHostUnsupported: "当前系统不支持该配置中的部分操作。",
-  profileRunHostUnsupported: "当前系统无法通过此配置运行该目标。",
-  profileHostUnsupportedWithHosts: "此操作只能在以下宿主系统执行：{hosts}。",
+  profileHostUnsupported: "当前宿主系统暂时无法执行该配置中的部分操作。",
+  profileRunHostUnsupported: "此配置要求与目标匹配的宿主系统。",
+  profileHostUnsupportedWithHosts:
+    "当前宿主无法执行此操作；它需要以下宿主系统之一：{hosts}。",
+  profileHostVerificationPending: "此操作尚未在当前宿主系统验证通过。",
   buildRequiredToRun: "请先构建项目，再运行。",
   repositoryEntrypoints: "仓库入口",
   source: "来源：{value}",

@@ -54,7 +54,10 @@ pub(super) fn parse_build_profiles(
             resolve_command_reference(bindings.run.as_deref(), commands, &mut profile_issues);
         let host_requirements =
             parse_host_requirements(manifest_profile.host_requirements, &id, &mut profile_issues);
-        let unsupported_actions = [
+        let verification =
+            parse_host_requirements(manifest_profile.verification, &id, &mut profile_issues);
+        validate_verification_hosts(&host_requirements, &verification, &id, &mut profile_issues);
+        let host_mismatch_actions = [
             (CommandKind::Run, run_command_id.is_some()),
             (CommandKind::Check, check_command_id.is_some()),
             (CommandKind::Build, build_command_id.is_some()),
@@ -67,6 +70,25 @@ pub(super) fn parse_build_profiles(
                     &platform.key,
                     HostOs::current(),
                 ))
+            .then_some(action)
+        })
+        .collect();
+        let unverified_actions = [
+            (CommandKind::Run, run_command_id.is_some()),
+            (CommandKind::Check, check_command_id.is_some()),
+            (CommandKind::Build, build_command_id.is_some()),
+        ]
+        .into_iter()
+        .filter_map(|(action, is_bound)| {
+            (is_bound
+                && host_requirements.action_supported_for_platform(
+                    &action,
+                    &platform.key,
+                    HostOs::current(),
+                )
+                && !verification.for_action(&action).is_some_and(|hosts| {
+                    HostOs::current().is_some_and(|host| hosts.contains(&host))
+                }))
             .then_some(action)
         })
         .collect();
@@ -87,7 +109,9 @@ pub(super) fn parse_build_profiles(
             check_command_id,
             build_command_id,
             host_requirements,
-            unsupported_actions,
+            verification,
+            host_mismatch_actions,
+            unverified_actions,
             source: profile_source,
             region: normalize_optional_text(manifest_profile.region),
             payment: normalize_optional_text(manifest_profile.payment),
@@ -115,15 +139,41 @@ fn parse_host_requirements(
     }
 }
 
+fn validate_verification_hosts(
+    requirements: &BuildHostRequirements,
+    verification: &BuildHostRequirements,
+    profile_id: &str,
+    issues: &mut Vec<String>,
+) {
+    for (action, label) in [
+        (CommandKind::Run, "run"),
+        (CommandKind::Check, "check"),
+        (CommandKind::Build, "build"),
+    ] {
+        let Some(required_hosts) = requirements.for_action(&action) else {
+            continue;
+        };
+        let Some(verified_hosts) = verification.for_action(&action) else {
+            continue;
+        };
+        for host in verified_hosts {
+            if !required_hosts.contains(host) {
+                issues.push(format!(
+                    "Build profile {profile_id} verification for {label} includes host {}, which is not declared in host_requirements.",
+                    host.as_str()
+                ));
+            }
+        }
+    }
+}
+
 fn parse_host_list(
     values: Option<Vec<String>>,
     profile_id: &str,
     action: &str,
     issues: &mut Vec<String>,
 ) -> Option<Vec<HostOs>> {
-    let Some(values) = values else {
-        return None;
-    };
+    let values = values?;
     let mut seen = HashSet::new();
     let mut hosts = Vec::new();
     for raw in values {

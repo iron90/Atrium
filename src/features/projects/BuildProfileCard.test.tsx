@@ -28,7 +28,13 @@ const profile: BuildProfile = {
     check: null,
     build: null,
   },
-  unsupportedActions: [],
+  verification: {
+    run: ["macos"],
+    check: ["macos"],
+    build: ["macos"],
+  },
+  hostMismatchActions: [],
+  unverifiedActions: [],
   source: ".atrium/manifest.toml#build_profiles.macos-direct",
   region: null,
   payment: null,
@@ -127,24 +133,49 @@ describe("build profile card", () => {
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
   });
 
-  it("disables actions that are not supported on the current host", () => {
+  it("disables actions whose declared host does not match the current host", () => {
     renderCard([availableArtifact], {
       ...profile,
       hostRequirements: {
         ...profile.hostRequirements,
         build: ["windows"],
       },
-      unsupportedActions: ["build"],
+      hostMismatchActions: ["build"],
     });
 
     const buildButton = screen.getByRole("button", { name: "Build" });
     expect(buildButton).toBeDisabled();
     expect(buildButton).toHaveAttribute(
       "title",
-      "This action requires one of these host OSes: Windows.",
+      "This action is unavailable here; it requires one of these host OSes: Windows.",
     );
     expect(
-      screen.getByText("This action requires one of these host OSes: Windows."),
+      screen.getByText(
+        "This action is unavailable here; it requires one of these host OSes: Windows.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("disables actions on the current host until the Agent verifies them", () => {
+    renderCard([availableArtifact], {
+      ...profile,
+      verification: {
+        ...profile.verification,
+        build: [],
+      },
+      unverifiedActions: ["build"],
+    });
+
+    const buildButton = screen.getByRole("button", { name: "Build" });
+    expect(buildButton).toBeDisabled();
+    expect(buildButton).toHaveAttribute(
+      "title",
+      "This action has not been verified on the current host.",
+    );
+    expect(
+      screen.getByText(
+        "This action has not been verified on the current host.",
+      ),
     ).toBeInTheDocument();
   });
 });

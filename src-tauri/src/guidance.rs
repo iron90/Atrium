@@ -50,9 +50,10 @@ mod tests {
         assert!(configuration.contains("BEGIN ATRIUM MANAGED RULES"));
         assert!(configuration.contains("## manifest.toml template"));
         assert!(configuration.contains("[[build_profiles]]"));
-        assert!(configuration.contains("schema = 2"));
+        assert!(configuration.contains("schema = 3"));
         assert!(configuration.contains("[build_profiles.host_requirements]"));
-        assert!(configuration.contains("verified-success allowlist"));
+        assert!(configuration.contains("lower compatibility boundary"));
+        assert!(configuration.contains("[build_profiles.verification]"));
         assert!(configuration.contains("verification matrix"));
         assert!(configuration.contains("Validation blockers and completion"));
         assert!(configuration.contains("partial-progress marker"));

@@ -150,7 +150,7 @@ describe("project protocol section", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the update action after guidance was generated but not acknowledged", () => {
+  it("does not treat a missing guidance acknowledgement as a version update", () => {
     const unacknowledgedGuidanceProject = {
       ...baseProject,
       guidance: { revision: 1, needsUpdate: false, needsSync: true },
@@ -166,7 +166,7 @@ describe("project protocol section", () => {
     renderSection(unacknowledgedGuidanceProject);
 
     expect(
-      screen.getByRole("button", { name: "Update Agent guidance" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Update Agent guidance" }),
+    ).not.toBeInTheDocument();
   });
 });

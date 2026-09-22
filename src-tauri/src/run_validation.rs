@@ -119,7 +119,29 @@ fn resolve_profile(
             .map(HostOs::as_str)
             .unwrap_or(std::env::consts::OS);
         return Err(format!(
-            "Build profile {} action {} is not supported on the current host ({current_host}); allowed hosts: {allowed_hosts}.",
+            "Build profile {} action {} is unavailable on the current host ({current_host}); required hosts: {allowed_hosts}.",
+            profile.id,
+            format_command_kind(action)
+        ));
+    }
+
+    if !profile.action_verified_on_current_host(action) {
+        let verified_hosts = profile
+            .verification
+            .for_action(action)
+            .map(|hosts| {
+                hosts
+                    .iter()
+                    .map(|host| host.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_else(|| "none".to_string());
+        let current_host = HostOs::current()
+            .map(HostOs::as_str)
+            .unwrap_or(std::env::consts::OS);
+        return Err(format!(
+            "Build profile {} action {} has not been verified on the current host ({current_host}); verified hosts: {verified_hosts}.",
             profile.id,
             format_command_kind(action)
         ));

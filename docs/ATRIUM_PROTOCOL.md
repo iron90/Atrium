@@ -47,20 +47,23 @@ and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
-Schema 1 and schema 2 are strict: unknown fields at any manifest level make the
+Schema 1, schema 2, and schema 3 are strict: unknown fields at any manifest level make the
 manifest invalid instead of being ignored. This prevents a misspelled field or
 a field from a newer protocol version from looking configured while silently
 having no effect. Schema 1 remains readable for compatibility and has no host
-requirements; schema 2 is the current schema and adds per-action execution
-host declarations. A future protocol revision must introduce a new schema
-number before adding fields.
+requirements; schema 2 adds per-action execution host declarations; schema 3
+adds per-action verification records. `host_requirements` declares where an
+action may run, while `verification` records hosts where the exact command has
+passed. A host mismatch is deferred verification, not a failure, and must not
+cause a valid command binding to be removed. A future protocol revision must
+introduce a new schema number before adding fields.
 
 ## Project icon
 
 The identity section points Atrium at the icon already used by the project:
 
 ```toml
-schema = 2
+schema = 3
 profile = "tauri-react"
 
 [identity]
@@ -117,6 +120,14 @@ artifacts = ["src-tauri/target/release/bundle/macos"]
 [build_profiles.commands]
 run = "package.json#scripts.dev"
 build = "package.json#scripts.build:macos:appstore"
+
+[build_profiles.host_requirements]
+run = ["macos"]
+build = ["macos"]
+
+[build_profiles.verification]
+run = ["macos"]
+build = ["macos"]
 ```
 
 The `build_profiles` entry is the executable relationship. It combines a
@@ -136,11 +147,12 @@ The command roles are framework-neutral:
   to the declared host allowlist. Cross-system desktop Run is not supported,
   including through compatibility layers or remote launchers. Other target IDs
   retain their declared host requirements. This restriction is applied both to
-  button availability and native execution validation (revision 8).
+  button availability and native execution validation (revision 9).
   Check and Build have independent host requirements. Revision 7 requires
   re-auditing existing Run bindings, including previously accepted host lists.
-  Missing target hosts or environments remain verification blockers and must
-  not be acknowledged in guidance-sync.
+  A target host mismatch is deferred verification and must not be treated as a
+  failure; a matching-host command or environment failure remains a blocker
+  and must not be acknowledged in guidance-sync.
 - `run` points to the project's primary local runtime entry. A web development
   server is valid for a web target; desktop, CLI, game, and mobile targets use
   their existing project-owned run entry. It must not point only to a
@@ -154,30 +166,37 @@ The command roles are framework-neutral:
   behavior.
 
 The target platform and the operating system that executes a command are
-separate facts. A profile can declare the host systems where each action has
-actually been verified:
+separate facts. A profile declares compatible execution hosts and records
+successful verification hosts independently:
 
 ```toml
 [build_profiles.host_requirements]
 run = ["macos", "windows"]
 check = ["macos", "windows", "linux"]
 build = ["windows"]
+
+[build_profiles.verification]
+run = ["macos"]
+check = ["macos", "windows"]
+build = ["windows"]
 ```
 
 Host values are limited to `macos`, `windows`, and `linux`. The three actions
-may use different lists. Omit an action only when it is genuinely unrestricted;
-do not infer host support from the target `platform`. For cross-compilation,
-declare the host where the repository's command and toolchain are verified.
-Atrium disables the corresponding profile action in the UI and rejects it
-before process execution when the current host is not listed. Schema 1
-profiles remain unrestricted for backward compatibility until their project
-Agent migrates them to schema 2.
+may use different lists. `host_requirements` is the lower compatibility
+boundary; `verification` is the upper evidence boundary. Omit an action's
+host requirement only when it is genuinely unrestricted; do not infer host
+support from the target `platform`. A host mismatch is deferred verification,
+not a failure, and must not cause a valid command binding to be removed. Atrium
+disables the corresponding profile action in the UI and rejects it before
+process execution when the current host is not listed. It also keeps an action
+disabled on a matching host until that host appears in `verification`. Schema 1
+and schema 2 profiles remain readable while their project Agent migrates them
+to schema 3.
 
-`host_requirements` is a verified-success allowlist, not a compatibility or
-process-launch allowlist. Before adding a host, the project Agent must inspect
-the exact program, arguments, working directory, expanded scripts, SDKs, and
-toolchain, then run the exact command bound in the manifest on that host. The
-evidence is action-specific:
+Before adding a host to `verification`, the project Agent must inspect the exact
+program, arguments, working directory, expanded scripts, SDKs, and toolchain,
+then run the exact command bound in the manifest on that host. The evidence is
+action-specific:
 
 - `run` must start the primary target and pass an available readiness or smoke
   check; seeing a process spawn is not enough;
@@ -191,9 +210,10 @@ The target platform, target triple, runner name, installed executable, CI
 configuration, or a command that merely reaches its first step does not prove
 host support. A cross-build host is supported only after its complete toolchain
 and the actual target artifact have been verified. If verification fails, a
-dependency is missing, or a host has not been tested, the Agent must not list
-that host. If no host passes for an action, the Agent should omit that command
-binding and report the blocker. Omitting a host field is allowed only when the
+dependency is missing, or a host has not been tested, the Agent must not add
+that host to `verification`, but it must preserve a valid compatible host in
+`host_requirements`. A command should be omitted only when no real
+project-owned entry exists. Omitting a host field is allowed only when the
 command has been established to be host-independent; omission must not mean
 that the action was not checked.
 
@@ -340,8 +360,8 @@ updating the separate, machine-readable file:
 The acknowledgement contains the same `guidance_revision` and
 `protocol_schema` values as `guidance.toml`. It must be written only after the
 Agent has synchronized `manifest.toml` and the marked Atrium rule in
-`AGENTS.md`, completed the required command verification, and resolved all
-environment blockers. Atrium does not read `AGENTS.md`; it uses this
+`AGENTS.md`, completed verification for actions applicable to the current host,
+and explicitly deferred or recorded other hosts. Atrium does not read `AGENTS.md`; it uses this
 acknowledgement to keep the Agent guidance action available across rescans and
 restarts until the project Agent has completed the handoff. A stale or missing
 acknowledgement is the correct state for an incomplete integration.

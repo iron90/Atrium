@@ -53,7 +53,7 @@ pub fn scan_project_configuration(
     if !manifest_schema::is_supported_schema(document.schema) {
         return invalid_configuration(
             vec![format!(
-                "Unsupported Atrium manifest schema: {}. Expected schema 1 or {}.",
+                "Unsupported Atrium manifest schema: {}. Expected schema 1 through {}.",
                 document.schema,
                 manifest_schema::CURRENT_SCHEMA
             )],
@@ -71,6 +71,23 @@ pub fn scan_project_configuration(
         return invalid_configuration(
             vec![format!(
                 "Host requirements require Atrium manifest schema {}. Update schema = {} before declaring build host requirements.",
+                manifest_schema::CURRENT_SCHEMA,
+                manifest_schema::CURRENT_SCHEMA
+            )],
+            Some(document.schema),
+        );
+    }
+
+    if document.schema < manifest_schema::CURRENT_SCHEMA
+        && document.build_profiles.as_ref().is_some_and(|profiles| {
+            profiles
+                .iter()
+                .any(|profile| profile.verification.is_some())
+        })
+    {
+        return invalid_configuration(
+            vec![format!(
+                "Host verification records require Atrium manifest schema {}. Update schema = {} before declaring build verification.",
                 manifest_schema::CURRENT_SCHEMA,
                 manifest_schema::CURRENT_SCHEMA
             )],
@@ -267,7 +284,7 @@ build = ["dist"]
     }
 
     #[test]
-    fn schema_two_keeps_host_limits_separate_from_profile_validity() {
+    fn schema_three_keeps_host_limits_and_verification_separate_from_profile_validity() {
         let root = std::env::temp_dir().join(format!(
             "atrium-manifest-host-requirements-{}",
             std::process::id()
@@ -276,7 +293,7 @@ build = ["dist"]
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "windows"
@@ -298,6 +315,9 @@ build = "package.json#scripts.build:windows"
 [build_profiles.host_requirements]
 check = ["macos", "windows", "linux"]
 build = ["windows"]
+
+[build_profiles.verification]
+check = ["macos"]
 "#,
         )
         .expect("write manifest");
@@ -320,7 +340,7 @@ build = ["windows"]
             result.configuration.status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(result.manifest_schema, Some(2));
+        assert_eq!(result.manifest_schema, Some(3));
         let protocol = build_protocol_status(
             &result,
             &IconConformance {
@@ -340,8 +360,12 @@ build = ["windows"]
             Some([HostOs::Macos, HostOs::Windows, HostOs::Linux].as_slice())
         );
         assert_eq!(
+            result.build_profiles[0].verification.check.as_deref(),
+            Some([HostOs::Macos].as_slice())
+        );
+        assert_eq!(
             result.build_profiles[0]
-                .unsupported_actions
+                .host_mismatch_actions
                 .contains(&CommandKind::Build),
             HostOs::current() != Some(HostOs::Windows)
         );

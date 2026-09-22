@@ -89,6 +89,28 @@ describe("protocol view model", () => {
     expect(view.shouldShowGuidance).toBe(true);
   });
 
+  it("keeps the three-state protocol card current while exposing pending host verification", () => {
+    const view = protocolViewModel({
+      ...baseProject,
+      buildProfiles: baseProject.buildProfiles.map((profile) => ({
+        ...profile,
+        unverifiedActions: ["build"],
+      })),
+      protocol: {
+        ...baseProject.protocol,
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status: "configured",
+        })),
+      },
+    });
+
+    expect(view.cardStatus).toBe("configured");
+    expect(view.needsUpdate).toBe(false);
+    expect(view.hasPendingHostVerification).toBe(true);
+    expect(view.shouldShowGuidance).toBe(true);
+  });
+
   it("keeps the protocol ready but asks for guidance when cleanup is invalid", () => {
     const view = protocolViewModel({
       ...baseProject,

@@ -68,7 +68,9 @@ pub struct BuildProfile {
     pub check_command_id: Option<String>,
     pub build_command_id: Option<String>,
     pub host_requirements: BuildHostRequirements,
-    pub unsupported_actions: Vec<CommandKind>,
+    pub verification: BuildHostRequirements,
+    pub host_mismatch_actions: Vec<CommandKind>,
+    pub unverified_actions: Vec<CommandKind>,
     pub source: String,
     pub region: Option<String>,
     pub payment: Option<String>,
@@ -96,6 +98,14 @@ impl BuildProfile {
             &self.platform.key,
             HostOs::current(),
         )
+    }
+
+    pub fn action_verified_on_current_host(&self, action: &CommandKind) -> bool {
+        HostOs::current().is_some_and(|host| {
+            self.verification
+                .for_action(action)
+                .is_some_and(|verified_hosts| verified_hosts.contains(&host))
+        })
     }
 }
 

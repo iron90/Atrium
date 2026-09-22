@@ -40,6 +40,10 @@ export function ProjectProtocolSection({
     protocolView.shouldShowGuidance ||
     (isAgentPromptForGuidanceUpdate && protocolView.needsUpdate);
   const isUpdatingGuidance = protocolView.needsUpdate && protocolView.isReady;
+  const isPreparingHostVerification =
+    protocolView.hasPendingHostVerification &&
+    protocolView.isReady &&
+    !protocolView.needsUpdate;
   const protocolDetailsSummary = fill(
     t("protocolDetailsSummary"),
     "count",
@@ -68,7 +72,9 @@ export function ProjectProtocolSection({
               ? t("generatingGuidance")
               : isUpdatingGuidance
                 ? t("updateAgentGuidance")
-                : t("generateGuidance")}
+                : isPreparingHostVerification
+                  ? t("prepareHostVerification")
+                  : t("generateGuidance")}
           </button>
         ) : null}
       </div>

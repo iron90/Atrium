@@ -48,7 +48,9 @@ export function useProjectGuidanceActions({
         );
         const protocolView = protocolViewModel(project);
         setIsAgentPromptForGuidanceUpdate(
-          protocolView.needsUpdate && protocolView.isReady,
+          (protocolView.needsUpdate ||
+            protocolView.hasPendingHostVerification) &&
+            protocolView.isReady,
         );
         setIsAgentPromptCopied(false);
       } catch (error) {

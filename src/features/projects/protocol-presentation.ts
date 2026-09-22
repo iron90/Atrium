@@ -7,6 +7,7 @@ export interface ProtocolViewModel {
   isReady: boolean;
   cardStatus: ProtocolCardStatus;
   needsUpdate: boolean;
+  hasPendingHostVerification: boolean;
   shouldShowGuidance: boolean;
 }
 
@@ -29,8 +30,10 @@ export const protocolViewModel = (
   const hasConfigurationGap =
     project.configuration.status !== "configured" ||
     project.buildProfiles.length === 0;
-  const guidanceNeedsUpdate =
-    project.guidance.needsUpdate || project.guidance.needsSync;
+  const guidanceNeedsUpdate = project.guidance.needsUpdate;
+  const hasPendingHostVerification = project.buildProfiles.some(
+    (profile) => profile.unverifiedActions.length > 0,
+  );
   const needsUpdate =
     project.protocol.needsUpdate ||
     (protocolIsConnected && guidanceNeedsUpdate);
@@ -43,8 +46,12 @@ export const protocolViewModel = (
     isReady,
     cardStatus,
     needsUpdate,
+    hasPendingHostVerification,
     shouldShowGuidance:
-      !protocolIsConnected || hasConfigurationGap || needsUpdate,
+      !protocolIsConnected ||
+      hasConfigurationGap ||
+      needsUpdate ||
+      hasPendingHostVerification,
   };
 };
 

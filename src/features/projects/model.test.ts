@@ -50,7 +50,7 @@ const facet = (key: string, label = key): Facet => ({
 
 const trustedContext = {
   manifestPath: ".atrium/manifest.toml",
-  schema: 2,
+  schema: 3,
   needsUpdate: false,
   manifestStatus: "configured" as const,
   capabilities: [

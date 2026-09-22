@@ -57,7 +57,9 @@ export interface BuildProfile {
   checkCommandId: string | null;
   buildCommandId: string | null;
   hostRequirements: BuildHostRequirements;
-  unsupportedActions: ProfileAction[];
+  verification: BuildHostRequirements;
+  hostMismatchActions: ProfileAction[];
+  unverifiedActions: ProfileAction[];
   source: string;
   region: string | null;
   payment: string | null;

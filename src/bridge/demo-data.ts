@@ -45,7 +45,13 @@ const buildProfile = (
     check: null,
     build: null,
   },
-  unsupportedActions: [],
+  verification: {
+    run: ["macos"],
+    check: ["macos"],
+    build: ["macos"],
+  },
+  hostMismatchActions: [],
+  unverifiedActions: [],
   source: ".atrium/manifest.toml#build_profiles",
   region: null,
   payment: null,
@@ -95,7 +101,7 @@ const protocolStatus = (
   >,
 ): ProtocolStatus => ({
   manifestPath: ".atrium/manifest.toml",
-  schema: manifestStatus === "missing" ? null : 2,
+  schema: manifestStatus === "missing" ? null : 3,
   needsUpdate: false,
   manifestStatus,
   capabilities: [

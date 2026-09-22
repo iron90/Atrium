@@ -52,20 +52,21 @@ export function BuildProfileCard({
   const hasAvailableArtifact = profileArtifacts.some(
     (artifact) => artifact.kind === "file" || artifact.kind === "directory",
   );
-  const unsupportedAction = profile.unsupportedActions[0];
-  const unsupportedHosts = unsupportedAction
-    ? profile.hostRequirements[unsupportedAction]
+  const hostMismatchAction = profile.hostMismatchActions[0];
+  const hostMismatchHosts = hostMismatchAction
+    ? profile.hostRequirements[hostMismatchAction]
     : null;
   const profileHostMessage =
-    unsupportedAction === "run"
+    hostMismatchAction === "run"
       ? t("profileRunHostUnsupported")
-      : unsupportedHosts?.length
+      : hostMismatchHosts?.length
         ? fill(
             t("profileHostUnsupportedWithHosts"),
             "hosts",
-            unsupportedHosts.map((host) => hostLabels[host]).join(" / "),
+            hostMismatchHosts.map((host) => hostLabels[host]).join(" / "),
           )
         : t("profileHostUnsupported");
+  const profileVerificationMessage = t("profileHostVerificationPending");
 
   return (
     <div className="profile-card">
@@ -96,8 +97,10 @@ export function BuildProfileCard({
           if (!command) return null;
           const runBlockedUntilBuild =
             action === "run" && profileReady && !hasAvailableArtifact;
-          const hostUnsupported = profile.unsupportedActions.includes(action);
-          const hostUnsupportedMessage =
+          const hostMismatch = profile.hostMismatchActions.includes(action);
+          const hostVerificationPending =
+            profile.unverifiedActions.includes(action);
+          const hostMismatchMessage =
             action === "run"
               ? t("profileRunHostUnsupported")
               : profile.hostRequirements[action]?.length
@@ -113,16 +116,19 @@ export function BuildProfileCard({
             Boolean(activeRun) ||
             !profileReady ||
             runBlockedUntilBuild ||
-            hostUnsupported;
+            hostMismatch ||
+            hostVerificationPending;
           const actionTitle = !canExecute
             ? t("configurationMissing")
             : profile.issues.length
               ? t("profileUnavailable")
-              : hostUnsupported
-                ? hostUnsupportedMessage
-                : runBlockedUntilBuild
-                  ? t("buildRequiredToRun")
-                  : command.displayCommand;
+              : hostMismatch
+                ? hostMismatchMessage
+                : hostVerificationPending
+                  ? profileVerificationMessage
+                  : runBlockedUntilBuild
+                    ? t("buildRequiredToRun")
+                    : command.displayCommand;
           const actionButton = (
             <button
               className={`profile-action command-${action}`}
@@ -198,8 +204,10 @@ export function BuildProfileCard({
       </div>
       {profile.issues.length ? (
         <span className="profile-issue">{profile.issues[0]}</span>
-      ) : profile.unsupportedActions.length ? (
+      ) : profile.hostMismatchActions.length ? (
         <span className="profile-issue">{profileHostMessage}</span>
+      ) : profile.unverifiedActions.length ? (
+        <span className="profile-issue">{profileVerificationMessage}</span>
       ) : null}
     </div>
   );
