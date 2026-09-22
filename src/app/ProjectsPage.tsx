@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill, formatTime } from "../shared/format";
@@ -20,7 +21,7 @@ export interface ProjectsPageProps {
   inspector: ProjectInspectorProps;
 }
 
-export function ProjectsPage({
+export const ProjectsPage = memo(function ProjectsPage({
   layout,
   snapshot,
   visibleProjects,
@@ -80,4 +81,4 @@ export function ProjectsPage({
       <ProjectInspector {...inspector} />
     </section>
   );
-}
+});

@@ -1,8 +1,9 @@
+import { memo } from "react";
 import type { ProjectSnapshot } from "../../bridge";
 import { GitChangePanel } from "./GitChangePanel";
 import { GitCommitTimeline } from "./GitCommitTimeline";
 
-export function GitHistoryView({
+export const GitHistoryView = memo(function GitHistoryView({
   projects,
   selectedId,
   onSelect,
@@ -26,4 +27,4 @@ export function GitHistoryView({
       />
     </div>
   );
-}
+});

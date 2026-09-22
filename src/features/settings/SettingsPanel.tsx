@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { useI18n } from "../../i18n";
 import type { Language } from "../../i18n";
 import type { LayoutId, ThemeId } from "./model";
 
-export function SettingsPanel({
+export const SettingsPanel = memo(function SettingsPanel({
   theme,
   setTheme,
   layout,
@@ -156,4 +157,4 @@ export function SettingsPanel({
       </div>
     </div>
   );
-}
+});

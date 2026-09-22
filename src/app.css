@@ -88,6 +88,7 @@ button[aria-busy="true"] {
   --control-padding-x: 10px;
   --motion-fast: 180ms;
   --motion-base: 300ms;
+  --motion-nav: 460ms;
   --motion-page: 420ms;
   --motion-slow: 420ms;
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -209,9 +210,15 @@ button[aria-busy="true"] {
   height: 100%;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none;
   padding: 28px 18px 20px;
   background: color-mix(in srgb, var(--sidebar) 94%, transparent);
   border-right: 1px solid var(--line);
+}
+.sidebar::-webkit-scrollbar,
+.main-column::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .brand-block {
@@ -257,10 +264,34 @@ button[aria-busy="true"] {
 }
 
 .primary-nav {
+  position: relative;
   display: grid;
   gap: 4px;
 }
+.nav-active-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--nav-indicator-height, 40px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  box-shadow:
+    inset 3px 0 var(--accent),
+    0 12px 24px color-mix(in srgb, var(--bg) 20%, transparent);
+  transform: translate3d(0, var(--nav-indicator-top, 0px), 0);
+  transition:
+    transform var(--motion-nav) var(--ease-emphasized),
+    height var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+  will-change: transform;
+  pointer-events: none;
+}
 .nav-item {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -275,11 +306,10 @@ button[aria-busy="true"] {
 .nav-item:hover,
 .nav-item.is-active {
   color: var(--text);
+}
+.nav-item:not(.is-active):hover {
   background: var(--panel-soft);
   border-color: var(--line);
-}
-.nav-item.is-active {
-  box-shadow: inset 3px 0 var(--accent);
 }
 .nav-glyph {
   width: 16px;
@@ -294,38 +324,111 @@ button[aria-busy="true"] {
   flex: 0 0 auto;
   border-radius: 50%;
 }
+.main-column-shell {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
 .main-column {
+  container: main-column / inline-size;
   height: 100%;
   min-width: 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scrollbar-width: none;
   padding: 38px 38px 34px;
+}
+.main-scrollbar {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: 7px;
+  bottom: 0;
+  width: 6px;
+  pointer-events: none;
+}
+.main-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: block;
+  min-height: 28px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 58%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
+  opacity: 0.72;
+  transition: opacity var(--motion-fast) var(--ease-standard);
 }
 .page-transition {
   position: relative;
   isolation: isolate;
+  contain: layout;
 }
 .page-transition-stage {
-  transform: translateY(0) scale(1);
-  transform-origin: top center;
-  filter: blur(0);
-  opacity: 1;
-  transition:
-    opacity var(--motion-page) var(--ease-emphasized),
-    transform var(--motion-page) var(--ease-emphasized),
-    filter var(--motion-page) var(--ease-emphasized);
+  min-width: 0;
+}
+.page-transition-stage-active {
+  position: relative;
+  z-index: 1;
+}
+.page-transition-stage-cached {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+  filter: none;
+  /* Keep the React tree alive without letting the hidden page affect layout. */
+  content-visibility: hidden;
+}
+.page-transition-stage-incoming {
+  position: relative;
+  z-index: 1;
+  animation: page-stage-enter var(--motion-page) var(--ease-emphasized) both;
+  backface-visibility: hidden;
   will-change: opacity, transform, filter;
 }
-.page-transition-leaving .page-transition-stage {
-  transform: translateY(-12px) scale(0.992);
-  filter: blur(3px);
-  opacity: 0;
+.page-transition-stage-outgoing {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  animation: page-stage-exit var(--motion-page) var(--ease-emphasized) both;
+  backface-visibility: hidden;
+  will-change: opacity, transform;
 }
-.page-transition-entering .page-transition-stage {
-  transform: translateY(18px) scale(0.985);
-  filter: blur(5px);
-  opacity: 0;
+@keyframes page-stage-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 18px, 0) scale(0.985);
+    filter: blur(6px);
+  }
+  55% {
+    opacity: 0.86;
+    transform: translate3d(6px, 3px, 0) scale(0.997);
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+@keyframes page-stage-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(-20px, -10px, 0) scale(0.992);
+  }
 }
 .page-view {
   min-width: 0;
@@ -485,6 +588,10 @@ button[aria-busy="true"] {
     minmax(145px, 1.05fr) minmax(112px, 0.7fr);
   gap: 14px;
   align-items: center;
+}
+.project-list-head > *,
+.project-row > * {
+  min-width: 0;
 }
 .project-row-actions {
   display: flex;
@@ -843,7 +950,9 @@ button[aria-busy="true"] {
 .platform-mark[data-platform="ipados"],
 .platform-mark[data-platform="ipad"],
 .platform-mark[data-platform="macos"] {
-  color: #f5f5f5;
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--panel-raised);
 }
 .platform-mark[data-platform="linux"] {
   color: #fcc624;
@@ -2733,5 +2842,92 @@ button[aria-busy="true"] {
   }
   .settings-footer .settings-scan {
     align-self: flex-start;
+  }
+}
+
+/*
+ * Projects has a dense table and a persistent inspector. The usable width is
+ * smaller than the viewport because of the sidebar and main-column padding,
+ * so viewport-only breakpoints can leave the table narrower than its tracks.
+ * Use the actual main-column width to choose a compact two-column layout
+ * before any project data is clipped.
+ */
+@container main-column (max-width: 1240px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .project-list-head,
+  .project-row {
+    grid-template-columns:
+      minmax(195px, 1.4fr) minmax(95px, 0.7fr) minmax(125px, 1fr)
+      minmax(120px, 0.9fr) minmax(105px, 0.7fr);
+    gap: 9px;
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+}
+
+@container main-column (max-width: 1040px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 12px;
+  }
+
+  .project-filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .project-filters > input {
+    grid-column: 1 / -1;
+  }
+
+  .project-list-head,
+  .project-row {
+    grid-template-columns:
+      minmax(0, 1.2fr) minmax(0, 0.75fr) minmax(0, 0.55fr)
+      minmax(0, 1.2fr) max-content;
+    gap: 7px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .project-list-head {
+    font-size: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .project-row {
+    min-height: 82px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .project-copy {
+    gap: 3px;
+  }
+
+  .project-copy strong {
+    font-size: 12px;
+  }
+
+  .project-copy span,
+  .git-cell,
+  .status-good,
+  .status-warning,
+  .status-muted {
+    font-size: 9px;
+  }
+
+  .facet-cell {
+    min-width: 0;
+    gap: 3px;
+    overflow: hidden;
+  }
+
+  .facet-chip:not(.platform-chip) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

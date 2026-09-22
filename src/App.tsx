@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AppSidebar } from "./app/AppSidebar";
 import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
@@ -24,11 +31,21 @@ import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import { errorMessage } from "./shared/errors";
 import {
+  cancelScheduledAnimationFrame,
+  scheduleAnimationFrame,
+} from "./shared/animation";
+import {
   persistLocalPreferences,
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import type { ProjectSnapshot, RunFinished, WorkspaceSnapshot } from "./bridge";
+import type {
+  ProfileAction,
+  ProjectCommand,
+  ProjectSnapshot,
+  RunFinished,
+  WorkspaceSnapshot,
+} from "./bridge";
 import "./app.css";
 
 export default function App() {
@@ -63,6 +80,83 @@ export default function App() {
   );
   const [error, setError] = useState<string | null>(null);
   const inspectorResetRef = useRef<() => void>(() => undefined);
+  const mainColumnRef = useRef<HTMLElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const [mainScrollThumb, setMainScrollThumb] = useState({
+    visible: false,
+    top: 0,
+    height: 0,
+  });
+
+  const updateMainScrollThumb = useCallback(() => {
+    const mainColumn = mainColumnRef.current;
+    if (!mainColumn) return;
+
+    const viewportHeight = mainColumn.clientHeight;
+    const contentHeight = mainColumn.scrollHeight;
+    const trackInset = 7;
+    const trackHeight = Math.max(0, viewportHeight - trackInset * 2);
+
+    if (contentHeight <= viewportHeight + 1 || trackHeight <= 0) {
+      setMainScrollThumb((current) =>
+        current.visible ? { visible: false, top: 0, height: 0 } : current,
+      );
+      return;
+    }
+
+    const height = Math.max(
+      28,
+      Math.min(trackHeight, (trackHeight * viewportHeight) / contentHeight),
+    );
+    const travel = Math.max(0, trackHeight - height);
+    const scrollRange = Math.max(1, contentHeight - viewportHeight);
+    const top = trackInset + (mainColumn.scrollTop / scrollRange) * travel;
+
+    setMainScrollThumb((current) =>
+      current.visible &&
+      Math.abs(current.top - top) < 0.5 &&
+      Math.abs(current.height - height) < 0.5
+        ? current
+        : { visible: true, top, height },
+    );
+  }, []);
+
+  useLayoutEffect(() => {
+    const mainColumn = mainColumnRef.current;
+    if (!mainColumn) return;
+
+    const scheduleScrollThumbUpdate = () => {
+      if (scrollFrameRef.current !== null) return;
+      scrollFrameRef.current = scheduleAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        updateMainScrollThumb();
+      });
+    };
+
+    scheduleScrollThumbUpdate();
+    mainColumn.addEventListener("scroll", scheduleScrollThumbUpdate, {
+      passive: true,
+    });
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(scheduleScrollThumbUpdate);
+    resizeObserver?.observe(mainColumn);
+
+    const mutationObserver = new MutationObserver(scheduleScrollThumbUpdate);
+    mutationObserver.observe(mainColumn, { childList: true, subtree: true });
+
+    return () => {
+      mainColumn.removeEventListener("scroll", scheduleScrollThumbUpdate);
+      resizeObserver?.disconnect();
+      mutationObserver.disconnect();
+      if (scrollFrameRef.current !== null) {
+        cancelScheduledAnimationFrame(scrollFrameRef.current);
+        scrollFrameRef.current = null;
+      }
+    };
+  }, [updateMainScrollThumb]);
 
   const handleWorkspaceError = useCallback(
     (message: string | null) => setError(message),
@@ -230,12 +324,15 @@ export default function App() {
     [],
   );
 
-  const handleLayoutChange = (nextLayout: LayoutId) => {
-    setLayout(nextLayout);
-    if (activePage !== "settings") {
-      setActivePage("projects");
-    }
-  };
+  const handleLayoutChange = useCallback(
+    (nextLayout: LayoutId) => {
+      setLayout(nextLayout);
+      if (activePage !== "settings") {
+        setActivePage("projects");
+      }
+    },
+    [activePage],
+  );
 
   const headingForPage = (page: PageId) =>
     page === "settings"
@@ -259,65 +356,163 @@ export default function App() {
       )
     : undefined;
 
-  const projectList: ProjectListProps = {
-    projects: visibleProjects,
-    selectedId: selectedProject?.id,
-    onSelect: selectProject,
-    search: projectSearch,
-    setSearch: setProjectSearch,
-    platformFilter,
-    setPlatformFilter,
-    channelFilter,
-    setChannelFilter,
-    projectSort,
-    setProjectSort,
-    showHidden: showHiddenProjects,
-    setShowHidden: setShowHiddenProjects,
-    filterOptions,
-    projectMeta,
-    onToggleFavorite: (id) =>
+  const handleToggleFavorite = useCallback(
+    (id: string) =>
       updateProjectMeta(id, {
         favorite: !projectMeta[id]?.favorite,
       }),
-    onToggleHidden: (id) =>
+    [projectMeta, updateProjectMeta],
+  );
+  const handleToggleHidden = useCallback(
+    (id: string) =>
       updateProjectMeta(id, {
         hidden: !projectMeta[id]?.hidden,
       }),
-  };
+    [projectMeta, updateProjectMeta],
+  );
+  const projectList = useMemo<ProjectListProps>(
+    () => ({
+      projects: visibleProjects,
+      selectedId: selectedProject?.id,
+      onSelect: selectProject,
+      search: projectSearch,
+      setSearch: setProjectSearch,
+      platformFilter,
+      setPlatformFilter,
+      channelFilter,
+      setChannelFilter,
+      projectSort,
+      setProjectSort,
+      showHidden: showHiddenProjects,
+      setShowHidden: setShowHiddenProjects,
+      filterOptions,
+      projectMeta,
+      onToggleFavorite: handleToggleFavorite,
+      onToggleHidden: handleToggleHidden,
+    }),
+    [
+      channelFilter,
+      filterOptions,
+      handleToggleFavorite,
+      handleToggleHidden,
+      platformFilter,
+      projectMeta,
+      projectSearch,
+      projectSort,
+      selectProject,
+      selectedProject?.id,
+      setChannelFilter,
+      setPlatformFilter,
+      setProjectSearch,
+      setProjectSort,
+      setShowHiddenProjects,
+      showHiddenProjects,
+      visibleProjects,
+    ],
+  );
 
-  const inspector: ProjectInspectorProps = {
-    project: selectedProject,
-    details:
-      inspectorProject?.id === selectedProject?.id
-        ? inspectorProject
-        : undefined,
-    isLoading: isLoadingDetails,
-    activeRun,
-    outputLines,
-    onRun: (command, profileId, profileAction) =>
-      void handleRun(command, undefined, profileId, profileAction),
-    onRefreshProject: (project) => void refreshProject(project),
-    isRefreshing: refreshingProjectId === selectedProject?.id,
-    onStop: () => void handleStop(),
-    onGenerateGuidance: (project) => void handleGenerateGuidance(project),
-    agentPrompt,
-    isAgentPromptForGuidanceUpdate,
-    isAgentPromptCopied,
-    onCopyAgentPrompt: () => void handleCopyAgentPrompt(),
-    isWritingGuidance,
-    cleanupFeedback,
-    cleanupSelection,
-    cleanupConfirmation,
-    cleanupProgress,
-    onCleanupSelectionChange: setCleanupSelection,
-    isCleaningArtifacts,
-    onCleanArtifacts: (project) => void handleCleanArtifacts(project),
-    onCancelCleanup: cancelCleanup,
-    onConfirmCleanup: () => void confirmCleanup(),
-    onOpenArtifact: handleOpenArtifact,
-    onOpenProjectAction: (action, project, linkId) =>
+  const handleInspectorRun = useCallback(
+    (
+      command: ProjectCommand,
+      profileId?: string,
+      profileAction?: ProfileAction,
+    ) => void handleRun(command, undefined, profileId, profileAction),
+    [handleRun],
+  );
+  const handleInspectorRefresh = useCallback(
+    (project: ProjectSnapshot) => void refreshProject(project),
+    [refreshProject],
+  );
+  const handleInspectorStop = useCallback(
+    () => void handleStop(),
+    [handleStop],
+  );
+  const handleInspectorGuidance = useCallback(
+    (project: ProjectSnapshot) => void handleGenerateGuidance(project),
+    [handleGenerateGuidance],
+  );
+  const handleCopyInspectorPrompt = useCallback(
+    () => void handleCopyAgentPrompt(),
+    [handleCopyAgentPrompt],
+  );
+  const handleInspectorCleanup = useCallback(
+    (project: ProjectSnapshot) => void handleCleanArtifacts(project),
+    [handleCleanArtifacts],
+  );
+  const handleInspectorConfirmCleanup = useCallback(
+    () => void confirmCleanup(),
+    [confirmCleanup],
+  );
+  const handleInspectorProjectAction = useCallback(
+    (action: ProjectAction, project: ProjectSnapshot, linkId?: string) =>
       void handleOpenProjectAction(action, project, linkId),
-  };
+    [handleOpenProjectAction],
+  );
+  const handleScanWorkspace = useCallback(
+    () => void scanWorkspace(),
+    [scanWorkspace],
+  );
+  const inspector = useMemo<ProjectInspectorProps>(
+    () => ({
+      project: selectedProject,
+      details:
+        inspectorProject?.id === selectedProject?.id
+          ? inspectorProject
+          : undefined,
+      isLoading: isLoadingDetails,
+      activeRun,
+      outputLines,
+      onRun: handleInspectorRun,
+      onRefreshProject: handleInspectorRefresh,
+      isRefreshing: refreshingProjectId === selectedProject?.id,
+      onStop: handleInspectorStop,
+      onGenerateGuidance: handleInspectorGuidance,
+      agentPrompt,
+      isAgentPromptForGuidanceUpdate,
+      isAgentPromptCopied,
+      onCopyAgentPrompt: handleCopyInspectorPrompt,
+      isWritingGuidance,
+      cleanupFeedback,
+      cleanupSelection,
+      cleanupConfirmation,
+      cleanupProgress,
+      onCleanupSelectionChange: setCleanupSelection,
+      isCleaningArtifacts,
+      onCleanArtifacts: handleInspectorCleanup,
+      onCancelCleanup: cancelCleanup,
+      onConfirmCleanup: handleInspectorConfirmCleanup,
+      onOpenArtifact: handleOpenArtifact,
+      onOpenProjectAction: handleInspectorProjectAction,
+    }),
+    [
+      activeRun,
+      agentPrompt,
+      cancelCleanup,
+      cleanupConfirmation,
+      cleanupFeedback,
+      cleanupProgress,
+      cleanupSelection,
+      handleCopyInspectorPrompt,
+      handleInspectorCleanup,
+      handleInspectorConfirmCleanup,
+      handleInspectorGuidance,
+      handleInspectorProjectAction,
+      handleInspectorRefresh,
+      handleInspectorRun,
+      handleInspectorStop,
+      handleOpenArtifact,
+      inspectorProject,
+      isAgentPromptCopied,
+      isAgentPromptForGuidanceUpdate,
+      isCleaningArtifacts,
+      isLoadingDetails,
+      isWritingGuidance,
+      outputLines,
+      refreshingProjectId,
+      selectedProject,
+      setCleanupSelection,
+    ],
+  );
 
   return (
     <I18nProvider value={i18nValue}>
@@ -335,61 +530,74 @@ export default function App() {
           }}
         />
 
-        <main className="main-column">
-          <PageTransition pageKey={activePage}>
-            {(page) => {
-              const heading = headingForPage(page);
-              return (
-                <div className="page-view" data-page={page}>
-                  <header className="topbar">
-                    <div className="page-heading">
-                      <h1>{heading.title}</h1>
-                      <p>{heading.body}</p>
-                    </div>
-                  </header>
+        <div className="main-column-shell">
+          <main ref={mainColumnRef} className="main-column">
+            <PageTransition pageKey={activePage}>
+              {(page) => {
+                const heading = headingForPage(page);
+                return (
+                  <div className="page-view" data-page={page}>
+                    <header className="topbar">
+                      <div className="page-heading">
+                        <h1>{heading.title}</h1>
+                        <p>{heading.body}</p>
+                      </div>
+                    </header>
 
-                  {error ? (
-                    <div className="error-banner" role="alert">
-                      {error}
-                    </div>
-                  ) : null}
+                    {error ? (
+                      <div className="error-banner" role="alert">
+                        {error}
+                      </div>
+                    ) : null}
 
-                  {page === "settings" ? (
-                    <SettingsPanel
-                      theme={theme}
-                      setTheme={setTheme}
-                      layout={layout}
-                      setLayout={handleLayoutChange}
-                      language={language}
-                      setLanguage={setLanguage}
-                      workspacePaths={workspacePaths}
-                      onWorkspacePathsChange={updateWorkspacePaths}
-                      excludeNames={excludeNames}
-                      setExcludeNames={setExcludeNames}
-                      onScan={() => void scanWorkspace()}
-                      isScanning={isScanning}
-                    />
-                  ) : page === "git" ? (
-                    <GitHistoryView
-                      key={selectedProject?.id ?? "none"}
-                      projects={snapshot.projects}
-                      selectedId={selectedProject?.id}
-                      onSelect={selectProject}
-                    />
-                  ) : (
-                    <ProjectsPage
-                      layout={layout}
-                      snapshot={snapshot}
-                      visibleProjects={visibleProjects}
-                      projectList={projectList}
-                      inspector={inspector}
-                    />
-                  )}
-                </div>
-              );
-            }}
-          </PageTransition>
-        </main>
+                    {page === "settings" ? (
+                      <SettingsPanel
+                        theme={theme}
+                        setTheme={setTheme}
+                        layout={layout}
+                        setLayout={handleLayoutChange}
+                        language={language}
+                        setLanguage={setLanguage}
+                        workspacePaths={workspacePaths}
+                        onWorkspacePathsChange={updateWorkspacePaths}
+                        excludeNames={excludeNames}
+                        setExcludeNames={setExcludeNames}
+                        onScan={handleScanWorkspace}
+                        isScanning={isScanning}
+                      />
+                    ) : page === "git" ? (
+                      <GitHistoryView
+                        key={selectedProject?.id ?? "none"}
+                        projects={snapshot.projects}
+                        selectedId={selectedProject?.id}
+                        onSelect={selectProject}
+                      />
+                    ) : (
+                      <ProjectsPage
+                        layout={layout}
+                        snapshot={snapshot}
+                        visibleProjects={visibleProjects}
+                        projectList={projectList}
+                        inspector={inspector}
+                      />
+                    )}
+                  </div>
+                );
+              }}
+            </PageTransition>
+          </main>
+          {mainScrollThumb.visible ? (
+            <div className="main-scrollbar" aria-hidden="true">
+              <span
+                className="main-scrollbar-thumb"
+                style={{
+                  height: `${mainScrollThumb.height}px`,
+                  transform: `translateY(${mainScrollThumb.top}px)`,
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
     </I18nProvider>
   );

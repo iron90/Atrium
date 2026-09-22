@@ -30,9 +30,14 @@ layout or compete with the content.
 
 ## Implementation coverage
 
-- Navigation is rendered through `PageTransition`, which keeps one stage alive
-  while switching pages. A requestAnimationFrame handoff lets the current
-  transition reverse or continue instead of losing the next page's entrance.
+- Navigation is rendered through `PageTransition`, which keeps each page host
+  mounted after its first load and preloads the remaining page hosts during
+  idle time. The outgoing host keeps a frozen view snapshot while its visual
+  exit completes, while the incoming host remains live and interactive. The
+  completed outgoing host stays off-flow and is reused on the next navigation,
+  so the animation's final frame does not compete with a React cleanup update.
+  Stable page hosts let an interrupted transition reverse or continue without
+  remounting the page content.
 - Disclosures use `AnimatedDisclosure`, which keeps the trigger semantic,
   animates the outer grid track and container shell, and delays unmounting until
   the closing transition has finished.
