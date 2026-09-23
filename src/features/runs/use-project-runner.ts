@@ -11,8 +11,9 @@ import type {
   RunError,
   RunFinished,
   RunStarted,
+  RunStatus,
 } from "../../bridge";
-import { useRunEventStream } from "./use-run-event-stream";
+import { useRunEventStream, type FinishedRunRecord } from "./use-run-event-stream";
 
 export type { RunMessage } from "../../shared/activity";
 
@@ -28,6 +29,7 @@ export interface UseProjectRunnerOptions {
 export interface UseProjectRunnerResult {
   activeRun?: RunStarted;
   activeRuns: RunStarted[];
+  lastFinishedRun?: FinishedRunRecord;
   outputLines: string[];
   runProjectCommand: (
     command: ProjectCommand,
@@ -64,10 +66,12 @@ export function useProjectRunner({
   );
   const {
     activeRuns: activeRunMap,
+    finishedByProject,
     outputLinesFor,
     registerRun,
     completeRun,
     replaceOutput,
+    recordFinished,
   } = useRunEventStream({
     onError: handleRunError,
     onFinished: handleRunFinished,
@@ -107,6 +111,45 @@ export function useProjectRunner({
     [activeRuns, selectedProject],
   );
   const outputLines = activeRun ? outputLinesFor(activeRun.runId) : [];
+  const lastFinishedRun = selectedProject
+    ? finishedByProject[selectedProject.id]
+    : undefined;
+
+  const recordSyntheticFinished = useCallback(
+    (
+      run: RunStarted,
+      status: Exclude<RunStatus, "running">,
+      exitCode: number | null,
+      stdout: string,
+      stderr: string,
+    ) => {
+      const finishedAt = Date.now();
+      const finished: RunFinished = {
+        runId: run.runId,
+        projectId: run.projectId,
+        commandId: run.commandId,
+        profileId: run.profileId,
+        profileAction: null,
+        projectPath: "",
+        platform: null,
+        channel: null,
+        gitBranch: null,
+        gitCommit: null,
+        worktreeClean: null,
+        displayCommand: run.displayCommand,
+        startedAt: run.startedAt,
+        finishedAt,
+        durationMs: Math.max(0, finishedAt - run.startedAt),
+        status,
+        exitCode,
+        stdout,
+        stderr,
+      };
+      const lines = stdout ? stdout.split("\n") : [];
+      recordFinished(finished, lines);
+    },
+    [recordFinished],
+  );
 
   const runProjectCommand = useCallback(
     async (
@@ -136,9 +179,15 @@ export function useProjectRunner({
         if (!nativeRuntime) {
           const timer = window.setTimeout(() => {
             demoTimers.current.delete(started.runId);
-            replaceOutput(started.runId, [
-              translate(language, "demoCompleted"),
-            ]);
+            const demoLine = translate(language, "demoCompleted");
+            replaceOutput(started.runId, [demoLine]);
+            recordSyntheticFinished(
+              started,
+              "succeeded",
+              0,
+              demoLine,
+              "",
+            );
             completeRun(started.runId);
             onMessage({
               type: "demo",
@@ -158,6 +207,7 @@ export function useProjectRunner({
       nativeRuntime,
       onError,
       onMessage,
+      recordSyntheticFinished,
       registerRun,
       replaceOutput,
       selectedProject,
@@ -166,17 +216,34 @@ export function useProjectRunner({
 
   const stopRun = useCallback(
     async (runId: string) => {
-      if (!activeRunMap[runId]) return;
+      const run = activeRunMap[runId];
+      if (!run) return;
       try {
         await bridge.stopProjectCommand(runId);
         cancelDemoTimer(runId);
+        const lines = outputLinesFor(runId);
+        recordSyntheticFinished(
+          run,
+          "cancelled",
+          null,
+          lines.join("\n"),
+          "",
+        );
         completeRun(runId);
         onMessage({ type: "cancelled" });
       } catch (stopError) {
         onError(errorMessage(stopError));
       }
     },
-    [activeRunMap, cancelDemoTimer, completeRun, onError, onMessage],
+    [
+      activeRunMap,
+      cancelDemoTimer,
+      completeRun,
+      onError,
+      onMessage,
+      outputLinesFor,
+      recordSyntheticFinished,
+    ],
   );
 
   const stopActiveRun = useCallback(async () => {
@@ -187,6 +254,7 @@ export function useProjectRunner({
   return {
     activeRun,
     activeRuns,
+    lastFinishedRun,
     outputLines,
     runProjectCommand,
     stopRun,

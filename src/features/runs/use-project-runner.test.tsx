@@ -91,6 +91,34 @@ describe("project runner", () => {
     expect(runProjectCommandMock).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps a finished run result for the selected project", async () => {
+    vi.useFakeTimers();
+    runProjectCommandMock.mockResolvedValue(started);
+    const { result } = renderHook(() =>
+      useProjectRunner({
+        nativeRuntime: false,
+        selectedProject: project,
+        language: "en",
+        onError: vi.fn(),
+        onMessage: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.runProjectCommand(command);
+    });
+    expect(result.current.lastFinishedRun).toBeUndefined();
+
+    act(() => vi.advanceTimersByTime(700));
+
+    expect(result.current.activeRun).toBeUndefined();
+    expect(result.current.lastFinishedRun?.run.status).toBe("succeeded");
+    expect(result.current.lastFinishedRun?.run.runId).toBe(started.runId);
+    expect(result.current.lastFinishedRun?.lines).toEqual([
+      "Demo preview completed.",
+    ]);
+  });
+
   it("keeps global run status when the selected project changes", async () => {
     runProjectCommandMock.mockResolvedValue(started);
     const secondProject = demoSnapshot("/workspace").projects[1];

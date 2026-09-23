@@ -96,6 +96,27 @@ describe("run event stream", () => {
     expect(onFinished).toHaveBeenCalledWith(finished);
   });
 
+  it("keeps the finished run result after the active run is cleared", async () => {
+    const { result } = renderHook(() =>
+      useRunEventStream({
+        onError: vi.fn(),
+        onFinished: vi.fn(),
+      }),
+    );
+    await waitFor(() => expect(handlers).toBeDefined());
+
+    act(() => handlers?.onStarted(started));
+    act(() => handlers?.onOutput(output));
+    act(() => handlers?.onFinished(finished));
+
+    expect(result.current.activeRuns).toEqual({});
+    expect(result.current.outputLinesFor(started.runId)).toEqual([]);
+    expect(result.current.finishedByProject[started.projectId]).toEqual({
+      run: finished,
+      lines: ["ready"],
+    });
+  });
+
   it("does not resubscribe when handler identities change", async () => {
     const onFinished = vi.fn();
     const onError = vi.fn();

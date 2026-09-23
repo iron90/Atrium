@@ -240,6 +240,7 @@ export default function App() {
   const {
     activeRun,
     activeRuns,
+    lastFinishedRun,
     outputLines,
     runProjectCommand: handleRun,
     stopRun: handleStopRun,
@@ -461,6 +462,7 @@ export default function App() {
           : undefined,
       isLoading: isLoadingDetails,
       activeRun,
+      lastFinishedRun,
       outputLines,
       onRun: handleInspectorRun,
       onRefreshProject: handleInspectorRefresh,
@@ -507,6 +509,7 @@ export default function App() {
       isCleaningArtifacts,
       isLoadingDetails,
       isWritingGuidance,
+      lastFinishedRun,
       outputLines,
       refreshingProjectId,
       selectedProject,

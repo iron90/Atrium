@@ -2134,6 +2134,15 @@ button[aria-busy="true"] {
   color: var(--accent);
   font-style: normal;
 }
+.live-run.is-succeeded em {
+  color: var(--accent);
+}
+.live-run.is-failed em {
+  color: var(--danger);
+}
+.live-run.is-cancelled em {
+  color: var(--muted);
+}
 .activity-pulse {
   width: 7px;
   height: 7px;

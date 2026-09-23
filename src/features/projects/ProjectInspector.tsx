@@ -17,6 +17,7 @@ import { ProjectRepositorySection } from "./ProjectRepositorySection";
 import { ProjectRunSection } from "./ProjectRunSection";
 import { ProjectStorageSection } from "./ProjectStorageSection";
 import type { ProjectAction } from "./project-actions";
+import type { FinishedRunRecord } from "../runs/use-run-event-stream";
 import type { CleanupFeedback } from "./StoragePanel";
 import { protocolViewModel } from "./protocol-presentation";
 
@@ -25,6 +26,7 @@ export interface ProjectInspectorProps {
   details?: ProjectSnapshot;
   isLoading: boolean;
   activeRun?: RunStarted;
+  lastFinishedRun?: FinishedRunRecord;
   outputLines: string[];
   onRun: (
     command: ProjectCommand,
@@ -66,6 +68,7 @@ export function ProjectInspector({
   details,
   isLoading,
   activeRun,
+  lastFinishedRun,
   outputLines,
   onRun,
   onRefreshProject,
@@ -165,6 +168,7 @@ export function ProjectInspector({
       />
       <ProjectRunSection
         activeRun={activeRun}
+        lastFinishedRun={lastFinishedRun}
         outputLines={outputLines}
         onStop={onStop}
       />

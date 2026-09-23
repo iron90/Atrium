@@ -15,6 +15,12 @@ import {
 } from "./run-output-buffer";
 
 const MAX_SETTLED_RUN_IDS = 256;
+const MAX_FINISHED_PROJECTS = 32;
+
+export interface FinishedRunRecord {
+  run: RunFinished;
+  lines: string[];
+}
 
 export interface RunEventStreamOptions {
   onError: (error: RunError) => void;
@@ -23,10 +29,12 @@ export interface RunEventStreamOptions {
 
 export interface RunEventStreamState {
   activeRuns: Record<string, RunStarted>;
+  finishedByProject: Record<string, FinishedRunRecord>;
   outputLinesFor: (runId: string) => string[];
   registerRun: (run: RunStarted) => void;
   completeRun: (runId: string) => void;
   replaceOutput: (runId: string, lines: string[]) => void;
+  recordFinished: (finished: RunFinished, lines?: string[]) => void;
 }
 
 export function useRunEventStream({
@@ -35,7 +43,11 @@ export function useRunEventStream({
 }: RunEventStreamOptions): RunEventStreamState {
   const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
   const [outputBuffer, setOutputBuffer] = useState<RunOutputBuffer>({});
+  const [finishedByProject, setFinishedByProject] = useState<
+    Record<string, FinishedRunRecord>
+  >({});
   const settledRunIds = useRef(new Set<string>());
+  const outputBufferRef = useRef(outputBuffer);
   const onErrorRef = useRef(onError);
   const onFinishedRef = useRef(onFinished);
 
@@ -43,6 +55,10 @@ export function useRunEventStream({
     onErrorRef.current = onError;
     onFinishedRef.current = onFinished;
   }, [onError, onFinished]);
+
+  useEffect(() => {
+    outputBufferRef.current = outputBuffer;
+  }, [outputBuffer]);
 
   const registerRun = useCallback((run: RunStarted) => {
     if (settledRunIds.current.delete(run.runId)) return;
@@ -64,6 +80,26 @@ export function useRunEventStream({
     setOutputBuffer((buffer) => removeRunOutput(buffer, runId));
   }, []);
 
+  const recordFinished = useCallback(
+    (finished: RunFinished, linesOverride?: string[]) => {
+      const lines =
+        linesOverride ?? outputForRun(outputBufferRef.current, finished.runId);
+      setFinishedByProject((current) => {
+        const next = { ...current };
+        if (
+          !(finished.projectId in next) &&
+          Object.keys(next).length >= MAX_FINISHED_PROJECTS
+        ) {
+          const oldestProjectId = Object.keys(next)[0];
+          delete next[oldestProjectId];
+        }
+        next[finished.projectId] = { run: finished, lines };
+        return next;
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     let disposed = false;
     let cleanup: (() => void) | undefined;
@@ -82,6 +118,8 @@ export function useRunEventStream({
           if (oldestRunId === undefined) break;
           settledRunIds.current.delete(oldestRunId);
         }
+        const lines = outputForRun(outputBufferRef.current, finished.runId);
+        recordFinished(finished, lines);
         completeRun(finished.runId);
         onFinishedRef.current(finished);
       },
@@ -108,7 +146,7 @@ export function useRunEventStream({
       disposed = true;
       cleanup?.();
     };
-  }, [completeRun, registerRun]);
+  }, [completeRun, recordFinished, registerRun]);
   const outputLinesFor = useCallback(
     (runId: string) => outputForRun(outputBuffer, runId),
     [outputBuffer],
@@ -121,9 +159,11 @@ export function useRunEventStream({
 
   return {
     activeRuns,
+    finishedByProject,
     outputLinesFor,
     registerRun,
     completeRun,
     replaceOutput,
+    recordFinished,
   };
 }
