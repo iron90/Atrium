@@ -95,4 +95,40 @@ describe("run event stream", () => {
     expect(result.current.outputLinesFor(started.runId)).toEqual([]);
     expect(onFinished).toHaveBeenCalledWith(finished);
   });
+
+  it("does not resubscribe when handler identities change", async () => {
+    const onFinished = vi.fn();
+    const onError = vi.fn();
+    const { rerender } = renderHook(
+      ({ nextFinished }: { nextFinished: (value: RunFinished) => void }) =>
+        useRunEventStream({ onError, onFinished: nextFinished }),
+      { initialProps: { nextFinished: onFinished } },
+    );
+    await waitFor(() => expect(handlers).toBeDefined());
+    expect(subscribeMock).toHaveBeenCalledTimes(1);
+
+    const nextFinished = vi.fn();
+    rerender({ nextFinished });
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+
+    expect(subscribeMock).toHaveBeenCalledTimes(1);
+    act(() => handlers?.onFinished(finished));
+    expect(onFinished).not.toHaveBeenCalled();
+    expect(nextFinished).toHaveBeenCalledWith(finished);
+  });
+
+  it("reports subscription failures through onError", async () => {
+    const onError = vi.fn();
+    subscribeMock.mockImplementation(async () => {
+      throw new Error("permission denied");
+    });
+
+    renderHook(() => useRunEventStream({ onError, onFinished: vi.fn() }));
+
+    await waitFor(() =>
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "permission denied" }),
+      ),
+    );
+  });
 });

@@ -36,6 +36,13 @@ export function useRunEventStream({
   const [activeRuns, setActiveRuns] = useState<Record<string, RunStarted>>({});
   const [outputBuffer, setOutputBuffer] = useState<RunOutputBuffer>({});
   const settledRunIds = useRef(new Set<string>());
+  const onErrorRef = useRef(onError);
+  const onFinishedRef = useRef(onFinished);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+    onFinishedRef.current = onFinished;
+  }, [onError, onFinished]);
 
   const registerRun = useCallback((run: RunStarted) => {
     if (settledRunIds.current.delete(run.runId)) return;
@@ -67,7 +74,7 @@ export function useRunEventStream({
           if (settledRunIds.current.has(output.runId)) return buffer;
           return appendRunOutput(buffer, output.runId, output.line);
         }),
-      onError,
+      onError: (error: RunError) => onErrorRef.current(error),
       onFinished: (finished) => {
         settledRunIds.current.add(finished.runId);
         while (settledRunIds.current.size > MAX_SETTLED_RUN_IDS) {
@@ -76,21 +83,32 @@ export function useRunEventStream({
           settledRunIds.current.delete(oldestRunId);
         }
         completeRun(finished.runId);
-        onFinished(finished);
+        onFinishedRef.current(finished);
       },
-    }).then((unsubscribe) => {
-      if (disposed) {
-        unsubscribe();
-      } else {
-        cleanup = unsubscribe;
-      }
-    });
+    })
+      .then((unsubscribe) => {
+        if (disposed) {
+          unsubscribe();
+        } else {
+          cleanup = unsubscribe;
+        }
+      })
+      .catch((subscriptionError: unknown) => {
+        if (disposed) return;
+        onErrorRef.current({
+          runId: "",
+          message:
+            subscriptionError instanceof Error
+              ? subscriptionError.message
+              : String(subscriptionError),
+        });
+      });
 
     return () => {
       disposed = true;
       cleanup?.();
     };
-  }, [completeRun, onError, onFinished, registerRun]);
+  }, [completeRun, registerRun]);
   const outputLinesFor = useCallback(
     (runId: string) => outputForRun(outputBuffer, runId),
     [outputBuffer],
