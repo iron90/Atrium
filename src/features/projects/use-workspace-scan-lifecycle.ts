@@ -61,9 +61,21 @@ export function useWorkspaceScanLifecycle({
   const [scanRequests] = useState(() => new LatestRequestGate());
   const languageRef = useRef(language);
 
+  const excludeNamesRef = useRef(excludeNames);
+  const preferencesRef = useRef(preferences);
+  const onErrorRef = useRef(onError);
+  const onMessageRef = useRef(onMessage);
+  const applyScannedSnapshotRef = useRef<(next: WorkspaceSnapshot) => void>(
+    () => undefined,
+  );
+
   useEffect(() => {
     languageRef.current = language;
-  }, [language]);
+    excludeNamesRef.current = excludeNames;
+    preferencesRef.current = preferences;
+    onErrorRef.current = onError;
+    onMessageRef.current = onMessage;
+  }, [language, excludeNames, preferences, onError, onMessage]);
 
   useEffect(() => {
     workspaceFingerprintRef.current = snapshotFingerprint(snapshot);
@@ -78,6 +90,10 @@ export function useWorkspaceScanLifecycle({
   );
 
   useEffect(() => {
+    applyScannedSnapshotRef.current = applyScannedSnapshot;
+  }, [applyScannedSnapshot]);
+
+  useEffect(() => {
     if (!nativeRuntime) return undefined;
 
     let disposed = false;
@@ -85,6 +101,7 @@ export function useWorkspaceScanLifecycle({
     void defaultWorkspacePath()
       .then((defaultPath) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return null;
+        const preferences = preferencesRef.current;
         const nextRoot = preferences.rootPath?.trim() || defaultPath;
         if (!nextRoot) {
           throw new Error("No default workspace path is available.");
@@ -98,7 +115,7 @@ export function useWorkspaceScanLifecycle({
         }
         return scanWorkspacesFn({
           paths: nextPaths,
-          excludeNames,
+          excludeNames: excludeNamesRef.current,
           language: languageRef.current,
         });
       })
@@ -106,13 +123,16 @@ export function useWorkspaceScanLifecycle({
         if (!nextSnapshot || disposed || !scanRequests.isCurrent(requestId)) {
           return;
         }
-        applyScannedSnapshot(nextSnapshot);
-        onMessage({ type: "projects", count: nextSnapshot.projects.length });
+        applyScannedSnapshotRef.current(nextSnapshot);
+        onMessageRef.current({
+          type: "projects",
+          count: nextSnapshot.projects.length,
+        });
       })
       .catch((scanError) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return;
-        onError(errorMessage(scanError));
-        onMessage({ type: "localized", key: "scanFailed" });
+        onErrorRef.current(errorMessage(scanError));
+        onMessageRef.current({ type: "localized", key: "scanFailed" });
       })
       .finally(() => {
         scanRequests.finish(requestId);
@@ -121,18 +141,7 @@ export function useWorkspaceScanLifecycle({
     return () => {
       disposed = true;
     };
-  }, [
-    applyScannedSnapshot,
-    excludeNames,
-    defaultWorkspacePath,
-    nativeRuntime,
-    onError,
-    onMessage,
-    preferences.rootPath,
-    preferences.workspaces,
-    scanWorkspacesFn,
-    scanRequests,
-  ]);
+  }, [defaultWorkspacePath, nativeRuntime, scanRequests, scanWorkspacesFn]);
 
   useEffect(() => {
     if (!nativeRuntime || !workspacePaths.some((path) => path.trim()))
@@ -146,7 +155,7 @@ export function useWorkspaceScanLifecycle({
       try {
         const nextSnapshot = await scanWorkspacesFn({
           paths: workspacePaths,
-          excludeNames,
+          excludeNames: excludeNamesRef.current,
           language: languageRef.current,
         });
         if (disposed || !scanRequests.isCurrent(requestId)) return;
@@ -182,7 +191,6 @@ export function useWorkspaceScanLifecycle({
     };
   }, [
     applyScannedSnapshot,
-    excludeNames,
     nativeRuntime,
     onError,
     onMessage,
@@ -227,7 +235,8 @@ export function useWorkspaceScanLifecycle({
         onMessage({ type: "localized", key: "scanFailed" });
       }
     } finally {
-      if (scanRequests.finish(requestId)) setIsScanning(false);
+      scanRequests.finish(requestId);
+      setIsScanning(false);
     }
   }, [
     applyScannedSnapshot,
