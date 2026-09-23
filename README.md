@@ -17,8 +17,7 @@ The current release focuses on these capabilities:
 7. inspect project storage and clean only manifest-declared cache/build directories.
 8. persist execution records and logs locally with project, profile, platform, channel, and Git context;
 9. inspect only the build artifacts explicitly declared by each build profile.
-10. search, filter, sort, favorite, hide, and manually order projects with a
-    persistent drag-handle workflow;
+10. search, filter, sort, favorite, and hide projects;
 11. scan multiple workspaces with deterministic exclusions and open project tools/links;
 12. preview and clean selected manifest-declared directories;
 13. compare Git revisions and copy a structured commit/file change summary.
