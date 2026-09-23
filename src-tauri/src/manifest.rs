@@ -407,6 +407,51 @@ label = "Website"
     }
 
     #[test]
+    fn undeclared_profile_facet_reference_is_not_synthesized_as_configured() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-undeclared-facet-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 1
+
+[[platforms]]
+id = "macos"
+
+[[channels]]
+id = "local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "ios"
+channel = "local"
+"#,
+        )
+        .expect("write manifest");
+
+        let result = scan_project_configuration(&root, &[]);
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(result.build_profiles.is_empty());
+        assert!(
+            result
+                .configuration
+                .issues
+                .iter()
+                .any(|issue| issue.contains("Platform ios is not declared")),
+            "issues: {:?}",
+            result.configuration.issues
+        );
+
+        fs::remove_dir_all(root).expect("remove project");
+    }
+
+    #[test]
     fn trims_profile_identifiers_before_binding() {
         let root = std::env::temp_dir().join(format!(
             "atrium-manifest-profile-whitespace-{}",

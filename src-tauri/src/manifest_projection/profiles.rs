@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use super::facets::configured_facet;
 use super::path_policy::normalize_declared_path;
 use crate::conformance::MANIFEST_PATH;
 use crate::manifest_schema::{ManifestBuildProfile, ManifestHostRequirements};
@@ -57,6 +56,24 @@ pub(super) fn parse_build_profiles(
         let verification =
             parse_host_requirements(manifest_profile.verification, &id, &mut profile_issues);
         validate_verification_hosts(&host_requirements, &verification, &id, &mut profile_issues);
+        let artifacts = parse_artifact_paths(
+            manifest_profile.artifacts.unwrap_or_default(),
+            &id,
+            &mut profile_issues,
+        );
+
+        let (platform, channel) = match (platform, channel) {
+            (Some(platform), Some(channel)) => (platform, channel),
+            _ => {
+                issues.extend(
+                    profile_issues
+                        .into_iter()
+                        .map(|issue| format!("{id}: {issue}")),
+                );
+                continue;
+            }
+        };
+
         let host_mismatch_actions = [
             (CommandKind::Run, run_command_id.is_some()),
             (CommandKind::Check, check_command_id.is_some()),
@@ -92,11 +109,6 @@ pub(super) fn parse_build_profiles(
             .then_some(action)
         })
         .collect();
-        let artifacts = parse_artifact_paths(
-            manifest_profile.artifacts.unwrap_or_default(),
-            &id,
-            &mut profile_issues,
-        );
 
         let label = normalize_optional_text(manifest_profile.label)
             .unwrap_or_else(|| format!("{} · {}", platform.label, channel.label));
@@ -212,14 +224,14 @@ fn resolve_facet(
     kind: &str,
     section: &str,
     issues: &mut Vec<String>,
-) -> Facet {
+) -> Option<Facet> {
     let id = id.trim();
     if let Some(facet) = facets.get(id) {
-        return facet.clone();
+        return Some(facet.clone());
     }
 
     issues.push(format!("{kind} {id} is not declared in [[{section}]]."));
-    configured_facet(id, section, id)
+    None
 }
 
 fn normalize_optional_text(value: Option<String>) -> Option<String> {
