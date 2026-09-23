@@ -11,10 +11,7 @@ pub fn read_git_snapshot(project_path: &Path) -> Option<GitSnapshot> {
         return None;
     }
 
-    let branch = run_git(project_path, &["branch", "--show-current"])
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .or_else(|| Some("(detached HEAD)".to_string()));
+    let branch = branch_from_command_output(run_git(project_path, &["branch", "--show-current"]));
 
     let status = run_git(
         project_path,
@@ -41,6 +38,14 @@ pub fn read_git_snapshot(project_path: &Path) -> Option<GitSnapshot> {
         recent_commits,
         references,
     })
+}
+
+fn branch_from_command_output(output: Option<String>) -> Option<String> {
+    let value = output?.trim().to_string();
+    if value.is_empty() {
+        return Some("(detached HEAD)".to_string());
+    }
+    Some(value)
 }
 
 fn read_commits(project_path: &Path) -> Vec<GitCommit> {
@@ -130,8 +135,31 @@ fn worktree_status(status: Option<&str>) -> (bool, u32, bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{count_worktree_changes, read_tracking_counts, worktree_status};
+    use super::{
+        branch_from_command_output, count_worktree_changes, read_tracking_counts, worktree_status,
+    };
     use std::path::Path;
+
+    #[test]
+    fn empty_branch_output_is_detached_head_not_a_failure() {
+        assert_eq!(
+            branch_from_command_output(Some("\n".to_string())),
+            Some("(detached HEAD)".to_string())
+        );
+    }
+
+    #[test]
+    fn failed_branch_command_is_unknown_not_detached_head() {
+        assert_eq!(branch_from_command_output(None), None);
+    }
+
+    #[test]
+    fn trims_successful_branch_output() {
+        assert_eq!(
+            branch_from_command_output(Some("  main\n".to_string())),
+            Some("main".to_string())
+        );
+    }
 
     #[test]
     fn missing_upstream_is_not_an_error() {
