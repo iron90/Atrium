@@ -13,7 +13,7 @@ export const openProjectAction = async (
       await bridge.openProjectDirectory(project.path);
       return;
     case "terminal":
-      await bridge.openProjectTerminal(project.path, project.tools?.terminal);
+      await bridge.openProjectTerminal(project.path);
       return;
     case "remote":
       if (project.repo?.remote) {

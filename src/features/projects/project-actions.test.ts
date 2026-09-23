@@ -18,7 +18,7 @@ describe("project actions", () => {
     await openProjectAction("terminal", project);
 
     expect(openDirectory).toHaveBeenCalledWith(project.path);
-    expect(openTerminal).toHaveBeenCalledWith(project.path, null);
+    expect(openTerminal).toHaveBeenCalledWith(project.path);
     openDirectory.mockRestore();
     openTerminal.mockRestore();
   });

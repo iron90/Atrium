@@ -4,6 +4,7 @@ use std::process::Command;
 use crate::command_boundary::run_blocking;
 use crate::os_open;
 use crate::project_path::canonical_project_root;
+use crate::scanner::scan_project;
 
 #[tauri::command]
 pub async fn open_project_directory_command(project_path: String) -> Result<(), String> {
@@ -15,14 +16,19 @@ pub async fn open_project_directory_command(project_path: String) -> Result<(), 
 }
 
 #[tauri::command]
-pub async fn open_project_terminal_command(
-    project_path: String,
-    terminal: Option<String>,
-) -> Result<(), String> {
+pub async fn open_project_terminal_command(project_path: String) -> Result<(), String> {
     run_blocking("Open terminal", move || {
         let root = canonical_project_root(Path::new(&project_path))?;
-        if let Some(program) = terminal.filter(|value| !value.trim().is_empty()) {
-            return Command::new(program.trim())
+        let project =
+            scan_project(&root).ok_or_else(|| "Project path cannot be scanned".to_string())?;
+        if let Some(program) = project
+            .tools
+            .terminal
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            return Command::new(program)
                 .current_dir(&root)
                 .spawn()
                 .map(|_| ())

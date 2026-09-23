@@ -25,13 +25,9 @@ export const openProjectDirectory = async (
 
 export const openProjectTerminal = async (
   projectPath: string,
-  terminal?: string | null,
 ): Promise<void> => {
   if (!isTauriRuntime()) return;
-  return invoke<void>("open_project_terminal_command", {
-    projectPath,
-    terminal,
-  });
+  return invoke<void>("open_project_terminal_command", { projectPath });
 };
 
 export const openProjectRemote = async (remote: string): Promise<void> => {
