@@ -14,6 +14,7 @@ import { ProjectContextSection } from "./ProjectContextSection";
 import { ProjectInspectorHeader } from "./ProjectInspectorHeader";
 import { ProjectProtocolSection } from "./ProjectProtocolSection";
 import { ProjectRepositorySection } from "./ProjectRepositorySection";
+import { ProjectRunHistorySection } from "./ProjectRunHistorySection";
 import { ProjectRunSection } from "./ProjectRunSection";
 import { ProjectStorageSection } from "./ProjectStorageSection";
 import type { ProjectAction } from "./project-actions";
@@ -27,6 +28,8 @@ export interface ProjectInspectorProps {
   isLoading: boolean;
   activeRun?: RunStarted;
   lastFinishedRun?: FinishedRunRecord;
+  runHistoryRefreshToken?: number;
+  onRunHistoryError?: (message: string | null) => void;
   outputLines: string[];
   onRun: (
     command: ProjectCommand,
@@ -69,6 +72,8 @@ export function ProjectInspector({
   isLoading,
   activeRun,
   lastFinishedRun,
+  runHistoryRefreshToken,
+  onRunHistoryError,
   outputLines,
   onRun,
   onRefreshProject,
@@ -171,6 +176,11 @@ export function ProjectInspector({
         lastFinishedRun={lastFinishedRun}
         outputLines={outputLines}
         onStop={onStop}
+      />
+      <ProjectRunHistorySection
+        project={project}
+        refreshToken={runHistoryRefreshToken}
+        onError={onRunHistoryError}
       />
       <ProjectCommitsSection project={inspectedProject} isLoading={isLoading} />
     </aside>

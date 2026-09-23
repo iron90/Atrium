@@ -79,6 +79,7 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
+  const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);
   const mainColumnRef = useRef<HTMLElement>(null);
   const scrollFrameRef = useRef<number | null>(null);
@@ -196,6 +197,7 @@ export default function App() {
   });
   const handleRunFinished = useCallback(
     (finished: RunFinished) => {
+      setRunHistoryRefreshToken((token) => token + 1);
       if (
         finished.status !== "succeeded" ||
         finished.profileAction !== "build"
@@ -463,6 +465,8 @@ export default function App() {
       isLoading: isLoadingDetails,
       activeRun,
       lastFinishedRun,
+      runHistoryRefreshToken,
+      onRunHistoryError: handleWorkspaceError,
       outputLines,
       onRun: handleInspectorRun,
       onRefreshProject: handleInspectorRefresh,
@@ -503,6 +507,7 @@ export default function App() {
       handleInspectorRun,
       handleInspectorStop,
       handleOpenArtifact,
+      handleWorkspaceError,
       inspectorProject,
       isAgentPromptCopied,
       isAgentPromptForGuidanceUpdate,
@@ -512,6 +517,7 @@ export default function App() {
       lastFinishedRun,
       outputLines,
       refreshingProjectId,
+      runHistoryRefreshToken,
       selectedProject,
       setCleanupSelection,
     ],

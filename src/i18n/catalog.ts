@@ -146,6 +146,7 @@ export const en = {
   platformMatrixDescription:
     "Only explicit project declarations are shown here. Empty cells mean no target was declared.",
   runHistory: "Persistent run history",
+  noRunHistory: "No completed runs for this project yet.",
   runContext: "Context",
   runProfile: "Profile",
   runTarget: "Target",
@@ -411,6 +412,7 @@ export const zh: Record<keyof typeof en, string> = {
   platformMatrixDescription:
     "这里只展示项目的明确声明。空白单元格表示没有声明目标平台。",
   runHistory: "持久化运行记录",
+  noRunHistory: "这个项目还没有已完成的运行记录。",
   runContext: "上下文",
   runProfile: "配置",
   runTarget: "目标",

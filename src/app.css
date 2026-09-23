@@ -2143,6 +2143,74 @@ button[aria-busy="true"] {
 .live-run.is-cancelled em {
   color: var(--muted);
 }
+.run-history-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.run-history-row {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.run-history-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.run-history-meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px 8px;
+  align-items: baseline;
+  color: var(--muted);
+  font:
+    10px "DM Mono",
+    monospace;
+}
+.run-history-meta code {
+  overflow: hidden;
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-history-meta time {
+  white-space: nowrap;
+}
+.run-history-detail {
+  grid-column: 1 / -1;
+  color: var(--faint);
+}
+.run-status.is-succeeded {
+  color: var(--accent);
+}
+.run-status.is-failed {
+  color: var(--danger);
+}
+.run-status.is-cancelled {
+  color: var(--muted);
+}
+.run-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.text-button {
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font:
+    9px "DM Mono",
+    monospace;
+  cursor: pointer;
+}
+.text-button:hover {
+  color: var(--accent);
+}
 .activity-pulse {
   width: 7px;
   height: 7px;
