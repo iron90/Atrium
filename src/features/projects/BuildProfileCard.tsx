@@ -52,6 +52,8 @@ export function BuildProfileCard({
   const hasAvailableArtifact = profileArtifacts.some(
     (artifact) => artifact.kind === "file" || artifact.kind === "directory",
   );
+  const requiresBuildBeforeRun =
+    profile.artifacts.length > 0 && !hasAvailableArtifact;
   const hostMismatchAction = profile.hostMismatchActions[0];
   const hostMismatchHosts = hostMismatchAction
     ? profile.hostRequirements[hostMismatchAction]
@@ -96,7 +98,7 @@ export function BuildProfileCard({
           const command = commandForProfile(profile, action, commands);
           if (!command) return null;
           const runBlockedUntilBuild =
-            action === "run" && profileReady && !hasAvailableArtifact;
+            action === "run" && profileReady && requiresBuildBeforeRun;
           const hostMismatch = profile.hostMismatchActions.includes(action);
           const hostVerificationPending =
             profile.unverifiedActions.includes(action);
