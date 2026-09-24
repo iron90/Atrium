@@ -1,8 +1,11 @@
 use std::path::Path;
 
+use tauri::State;
+
 use crate::command_boundary::run_blocking;
 use crate::os_open;
 use crate::scanner::scan_project;
+use crate::state::AppState;
 use crate::url_policy::validate_browsable_url;
 
 #[tauri::command]
@@ -13,9 +16,13 @@ pub async fn open_project_remote_command(remote: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_project_link_command(
+    state: State<'_, AppState>,
     project_path: String,
     link_id: String,
 ) -> Result<(), String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     run_blocking("Open project link", move || {
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;

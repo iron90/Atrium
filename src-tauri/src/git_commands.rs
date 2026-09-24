@@ -1,16 +1,23 @@
 use std::path::Path;
 
+use tauri::State;
+
 use crate::command_boundary::run_blocking;
 use crate::git::read_git_change_summary;
 use crate::model::GitChangeSummary;
 use crate::project_path::canonical_project_root;
+use crate::state::AppState;
 
 #[tauri::command]
 pub async fn read_git_change_summary_command(
+    state: State<'_, AppState>,
     project_path: String,
     from: String,
     to: Option<String>,
 ) -> Result<GitChangeSummary, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     run_blocking("Git change summary", move || {
         read_git_change_summary_for_project(Path::new(&project_path), &from, to.as_deref())
     })
@@ -39,7 +46,7 @@ mod tests {
     fn rejects_a_non_directory_before_running_git() {
         let path = fixture_path("file");
         let _ = fs::remove_file(&path);
-        fs::write(&path, b"not a project directory").expect("create fixture file");
+        fs::write(&path, b"not a project directory").expect("create project file");
 
         assert_eq!(
             read_git_change_summary_for_project(&path, "HEAD~1", None)
@@ -47,6 +54,6 @@ mod tests {
             "Project path is not a directory"
         );
 
-        fs::remove_file(path).expect("remove fixture file");
+        fs::remove_file(path).expect("remove project file");
     }
 }

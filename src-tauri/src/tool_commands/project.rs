@@ -1,13 +1,22 @@
 use std::path::Path;
 use std::process::Command;
 
+use tauri::State;
+
 use crate::command_boundary::run_blocking;
 use crate::os_open;
 use crate::project_path::canonical_project_root;
 use crate::scanner::scan_project;
+use crate::state::AppState;
 
 #[tauri::command]
-pub async fn open_project_directory_command(project_path: String) -> Result<(), String> {
+pub async fn open_project_directory_command(
+    state: State<'_, AppState>,
+    project_path: String,
+) -> Result<(), String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     run_blocking("Open project", move || {
         let root = canonical_project_root(Path::new(&project_path))?;
         open_path(&root)
@@ -16,7 +25,13 @@ pub async fn open_project_directory_command(project_path: String) -> Result<(), 
 }
 
 #[tauri::command]
-pub async fn open_project_terminal_command(project_path: String) -> Result<(), String> {
+pub async fn open_project_terminal_command(
+    state: State<'_, AppState>,
+    project_path: String,
+) -> Result<(), String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     run_blocking("Open terminal", move || {
         let root = canonical_project_root(Path::new(&project_path))?;
         let project =

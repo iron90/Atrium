@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Emitter, State};
 
@@ -11,14 +11,18 @@ use crate::storage::clean_project_artifacts_selected_with_progress;
 
 #[tauri::command]
 pub async fn scan_workspace_command(
+    state: State<'_, AppState>,
     root_path: String,
     excluded_names: Option<Vec<String>>,
 ) -> Result<WorkspaceSnapshot, String> {
     let excluded_names = excluded_names.unwrap_or_default();
-    run_blocking("Workspace scan", move || {
+    let app_state = state.inner().clone();
+    let snapshot = run_blocking("Workspace scan", move || {
         scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names)
     })
-    .await
+    .await?;
+    app_state.register_workspace_root(PathBuf::from(&snapshot.root_path));
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -26,6 +30,9 @@ pub async fn inspect_project_command(
     state: State<'_, AppState>,
     project_path: String,
 ) -> Result<ProjectSnapshot, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     let inspection_permit = state
         .inner()
         .project_inspection_gate
@@ -48,6 +55,9 @@ pub async fn clean_project_artifacts_command(
     project_path: String,
     selected_paths: Option<Vec<String>>,
 ) -> Result<CleanupResult, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     let inspection_permit = state
         .inner()
         .project_inspection_gate
@@ -75,8 +85,12 @@ pub async fn clean_project_artifacts_command(
 
 #[tauri::command]
 pub async fn generate_project_guidance_command(
+    state: State<'_, AppState>,
     project_path: String,
 ) -> Result<ProjectGuidanceReport, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
     run_blocking("Project guidance", move || {
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;

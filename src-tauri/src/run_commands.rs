@@ -15,6 +15,9 @@ pub async fn run_project_command(
     profile_id: Option<String>,
     profile_action: Option<CommandKind>,
 ) -> Result<RunStarted, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(std::path::Path::new(&project_path))?;
     start_project_command(
         app,
         state.inner().clone(),

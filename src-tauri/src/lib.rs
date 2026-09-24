@@ -28,6 +28,7 @@ mod time;
 mod tool_commands;
 mod url_policy;
 mod workspace_commands;
+mod workspace_membership;
 mod workspace_policy;
 mod workspace_scan;
 
