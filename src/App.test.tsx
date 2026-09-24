@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import App from "./App";
 
@@ -276,5 +282,24 @@ describe("Atrium board", () => {
     expect(
       screen.getByRole("heading", { name: "Version changes" }),
     ).toBeInTheDocument();
+  });
+
+  it("surfaces activity messages in the status banner", async () => {
+    render(<App />);
+
+    expect(document.querySelector(".status-banner")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Scan workspace" }));
+
+    await waitFor(() => {
+      expect(document.querySelector(".status-banner")).toHaveTextContent(
+        /\d+ projects discovered/,
+      );
+    });
+    expect(document.querySelector(".status-banner")).toHaveAttribute(
+      "role",
+      "status",
+    );
   });
 });

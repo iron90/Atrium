@@ -7,6 +7,10 @@ import {
   useState,
 } from "react";
 import { AppSidebar } from "./app/AppSidebar";
+import {
+  formatActivityMessage,
+  type ActivityMessage,
+} from "./app/activity-message";
 import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
@@ -79,6 +83,8 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
+  const [activityMessage, setActivityMessage] =
+    useState<ActivityMessage | null>(null);
   const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);
   const mainColumnRef = useRef<HTMLElement>(null);
@@ -163,8 +169,9 @@ export default function App() {
     (message: string | null) => setError(message),
     [],
   );
-  const handleWorkspaceMessage = useCallback(() => undefined, []);
-  const handleRunMessage = useCallback(() => undefined, []);
+  const handleActivityMessage = useCallback((message: ActivityMessage) => {
+    setActivityMessage(message);
+  }, []);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
   }, []);
@@ -191,7 +198,7 @@ export default function App() {
     excludeNames,
     language,
     onError: handleWorkspaceError,
-    onMessage: handleWorkspaceMessage,
+    onMessage: handleActivityMessage,
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
   });
@@ -252,7 +259,7 @@ export default function App() {
     selectedProject,
     language,
     onError: handleWorkspaceError,
-    onMessage: handleRunMessage,
+    onMessage: handleActivityMessage,
     onFinished: handleRunFinished,
   });
 
@@ -556,6 +563,11 @@ export default function App() {
                     {error ? (
                       <div className="error-banner" role="alert">
                         {error}
+                      </div>
+                    ) : null}
+                    {activityMessage ? (
+                      <div className="status-banner" role="status">
+                        {formatActivityMessage(activityMessage, language)}
                       </div>
                     ) : null}
 

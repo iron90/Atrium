@@ -533,6 +533,17 @@ button[aria-busy="true"] {
   font-size: 12px;
   animation: status-enter var(--motion-base) var(--ease-emphasized) both;
 }
+.status-banner {
+  max-width: 1480px;
+  margin: 0 auto 16px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 12px;
+  animation: status-enter var(--motion-base) var(--ease-emphasized) both;
+}
 
 .content-grid {
   display: grid;

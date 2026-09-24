@@ -137,4 +137,55 @@ describe("workspace scan lifecycle", () => {
 
     await waitFor(() => expect(result.current.isScanning).toBe(false));
   });
+
+  it("reports automatic refresh failures through onError", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSnapshot = emptySnapshot("/workspace");
+      let call = 0;
+      const scanWorkspacesFn = vi.fn(
+        async (args: ScanArgs): Promise<WorkspaceSnapshot> => {
+          void args;
+          call += 1;
+          if (call === 1) return initialSnapshot;
+          throw new Error("refresh exploded");
+        },
+      );
+      const onError = vi.fn();
+      const onMessage = vi.fn();
+      const defaultWorkspacePath = vi.fn(async () => "/workspace");
+
+      renderHook(() =>
+        useWorkspaceScanLifecycle({
+          nativeRuntime: true,
+          preferences: {},
+          initialRootPath: "/workspace",
+          initialWorkspacePaths: ["/workspace"],
+          initialSnapshot,
+          snapshot: initialSnapshot,
+          excludeNames: [],
+          language: "en",
+          onError,
+          onMessage,
+          onApplySnapshot: noop,
+          onSnapshotTimestamp: noop,
+          defaultWorkspacePath,
+          scanWorkspacesFn,
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(onError).toHaveBeenCalledWith("refresh exploded");
+      expect(onMessage).toHaveBeenCalledWith({
+        type: "localized",
+        key: "refreshFailed",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

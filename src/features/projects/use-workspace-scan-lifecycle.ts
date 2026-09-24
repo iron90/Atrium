@@ -175,8 +175,9 @@ export function useWorkspaceScanLifecycle({
             count: nextSnapshot.projects.length,
           });
         }
-      } catch {
+      } catch (refreshError) {
         if (!disposed && scanRequests.isCurrent(requestId)) {
+          onError(errorMessage(refreshError));
           onMessage({ type: "localized", key: "refreshFailed" });
         }
       } finally {
