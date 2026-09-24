@@ -1,44 +1,37 @@
 import { invoke } from "@tauri-apps/api/core";
-import { isTauriRuntime } from "./runtime";
 
-export const openArtifact = async (
-  projectPath: string,
-  profileId: string,
-  relativePath: string,
-): Promise<void> => {
-  if (!isTauriRuntime()) {
-    return;
-  }
-  return invoke<void>("open_declared_artifact_command", {
-    projectPath,
-    profileId,
-    relativePath,
-  });
+export const nativeToolMethods = {
+  openArtifact: async (
+    projectPath: string,
+    profileId: string,
+    relativePath: string,
+  ): Promise<void> =>
+    invoke<void>("open_declared_artifact_command", {
+      projectPath,
+      profileId,
+      relativePath,
+    }),
+
+  openProjectDirectory: async (projectPath: string): Promise<void> =>
+    invoke<void>("open_project_directory_command", { projectPath }),
+
+  openProjectTerminal: async (projectPath: string): Promise<void> =>
+    invoke<void>("open_project_terminal_command", { projectPath }),
+
+  openProjectRemote: async (remote: string): Promise<void> =>
+    invoke<void>("open_project_remote_command", { remote }),
+
+  openProjectLink: async (
+    projectPath: string,
+    linkId: string,
+  ): Promise<void> =>
+    invoke<void>("open_project_link_command", { projectPath, linkId }),
 };
 
-export const openProjectDirectory = async (
-  projectPath: string,
-): Promise<void> => {
-  if (!isTauriRuntime()) return;
-  return invoke<void>("open_project_directory_command", { projectPath });
-};
-
-export const openProjectTerminal = async (
-  projectPath: string,
-): Promise<void> => {
-  if (!isTauriRuntime()) return;
-  return invoke<void>("open_project_terminal_command", { projectPath });
-};
-
-export const openProjectRemote = async (remote: string): Promise<void> => {
-  if (!isTauriRuntime()) return;
-  return invoke<void>("open_project_remote_command", { remote });
-};
-
-export const openProjectLink = async (
-  projectPath: string,
-  linkId: string,
-): Promise<void> => {
-  if (!isTauriRuntime()) return;
-  return invoke<void>("open_project_link_command", { projectPath, linkId });
+export const previewToolMethods = {
+  openArtifact: async (): Promise<void> => undefined,
+  openProjectDirectory: async (): Promise<void> => undefined,
+  openProjectTerminal: async (): Promise<void> => undefined,
+  openProjectRemote: async (): Promise<void> => undefined,
+  openProjectLink: async (): Promise<void> => undefined,
 };

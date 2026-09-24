@@ -1,16 +1,10 @@
-import * as gitBridge from "./git";
-import * as projectBridge from "./projects";
-import * as runBridge from "./runs";
-import * as toolBridge from "./tools";
+import type { AtriumBridge } from "./bridge-interface";
+import { createBridge } from "./create";
 import { isTauriRuntime } from "./runtime";
 
-export { isTauriRuntime };
+export { createBridge, isTauriRuntime };
+export type { AtriumBridge } from "./bridge-interface";
 
-export const bridge = {
-  ...projectBridge,
-  ...runBridge,
-  ...gitBridge,
-  ...toolBridge,
-};
+export const bridge: AtriumBridge = createBridge();
 
 export type * from "./types";

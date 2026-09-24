@@ -1,42 +1,41 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fakeRun } from "./fake-bridge";
-import { isTauriRuntime } from "./runtime";
 import type { ProfileAction, RunFinished, RunStarted } from "./types";
 
-export const runProjectCommand = async (
-  projectPath: string,
-  commandId: string,
-  profileId?: string,
-  profileAction?: ProfileAction,
-): Promise<RunStarted> => {
-  if (!isTauriRuntime()) {
-    return fakeRun(projectPath, commandId, profileId);
-  }
-  return invoke<RunStarted>("run_project_command", {
-    projectPath,
-    commandId,
-    profileId,
-    profileAction,
-  });
+export const nativeRunMethods = {
+  runProjectCommand: async (
+    projectPath: string,
+    commandId: string,
+    profileId?: string,
+    profileAction?: ProfileAction,
+  ): Promise<RunStarted> =>
+    invoke<RunStarted>("run_project_command", {
+      projectPath,
+      commandId,
+      profileId,
+      profileAction,
+    }),
+
+  listRunHistory: async (): Promise<RunFinished[]> =>
+    invoke<RunFinished[]>("list_run_history_command"),
+
+  openRunLog: async (runId: string): Promise<void> =>
+    invoke<void>("open_run_log_command", { runId }),
+
+  stopProjectCommand: async (runId: string): Promise<void> =>
+    invoke<void>("stop_project_command", { runId }),
 };
 
-export const listRunHistory = async (): Promise<RunFinished[]> => {
-  if (!isTauriRuntime()) {
-    return [];
-  }
-  return invoke<RunFinished[]>("list_run_history_command");
-};
+export const previewRunMethods = {
+  runProjectCommand: async (
+    projectPath: string,
+    commandId: string,
+    profileId?: string,
+  ): Promise<RunStarted> => fakeRun(projectPath, commandId, profileId),
 
-export const openRunLog = async (runId: string): Promise<void> => {
-  if (!isTauriRuntime()) {
-    return;
-  }
-  return invoke<void>("open_run_log_command", { runId });
-};
+  listRunHistory: async (): Promise<RunFinished[]> => [],
 
-export const stopProjectCommand = async (runId: string): Promise<void> => {
-  if (!isTauriRuntime()) {
-    return;
-  }
-  return invoke<void>("stop_project_command", { runId });
+  openRunLog: async (): Promise<void> => undefined,
+
+  stopProjectCommand: async (): Promise<void> => undefined,
 };

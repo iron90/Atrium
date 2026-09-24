@@ -1,14 +1,26 @@
 import { invoke } from "@tauri-apps/api/core";
 import { demoSnapshot } from "./fake-bridge";
-import { isTauriRuntime } from "./runtime";
 import type { GitChangeSummary } from "./types";
 
-export const readGitChangeSummary = async (
-  projectPath: string,
-  from: string,
-  to?: string,
-): Promise<GitChangeSummary> => {
-  if (!isTauriRuntime()) {
+export const nativeGitMethods = {
+  readGitChangeSummary: async (
+    projectPath: string,
+    from: string,
+    to?: string,
+  ): Promise<GitChangeSummary> =>
+    invoke<GitChangeSummary>("read_git_change_summary_command", {
+      projectPath,
+      from,
+      to,
+    }),
+};
+
+export const previewGitMethods = {
+  readGitChangeSummary: async (
+    projectPath: string,
+    from: string,
+    to?: string,
+  ): Promise<GitChangeSummary> => {
     const project = demoSnapshot(
       projectPath.slice(0, projectPath.lastIndexOf("/")),
     ).projects.find((candidate) => candidate.path === projectPath);
@@ -27,10 +39,5 @@ export const readGitChangeSummary = async (
       insertions: commits.length * 12,
       deletions: commits.length * 4,
     };
-  }
-  return invoke<GitChangeSummary>("read_git_change_summary_command", {
-    projectPath,
-    from,
-    to,
-  });
+  },
 };

@@ -15,20 +15,19 @@ export interface RunEventHandlers {
   onError?: (error: RunError) => void;
 }
 
-export async function subscribeToRunEvents(
-  handlers: RunEventHandlers,
-): Promise<UnlistenFn> {
-  if (!isTauriRuntime()) {
-    return () => undefined;
-  }
+type EventStrategy = "native" | "preview";
 
+const resolveEventStrategy = (): EventStrategy =>
+  isTauriRuntime() ? "native" : "preview";
+
+const subscribeToNativeRunEvents = async (
+  handlers: RunEventHandlers,
+): Promise<UnlistenFn> => {
   const unlisteners = await Promise.all([
     listen<RunStarted>("run-started", (event) =>
       handlers.onStarted(event.payload),
     ),
-    listen<RunOutput>("run-output", (event) =>
-      handlers.onOutput(event.payload),
-    ),
+    listen<RunOutput>("run-output", (event) => handlers.onOutput(event.payload)),
     listen<RunFinished>("run-finished", (event) =>
       handlers.onFinished(event.payload),
     ),
@@ -38,16 +37,35 @@ export async function subscribeToRunEvents(
   return () => {
     unlisteners.forEach((unlisten) => unlisten());
   };
+};
+
+const subscribeToPreviewRunEvents = async (): Promise<UnlistenFn> => () =>
+  undefined;
+
+export async function subscribeToRunEvents(
+  handlers: RunEventHandlers,
+): Promise<UnlistenFn> {
+  if (resolveEventStrategy() === "native") {
+    return subscribeToNativeRunEvents(handlers);
+  }
+  return subscribeToPreviewRunEvents();
 }
+
+const subscribeToNativeCleanupProgress = async (
+  onProgress: (progress: CleanupProgress) => void,
+): Promise<UnlistenFn> =>
+  listen<CleanupProgress>("cleanup-progress", (event) =>
+    onProgress(event.payload),
+  );
+
+const subscribeToPreviewCleanupProgress = async (): Promise<UnlistenFn> => () =>
+  undefined;
 
 export async function subscribeToCleanupProgress(
   onProgress: (progress: CleanupProgress) => void,
 ): Promise<UnlistenFn> {
-  if (!isTauriRuntime()) {
-    return () => undefined;
+  if (resolveEventStrategy() === "native") {
+    return subscribeToNativeCleanupProgress(onProgress);
   }
-
-  return listen<CleanupProgress>("cleanup-progress", (event) =>
-    onProgress(event.payload),
-  );
+  return subscribeToPreviewCleanupProgress();
 }
