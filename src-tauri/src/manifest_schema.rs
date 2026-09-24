@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 pub(crate) const CURRENT_SCHEMA: u32 = 3;
 pub(crate) const LEGACY_SCHEMA: u32 = 1;
+pub(crate) const HOST_REQUIREMENTS_SCHEMA: u32 = 2;
 
 pub(crate) fn is_supported_schema(schema: u32) -> bool {
     (LEGACY_SCHEMA..=CURRENT_SCHEMA).contains(&schema)

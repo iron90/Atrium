@@ -71,8 +71,8 @@ pub fn scan_project_configuration(
         return invalid_configuration(
             vec![format!(
                 "Host requirements require Atrium manifest schema {}. Update schema = {} before declaring build host requirements.",
-                manifest_schema::CURRENT_SCHEMA,
-                manifest_schema::CURRENT_SCHEMA
+                manifest_schema::HOST_REQUIREMENTS_SCHEMA,
+                manifest_schema::HOST_REQUIREMENTS_SCHEMA
             )],
             Some(document.schema),
         );
@@ -279,6 +279,54 @@ build = ["dist"]
         assert!(result.platforms.is_empty());
         assert!(result.channels.is_empty());
         assert!(result.build_profiles.is_empty());
+
+        fs::remove_dir_all(root).expect("remove project");
+    }
+
+    #[test]
+    fn schema_one_host_requirements_requires_schema_two() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-schema-one-host-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 1
+
+[[platforms]]
+id = "macos"
+
+[[channels]]
+id = "local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.host_requirements]
+run = ["macos"]
+"#,
+        )
+        .expect("write manifest");
+
+        let result = scan_project_configuration(&root, &[]);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(
+            result
+                .configuration
+                .issues
+                .iter()
+                .any(|issue| issue.contains("Host requirements require Atrium manifest schema 2.")),
+            "issues: {:?}",
+            result.configuration.issues
+        );
 
         fs::remove_dir_all(root).expect("remove project");
     }
