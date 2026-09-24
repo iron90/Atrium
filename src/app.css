@@ -579,6 +579,31 @@ button[aria-busy="true"] {
     10px "DM Mono",
     monospace;
 }
+.scan-warnings {
+  margin: 0 3px 15px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  font-size: 12px;
+  animation: status-enter var(--motion-base) var(--ease-emphasized) both;
+}
+.scan-warnings strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--warning);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.scan-warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+.scan-warnings li + li {
+  margin-top: 4px;
+}
 
 .project-list,
 .inspector {

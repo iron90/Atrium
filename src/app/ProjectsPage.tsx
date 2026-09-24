@@ -68,6 +68,17 @@ export const ProjectsPage = memo(function ProjectsPage({
           </div>
         </div>
 
+        {snapshot.warnings.length > 0 ? (
+          <div className="scan-warnings" role="status">
+            <strong>{t("scanWarnings")}</strong>
+            <ul>
+              {snapshot.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         {layout === "matrix" ? (
           <PlatformMatrix
             projects={visibleProjects}
