@@ -2755,8 +2755,13 @@ button[aria-busy="true"] {
   width: 29px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  color: var(--danger);
   background: transparent;
+}
+.workspace-path-row .workspace-path-browse {
+  color: var(--muted);
+}
+.workspace-path-row .workspace-path-remove {
+  color: var(--danger);
 }
 .secondary-button {
   justify-self: start;

@@ -1,7 +1,13 @@
 import { memo } from "react";
+import { bridge, isTauriRuntime } from "../../bridge";
 import { useI18n } from "../../i18n";
 import type { Language } from "../../i18n";
 import type { LayoutId, ThemeId } from "./model";
+
+function resolveWorkspaceDirectory(): Promise<string | null> {
+  if (!isTauriRuntime()) return Promise.resolve(null);
+  return bridge.pickWorkspaceDirectory();
+}
 
 export const SettingsPanel = memo(function SettingsPanel({
   theme,
@@ -96,6 +102,23 @@ export const SettingsPanel = memo(function SettingsPanel({
                 />
                 <button
                   type="button"
+                  className="workspace-path-browse"
+                  aria-label={`${t("browseWorkspace")} ${index + 1}`}
+                  onClick={() => {
+                    void resolveWorkspaceDirectory().then((selected) => {
+                      if (!selected) return;
+                      const next = [...workspacePaths];
+                      next[index] = selected;
+                      onWorkspacePathsChange(next);
+                    });
+                  }}
+                >
+                  …
+                </button>
+                <button
+                  type="button"
+                  className="workspace-path-remove"
+                  aria-label={`${t("removeWorkspace")} ${index + 1}`}
                   onClick={() =>
                     onWorkspacePathsChange(
                       workspacePaths.filter(
@@ -112,7 +135,19 @@ export const SettingsPanel = memo(function SettingsPanel({
           <button
             type="button"
             className="secondary-button"
-            onClick={() => onWorkspacePathsChange([...workspacePaths, ""])}
+            onClick={() => {
+              if (!isTauriRuntime()) {
+                onWorkspacePathsChange([...workspacePaths, ""]);
+                return;
+              }
+              void resolveWorkspaceDirectory().then((selected) => {
+                onWorkspacePathsChange(
+                  selected
+                    ? [...workspacePaths.filter(Boolean), selected]
+                    : [...workspacePaths, ""],
+                );
+              });
+            }}
           >
             {t("addWorkspace")}
           </button>

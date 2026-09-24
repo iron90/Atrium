@@ -243,6 +243,7 @@ export const en = {
   hideProject: "Hide project",
   restoreProject: "Restore project",
   addWorkspace: "Add workspace",
+  browseWorkspace: "Browse for workspace",
   removeWorkspace: "Remove workspace",
   excludeDirectories: "Excluded directory names",
   workspaceExclusionDescription:
@@ -507,6 +508,7 @@ export const zh: Record<keyof typeof en, string> = {
   hideProject: "隐藏项目",
   restoreProject: "恢复项目",
   addWorkspace: "添加工作区",
+  browseWorkspace: "浏览选择工作区",
   removeWorkspace: "移除工作区",
   excludeDirectories: "排除的目录名",
   workspaceExclusionDescription:

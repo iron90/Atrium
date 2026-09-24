@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { bridge } from "../../bridge";
 import type { WorkspaceSnapshot } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { WorkspaceMessage } from "../../shared/activity";
@@ -26,7 +25,6 @@ export interface UseWorkspaceScanLifecycleOptions {
   onMessage: (message: WorkspaceMessage) => void;
   onApplySnapshot: (snapshot: WorkspaceSnapshot) => void;
   onSnapshotTimestamp: (scannedAt: number) => void;
-  defaultWorkspacePath?: () => Promise<string>;
   scanWorkspacesFn?: typeof scanWorkspaces;
 }
 
@@ -51,7 +49,6 @@ export function useWorkspaceScanLifecycle({
   onMessage,
   onApplySnapshot,
   onSnapshotTimestamp,
-  defaultWorkspacePath = bridge.defaultWorkspacePath,
   scanWorkspacesFn = scanWorkspaces,
 }: UseWorkspaceScanLifecycleOptions): UseWorkspaceScanLifecycleResult {
   const [rootPath, setRootPath] = useState(initialRootPath);
@@ -96,29 +93,21 @@ export function useWorkspaceScanLifecycle({
   useEffect(() => {
     if (!nativeRuntime) return undefined;
 
+    const savedPreferences = preferencesRef.current;
+    const savedPaths = savedPreferences.workspaces?.length
+      ? savedPreferences.workspaces
+      : savedPreferences.rootPath?.trim()
+        ? [savedPreferences.rootPath.trim()]
+        : [];
+    if (!savedPaths.length) return undefined;
+
     let disposed = false;
     const requestId = scanRequests.begin();
-    void defaultWorkspacePath()
-      .then((defaultPath) => {
-        if (disposed || !scanRequests.isCurrent(requestId)) return null;
-        const preferences = preferencesRef.current;
-        const nextRoot = preferences.rootPath?.trim() || defaultPath;
-        if (!nextRoot) {
-          throw new Error("No default workspace path is available.");
-        }
-        const nextPaths = preferences.workspaces?.length
-          ? preferences.workspaces
-          : [nextRoot];
-        if (!disposed) {
-          setRootPath(nextPaths[0] ?? nextRoot);
-          setWorkspacePaths(nextPaths);
-        }
-        return scanWorkspacesFn({
-          paths: nextPaths,
-          excludeNames: excludeNamesRef.current,
-          language: languageRef.current,
-        });
-      })
+    void scanWorkspacesFn({
+      paths: savedPaths,
+      excludeNames: excludeNamesRef.current,
+      language: languageRef.current,
+    })
       .then((nextSnapshot) => {
         if (!nextSnapshot || disposed || !scanRequests.isCurrent(requestId)) {
           return;
@@ -141,7 +130,7 @@ export function useWorkspaceScanLifecycle({
     return () => {
       disposed = true;
     };
-  }, [defaultWorkspacePath, nativeRuntime, scanRequests, scanWorkspacesFn]);
+  }, [nativeRuntime, scanRequests, scanWorkspacesFn]);
 
   useEffect(() => {
     if (!nativeRuntime || !workspacePaths.some((path) => path.trim()))

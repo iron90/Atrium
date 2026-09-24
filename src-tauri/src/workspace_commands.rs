@@ -13,19 +13,6 @@ use crate::state::AppState;
 use crate::storage::clean_project_artifacts_selected_with_progress;
 
 #[tauri::command]
-pub fn default_workspace_path_command() -> String {
-    let home = std::env::var("USERPROFILE")
-        .or_else(|_| std::env::var("HOME"))
-        .unwrap_or_else(|_| ".".to_string());
-    let preferred = Path::new(&home).join("Z-Project");
-    if preferred.is_dir() {
-        preferred.to_string_lossy().to_string()
-    } else {
-        home
-    }
-}
-
-#[tauri::command]
 pub async fn scan_workspace_command(
     root_path: String,
     excluded_names: Option<Vec<String>>,

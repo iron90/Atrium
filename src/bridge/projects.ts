@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { DEMO_WORKSPACE_ROOT, demoSnapshot } from "./fake-bridge";
+import { demoSnapshot } from "./fake-bridge";
 import { isTauriRuntime } from "./runtime";
 import type {
   CleanupResult,
@@ -9,11 +9,15 @@ import type {
   WorkspaceSnapshot,
 } from "./types";
 
-export const defaultWorkspacePath = async (): Promise<string> => {
-  if (!isTauriRuntime()) {
-    return DEMO_WORKSPACE_ROOT;
-  }
-  return invoke<string>("default_workspace_path_command");
+export const pickWorkspaceDirectory = async (): Promise<string | null> => {
+  if (!isTauriRuntime()) return null;
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const result = await open({
+    directory: true,
+    multiple: false,
+    canCreateDirectories: true,
+  });
+  return typeof result === "string" ? result : null;
 };
 
 export const scanWorkspace = async (

@@ -14,7 +14,6 @@ function renderInitialScan(
   language: "en" | "zh" = "en",
 ) {
   const initialSnapshot = emptySnapshot("/workspace");
-  const defaultWorkspacePath = vi.fn(async () => "/workspace");
   const scanWorkspacesFn = vi.fn(
     async (args: ScanArgs): Promise<WorkspaceSnapshot> => {
       void args;
@@ -25,7 +24,7 @@ function renderInitialScan(
   const onMessage = vi.fn();
   const onApplySnapshot = vi.fn();
   const onSnapshotTimestamp = vi.fn();
-  const preferences = {};
+  const preferences = { workspaces: ["/workspace"] };
   const { rerender, result } = renderHook(
     ({
       nextExcludeNames,
@@ -47,13 +46,11 @@ function renderInitialScan(
         onMessage,
         onApplySnapshot,
         onSnapshotTimestamp,
-        defaultWorkspacePath,
         scanWorkspacesFn,
       }),
     { initialProps: { nextExcludeNames: excludeNames, nextLanguage: language } },
   );
   return {
-    defaultWorkspacePath,
     scanWorkspacesFn,
     rerender,
     result,
@@ -62,8 +59,7 @@ function renderInitialScan(
 
 describe("workspace scan lifecycle", () => {
   it("does not rescan the workspace when only the language changes", async () => {
-    const { defaultWorkspacePath, scanWorkspacesFn, rerender } =
-      renderInitialScan();
+    const { scanWorkspacesFn, rerender } = renderInitialScan();
 
     await waitFor(() => expect(scanWorkspacesFn).toHaveBeenCalledTimes(1));
 
@@ -73,13 +69,11 @@ describe("workspace scan lifecycle", () => {
     });
     await new Promise((resolve) => window.setTimeout(resolve, 20));
 
-    expect(defaultWorkspacePath).toHaveBeenCalledTimes(1);
     expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
   });
 
   it("does not rescan the workspace while exclude names are being edited", async () => {
-    const { defaultWorkspacePath, scanWorkspacesFn, rerender } =
-      renderInitialScan();
+    const { scanWorkspacesFn, rerender } = renderInitialScan();
 
     await waitFor(() => expect(scanWorkspacesFn).toHaveBeenCalledTimes(1));
 
@@ -88,11 +82,37 @@ describe("workspace scan lifecycle", () => {
     }
     await new Promise((resolve) => window.setTimeout(resolve, 20));
 
-    expect(defaultWorkspacePath).toHaveBeenCalledTimes(1);
     expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
     expect(vi.mocked(scanWorkspacesFn).mock.calls[0][0]?.excludeNames).toEqual(
       [],
     );
+  });
+
+  it("skips the automatic scan when no workspace is saved", async () => {
+    const initialSnapshot = emptySnapshot("");
+    const scanWorkspacesFn = vi.fn(async () => initialSnapshot);
+
+    renderHook(() =>
+      useWorkspaceScanLifecycle({
+        nativeRuntime: true,
+        preferences: {},
+        initialRootPath: "",
+        initialWorkspacePaths: [],
+        initialSnapshot,
+        snapshot: initialSnapshot,
+        excludeNames: [],
+        language: "en",
+        onError: noop,
+        onMessage: noop,
+        onApplySnapshot: noop,
+        onSnapshotTimestamp: noop,
+        scanWorkspacesFn,
+      }),
+    );
+
+    await new Promise((resolve) => window.setTimeout(resolve, 20));
+
+    expect(scanWorkspacesFn).not.toHaveBeenCalled();
   });
 
   it("clears the scanning flag even when another request preempts the gate", async () => {
@@ -104,11 +124,10 @@ describe("workspace scan lifecycle", () => {
           pending.push(resolve);
         }),
     );
-    const defaultWorkspacePath = vi.fn(async () => "/workspace");
     const { result } = renderHook(() =>
       useWorkspaceScanLifecycle({
         nativeRuntime: true,
-        preferences: {},
+        preferences: { workspaces: ["/workspace"] },
         initialRootPath: "/workspace",
         initialWorkspacePaths: ["/workspace"],
         initialSnapshot,
@@ -119,7 +138,6 @@ describe("workspace scan lifecycle", () => {
         onMessage: noop,
         onApplySnapshot: noop,
         onSnapshotTimestamp: noop,
-        defaultWorkspacePath,
         scanWorkspacesFn,
       }),
     );
@@ -153,12 +171,11 @@ describe("workspace scan lifecycle", () => {
       );
       const onError = vi.fn();
       const onMessage = vi.fn();
-      const defaultWorkspacePath = vi.fn(async () => "/workspace");
 
       renderHook(() =>
         useWorkspaceScanLifecycle({
           nativeRuntime: true,
-          preferences: {},
+          preferences: { workspaces: ["/workspace"] },
           initialRootPath: "/workspace",
           initialWorkspacePaths: ["/workspace"],
           initialSnapshot,
@@ -169,7 +186,6 @@ describe("workspace scan lifecycle", () => {
           onMessage,
           onApplySnapshot: noop,
           onSnapshotTimestamp: noop,
-          defaultWorkspacePath,
           scanWorkspacesFn,
         }),
       );

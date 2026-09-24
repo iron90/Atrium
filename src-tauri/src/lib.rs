@@ -33,9 +33,9 @@ mod workspace_scan;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(state::AppState::default())
         .invoke_handler(tauri::generate_handler![
-            workspace_commands::default_workspace_path_command,
             workspace_commands::scan_workspace_command,
             workspace_commands::inspect_project_command,
             workspace_commands::generate_project_configuration_report_command,
