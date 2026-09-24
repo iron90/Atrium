@@ -3,7 +3,6 @@ import { demoSnapshot } from "./fake-bridge";
 import { isTauriRuntime } from "./runtime";
 import type {
   CleanupResult,
-  ProjectConfigurationReport,
   ProjectGuidanceReport,
   ProjectSnapshot,
   WorkspaceSnapshot,
@@ -70,21 +69,6 @@ export const cleanProjectArtifacts = async (
     projectPath,
     selectedPaths,
   });
-};
-
-export const generateProjectConfigurationReport = async (
-  projectPath: string,
-): Promise<ProjectConfigurationReport> => {
-  if (!isTauriRuntime()) {
-    return {
-      path: ".atrium/reports/project-configuration.md",
-      status: "missing",
-    };
-  }
-  return invoke<ProjectConfigurationReport>(
-    "generate_project_configuration_report_command",
-    { projectPath },
-  );
 };
 
 export const generateProjectGuidance = async (

@@ -38,7 +38,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             workspace_commands::scan_workspace_command,
             workspace_commands::inspect_project_command,
-            workspace_commands::generate_project_configuration_report_command,
             workspace_commands::generate_project_guidance_command,
             workspace_commands::clean_project_artifacts_command,
             run_commands::run_project_command,

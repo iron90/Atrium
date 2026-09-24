@@ -3,11 +3,8 @@ use std::path::Path;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::command_boundary::run_blocking;
-use crate::guidance::{write_project_configuration_report, write_project_guidance_reports};
-use crate::model::{
-    CleanupResult, ProjectConfigurationReport, ProjectGuidanceReport, ProjectSnapshot,
-    WorkspaceSnapshot,
-};
+use crate::guidance::write_project_guidance_reports;
+use crate::model::{CleanupResult, ProjectGuidanceReport, ProjectSnapshot, WorkspaceSnapshot};
 use crate::scanner::{scan_project, scan_project_with_storage, scan_workspace_with_exclusions};
 use crate::state::AppState;
 use crate::storage::clean_project_artifacts_selected_with_progress;
@@ -72,18 +69,6 @@ pub async fn clean_project_artifacts_command(
                 }
             },
         )
-    })
-    .await
-}
-
-#[tauri::command]
-pub async fn generate_project_configuration_report_command(
-    project_path: String,
-) -> Result<ProjectConfigurationReport, String> {
-    run_blocking("Project configuration report", move || {
-        let project = scan_project(Path::new(&project_path))
-            .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        write_project_configuration_report(Path::new(&project_path), &project)
     })
     .await
 }

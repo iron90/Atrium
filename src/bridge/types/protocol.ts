@@ -12,11 +12,6 @@ export interface IconConformance {
   resolvedIcon: string | null;
 }
 
-export interface ProjectConfigurationReport {
-  path: string;
-  status: ProjectConfigurationStatus;
-}
-
 export interface ProjectGuidanceReport {
   paths: string[];
   configurationStatus: ProjectConfigurationStatus;
