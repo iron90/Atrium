@@ -154,19 +154,21 @@ where
     }
 
     fn percent(&self) -> u8 {
-        if self.total_bytes > 0 {
-            return (self
-                .completed_bytes
-                .min(self.total_bytes)
-                .saturating_mul(100)
-                / self.total_bytes) as u8;
+        if let Some(percent) = self
+            .completed_bytes
+            .min(self.total_bytes)
+            .saturating_mul(100)
+            .checked_div(self.total_bytes)
+        {
+            return percent as u8;
         }
-        if self.total_files > 0 {
-            return (self
-                .completed_files
-                .min(self.total_files)
-                .saturating_mul(100)
-                / self.total_files) as u8;
+        if let Some(percent) = self
+            .completed_files
+            .min(self.total_files)
+            .saturating_mul(100)
+            .checked_div(self.total_files)
+        {
+            return percent as u8;
         }
         100
     }
@@ -182,7 +184,11 @@ where
 {
     let metadata = fs::symlink_metadata(target)?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
-        let bytes = metadata.is_file().then_some(metadata.len()).unwrap_or(0);
+        let bytes = if metadata.is_file() {
+            metadata.len()
+        } else {
+            0
+        };
         fs::remove_file(target)?;
         progress.advance(
             bytes,

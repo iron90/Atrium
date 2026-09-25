@@ -39,7 +39,7 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
             .find(|candidate| scripts.contains_key(**candidate))
         {
             selected.insert((*name).to_string());
-            commands.push(package_command(path, manager, name, kind.clone()));
+            commands.push(package_command(path, manager, name, *kind));
         }
     }
     for name in names {
