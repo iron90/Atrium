@@ -23,18 +23,34 @@ const resolveEventStrategy = (): EventStrategy =>
 const subscribeToNativeRunEvents = async (
   handlers: RunEventHandlers,
 ): Promise<UnlistenFn> => {
-  const unlisteners = await Promise.all([
-    listen<RunStarted>("run-started", (event) =>
-      handlers.onStarted(event.payload),
-    ),
-    listen<RunOutput>("run-output", (event) =>
-      handlers.onOutput(event.payload),
-    ),
-    listen<RunFinished>("run-finished", (event) =>
-      handlers.onFinished(event.payload),
-    ),
-    listen<RunError>("run-error", (event) => handlers.onError?.(event.payload)),
-  ]);
+  // Subscribe sequentially and clean up on failure: a rejected listen must
+  // not leak the unlisteners that already resolved.
+  const unlisteners: UnlistenFn[] = [];
+  try {
+    unlisteners.push(
+      await listen<RunStarted>("run-started", (event) =>
+        handlers.onStarted(event.payload),
+      ),
+    );
+    unlisteners.push(
+      await listen<RunOutput>("run-output", (event) =>
+        handlers.onOutput(event.payload),
+      ),
+    );
+    unlisteners.push(
+      await listen<RunFinished>("run-finished", (event) =>
+        handlers.onFinished(event.payload),
+      ),
+    );
+    unlisteners.push(
+      await listen<RunError>("run-error", (event) =>
+        handlers.onError?.(event.payload),
+      ),
+    );
+  } catch (error) {
+    unlisteners.forEach((unlisten) => unlisten());
+    throw error;
+  }
 
   return () => {
     unlisteners.forEach((unlisten) => unlisten());
