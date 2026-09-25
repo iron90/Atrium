@@ -4,8 +4,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::filesystem_metrics::PathMetricsCache;
+use crate::manifest_projection::path_targets_protected_component;
 use crate::model::{CleanupDeclaration, ProjectStorage, StorageEntry, StorageEntryKind};
 use crate::project_path::resolve_existing_path_inside_project;
+
+// Execution-time mirrors of the declaration-time protection list: Win32 path
+// normalization can make a declared component resolve to a protected name.
+const EXECUTION_PROTECTED_COMPONENTS: &[&str] = &[".git", ".atrium"];
 
 pub fn inspect_project_storage(
     project_path: &Path,
@@ -70,6 +75,14 @@ pub(super) fn resolve_safe_cleanable_directory(root: &Path, target: &Path) -> Op
     let canonical_target = resolve_existing_path_inside_project(root, target).ok()?;
     let metadata = fs::symlink_metadata(target).ok()?;
     if !metadata.is_dir() || metadata.file_type().is_symlink() {
+        return None;
+    }
+    let canonical_root = root.canonicalize().ok()?;
+    if path_targets_protected_component(
+        &canonical_root,
+        &canonical_target,
+        EXECUTION_PROTECTED_COMPONENTS,
+    ) {
         return None;
     }
     Some(canonical_target)
