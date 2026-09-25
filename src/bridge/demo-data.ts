@@ -150,12 +150,10 @@ const withProjectWorkingDirectory = (
   })),
 });
 
-export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
-  rootPath,
-  scannedAt: now,
-  warnings: [],
-  projects: [
-    {
+// Typed as ProjectSnapshot so demo drift from the real bridge contract is a
+// compile error instead of silently passing through a cast.
+const demoProjects = (rootPath: string): ProjectSnapshot[] => [
+  {
       ...demoProjectDefaults,
       id: `${rootPath}/SampleForge`,
       name: "SampleForge",
@@ -626,5 +624,11 @@ export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
       repo: null,
       scannedAt: now,
     },
-  ].map((project) => withProjectWorkingDirectory(project as ProjectSnapshot)),
+];
+
+export const demoSnapshot = (rootPath: string): WorkspaceSnapshot => ({
+  rootPath,
+  scannedAt: now,
+  warnings: [],
+  projects: demoProjects(rootPath).map(withProjectWorkingDirectory),
 });
