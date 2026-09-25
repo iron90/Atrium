@@ -149,7 +149,9 @@ export function useWorkspaceScanLifecycle({
     const refreshWorkspace = async () => {
       if (disposed || scanRequests.isBusy) return;
       const requestId = scanRequests.begin();
-      onMessage({ type: "refreshingWorkspace" });
+      // Background polls stay silent: announcing them would overwrite the
+      // status banner every 10 seconds and bury messages the user should
+      // read. Only real changes and failures are reported.
       try {
         const nextSnapshot = await withTimeout(
           scanWorkspacesFn({
@@ -172,10 +174,6 @@ export function useWorkspaceScanLifecycle({
           });
         } else {
           onSnapshotTimestamp(nextSnapshot.scannedAt);
-          onMessage({
-            type: "projects",
-            count: nextSnapshot.projects.length,
-          });
         }
       } catch (refreshError) {
         if (!disposed && scanRequests.isCurrent(requestId)) {
