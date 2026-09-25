@@ -48,7 +48,9 @@ export function ProjectRunSection({
         ? t("failed")
         : t("cancelled");
   const exitLabel =
-    run.exitCode === null ? null : fill(t("exit"), "code", String(run.exitCode));
+    run.exitCode === null
+      ? null
+      : fill(t("exit"), "code", String(run.exitCode));
   const meta = [exitLabel, `${Math.round(run.durationMs / 1000)}s`]
     .filter(Boolean)
     .join(" · ");

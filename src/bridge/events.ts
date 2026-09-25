@@ -27,7 +27,9 @@ const subscribeToNativeRunEvents = async (
     listen<RunStarted>("run-started", (event) =>
       handlers.onStarted(event.payload),
     ),
-    listen<RunOutput>("run-output", (event) => handlers.onOutput(event.payload)),
+    listen<RunOutput>("run-output", (event) =>
+      handlers.onOutput(event.payload),
+    ),
     listen<RunFinished>("run-finished", (event) =>
       handlers.onFinished(event.payload),
     ),

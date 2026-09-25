@@ -5,17 +5,11 @@ export {
   syncStatusAriaLabel,
   syncStatusClass,
 } from "./git-presentation";
+export { commandLabel, commandForProfile } from "./command-presentation";
 export {
-  commandLabel,
-  profileCommandId,
-  commandForProfile,
-} from "./command-presentation";
-export {
-  hasConfiguredCapability,
   hasTrustedContext,
   capabilityLabel,
   capabilityStatusLabel,
-  protocolStatusDescription,
   protocolStatusLabel,
   protocolViewModel,
 } from "./protocol-presentation";

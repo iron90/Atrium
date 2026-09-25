@@ -48,7 +48,9 @@ function renderInitialScan(
         onSnapshotTimestamp,
         scanWorkspacesFn,
       }),
-    { initialProps: { nextExcludeNames: excludeNames, nextLanguage: language } },
+    {
+      initialProps: { nextExcludeNames: excludeNames, nextLanguage: language },
+    },
   );
   return {
     scanWorkspacesFn,

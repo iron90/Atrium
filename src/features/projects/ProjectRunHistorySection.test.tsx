@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RunFinished } from "../../bridge";
 import { demoSnapshot } from "../../bridge/fake-bridge";
@@ -72,9 +78,7 @@ describe("ProjectRunHistorySection", () => {
     );
     await waitFor(() => expect(listRunHistoryMock).toHaveBeenCalledTimes(1));
 
-    rerender(
-      <ProjectRunHistorySection project={project} refreshToken={1} />,
-    );
+    rerender(<ProjectRunHistorySection project={project} refreshToken={1} />);
     await waitFor(() => expect(listRunHistoryMock).toHaveBeenCalledTimes(2));
   });
 
@@ -83,13 +87,13 @@ describe("ProjectRunHistorySection", () => {
     openRunLogMock.mockResolvedValue(undefined);
 
     render(<ProjectRunHistorySection project={project} />);
-    await waitFor(() => expect(screen.getByText("Open log")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("Open log")).toBeInTheDocument(),
+    );
 
     fireEvent.click(screen.getByText("Open log"));
 
-    await waitFor(() =>
-      expect(openRunLogMock).toHaveBeenCalledWith("run-1"),
-    );
+    await waitFor(() => expect(openRunLogMock).toHaveBeenCalledWith("run-1"));
   });
 
   it("shows an empty message when the project has no runs", async () => {

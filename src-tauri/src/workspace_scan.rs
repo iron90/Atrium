@@ -7,11 +7,6 @@ use crate::project_scan::scan_project;
 use crate::time::now_millis;
 use crate::workspace_policy::{is_ignored_name, is_project_candidate};
 
-#[allow(dead_code)]
-pub fn scan_workspace(root_path: &Path) -> Result<WorkspaceSnapshot, String> {
-    scan_workspace_with_exclusions(root_path, &[])
-}
-
 pub fn scan_workspace_with_exclusions(
     root_path: &Path,
     excluded_names: &[String],

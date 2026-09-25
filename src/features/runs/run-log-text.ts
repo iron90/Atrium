@@ -24,6 +24,12 @@ export function renderRunLogText(record: RunFinished): string {
   if (record.worktreeClean !== null) {
     lines.push(`Worktree clean: ${record.worktreeClean}`);
   }
-  lines.push("", "--- stdout ---", record.stdout, "--- stderr ---", record.stderr);
+  lines.push(
+    "",
+    "--- stdout ---",
+    record.stdout,
+    "--- stderr ---",
+    record.stderr,
+  );
   return lines.join("\n");
 }

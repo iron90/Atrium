@@ -138,7 +138,9 @@ describe("build profile card", () => {
 
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
     expect(document.querySelector(".profile-action-hint")).toBeNull();
-    expect(screen.getByText("No build artifacts are declared for this profile.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No build artifacts are declared for this profile."),
+    ).toBeInTheDocument();
   });
 
   it("disables actions whose declared host does not match the current host", () => {

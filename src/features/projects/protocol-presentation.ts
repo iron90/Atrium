@@ -55,7 +55,7 @@ export const protocolViewModel = (
   };
 };
 
-export const hasConfiguredCapability = (
+const hasConfiguredCapability = (
   project: ProjectSnapshot,
   capabilityId: string,
 ): boolean =>
@@ -116,19 +116,5 @@ export const protocolStatusLabel = (
       return t("protocolStatusNeedsUpdate");
     case "missing":
       return t("protocolStatusMissing");
-  }
-};
-
-export const protocolStatusDescription = (
-  status: ProtocolCardStatus,
-  t: (key: TranslationKey) => string,
-): string => {
-  switch (status) {
-    case "configured":
-      return t("protocolStatusDescriptionConfigured");
-    case "needs-update":
-      return t("protocolStatusDescriptionNeedsUpdate");
-    case "missing":
-      return t("protocolStatusDescriptionMissing");
   }
 };

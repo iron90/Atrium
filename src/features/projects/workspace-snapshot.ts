@@ -60,9 +60,6 @@ const projectFingerprintData = (project: ProjectSnapshot) => ({
   cleanup: project.cleanup,
 });
 
-export const projectFingerprint = (project: ProjectSnapshot): string =>
-  JSON.stringify(projectFingerprintData(project));
-
 export const snapshotFingerprint = (snapshot: WorkspaceSnapshot): string =>
   JSON.stringify(snapshot.projects.map(projectFingerprintData));
 

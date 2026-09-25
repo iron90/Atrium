@@ -81,12 +81,6 @@ export const en = {
   protocolStatusConfigured: "Protocol up to date",
   protocolStatusNeedsUpdate: "Protocol needs update",
   protocolStatusMissing: "Protocol not connected",
-  protocolStatusDescriptionConfigured:
-    "The protocol is connected and uses the latest supported version.",
-  protocolStatusDescriptionNeedsUpdate:
-    "The protocol is connected, but its manifest or Agent guidance needs to be updated.",
-  protocolStatusDescriptionMissing:
-    "Connect the Atrium protocol to enable project-aware actions.",
   protocolDetails: "Protocol details",
   protocolDetailsSummary: "{count} capability checks",
   protocolCapabilities: "Capabilities",
@@ -356,10 +350,6 @@ export const zh: Record<keyof typeof en, string> = {
   protocolStatusConfigured: "协议已是最新版本",
   protocolStatusNeedsUpdate: "协议需要更新",
   protocolStatusMissing: "尚未接入协议",
-  protocolStatusDescriptionConfigured: "协议已接入，并且使用的是最新版本。",
-  protocolStatusDescriptionNeedsUpdate:
-    "协议已接入，但 manifest 或项目 Agent 引导需要更新。",
-  protocolStatusDescriptionMissing: "接入 Atrium 协议后即可启用项目相关操作。",
   protocolDetails: "协议检查细则",
   protocolDetailsSummary: "共 {count} 项能力检查",
   protocolCapabilities: "能力",

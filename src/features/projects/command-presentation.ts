@@ -11,7 +11,7 @@ export const commandLabel = (
   return command.label;
 };
 
-export const profileCommandId = (
+const profileCommandId = (
   profile: BuildProfile,
   action: ProfileAction,
 ): string | null => {

@@ -21,10 +21,7 @@ export const nativeToolMethods = {
   openProjectRemote: async (remote: string): Promise<void> =>
     invoke<void>("open_project_remote_command", { remote }),
 
-  openProjectLink: async (
-    projectPath: string,
-    linkId: string,
-  ): Promise<void> =>
+  openProjectLink: async (projectPath: string, linkId: string): Promise<void> =>
     invoke<void>("open_project_link_command", { projectPath, linkId }),
 };
 

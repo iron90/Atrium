@@ -6,7 +6,6 @@ pub use inspection::inspect_project_storage;
 
 #[cfg(test)]
 mod tests {
-    use super::cleanup::{clean_project_artifacts, clean_project_artifacts_selected};
     use super::{clean_project_artifacts_selected_with_progress, inspect_project_storage};
     use crate::model::{CleanupDeclaration, CleanupProgressPhase};
     use std::fs;
@@ -53,7 +52,8 @@ mod tests {
             cache: Vec::new(),
             build: vec!["build".to_string()],
         };
-        let result = clean_project_artifacts(&root, &cleanup).expect("clean project fixture");
+        let result = clean_project_artifacts_selected_with_progress(&root, &cleanup, None, |_| {})
+            .expect("clean project fixture");
         assert_eq!(result.removed_entries.len(), 1);
         assert!(result.failed_entries.is_empty());
         assert!(!root.join("build").exists());
@@ -76,8 +76,13 @@ mod tests {
             build: Vec::new(),
         };
         let selected = vec!["source".to_string()];
-        let result = clean_project_artifacts_selected(&root, &cleanup, Some(&selected))
-            .expect("clean selected fixture");
+        let result = clean_project_artifacts_selected_with_progress(
+            &root,
+            &cleanup,
+            Some(&selected),
+            |_| {},
+        )
+        .expect("clean selected fixture");
         assert!(result.removed_entries.is_empty());
         assert!(root.join("cache/item").exists());
         assert!(root.join("source/item").exists());
@@ -145,7 +150,8 @@ mod tests {
             cache: vec!["linked/cache".to_string()],
             build: Vec::new(),
         };
-        let result = clean_project_artifacts(&root, &cleanup).expect("clean project fixture");
+        let result = clean_project_artifacts_selected_with_progress(&root, &cleanup, None, |_| {})
+            .expect("clean project fixture");
 
         assert!(result.removed_entries.is_empty());
         assert!(outside.join("cache/item").exists());

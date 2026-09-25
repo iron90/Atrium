@@ -13,7 +13,10 @@ import type {
   RunStarted,
   RunStatus,
 } from "../../bridge";
-import { useRunEventStream, type FinishedRunRecord } from "./use-run-event-stream";
+import {
+  useRunEventStream,
+  type FinishedRunRecord,
+} from "./use-run-event-stream";
 
 export type { RunMessage } from "../../shared/activity";
 
@@ -181,13 +184,7 @@ export function useProjectRunner({
             demoTimers.current.delete(started.runId);
             const demoLine = translate(language, "demoCompleted");
             replaceOutput(started.runId, [demoLine]);
-            recordSyntheticFinished(
-              started,
-              "succeeded",
-              0,
-              demoLine,
-              "",
-            );
+            recordSyntheticFinished(started, "succeeded", 0, demoLine, "");
             completeRun(started.runId);
             onMessage({
               type: "demo",
@@ -222,13 +219,7 @@ export function useProjectRunner({
         await bridge.stopProjectCommand(runId);
         cancelDemoTimer(runId);
         const lines = outputLinesFor(runId);
-        recordSyntheticFinished(
-          run,
-          "cancelled",
-          null,
-          lines.join("\n"),
-          "",
-        );
+        recordSyntheticFinished(run, "cancelled", null, lines.join("\n"), "");
         completeRun(runId);
         onMessage({ type: "cancelled" });
       } catch (stopError) {

@@ -11,22 +11,6 @@ use super::inspection::{
     discover_cleanable_entries, inspect_project_storage, resolve_safe_cleanable_directory,
 };
 
-#[allow(dead_code)]
-pub fn clean_project_artifacts(
-    project_path: &Path,
-    cleanup: &CleanupDeclaration,
-) -> Result<CleanupResult, String> {
-    clean_project_artifacts_selected(project_path, cleanup, None)
-}
-
-pub fn clean_project_artifacts_selected(
-    project_path: &Path,
-    cleanup: &CleanupDeclaration,
-    selected_paths: Option<&[String]>,
-) -> Result<CleanupResult, String> {
-    clean_project_artifacts_selected_with_progress(project_path, cleanup, selected_paths, |_| {})
-}
-
 pub fn clean_project_artifacts_selected_with_progress<F>(
     project_path: &Path,
     cleanup: &CleanupDeclaration,

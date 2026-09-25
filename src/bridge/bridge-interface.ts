@@ -11,7 +11,10 @@ import type {
 
 export interface AtriumBridge {
   pickWorkspaceDirectory(): Promise<string | null>;
-  scanWorkspace(rootPath: string, excludedNames?: string[]): Promise<WorkspaceSnapshot>;
+  scanWorkspace(
+    rootPath: string,
+    excludedNames?: string[],
+  ): Promise<WorkspaceSnapshot>;
   inspectProject(projectPath: string): Promise<ProjectSnapshot>;
   cleanProjectArtifacts(
     projectPath: string,
