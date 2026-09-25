@@ -12,7 +12,7 @@ pub const GUIDANCE_METADATA_PATH: &str = ".atrium/guidance.toml";
 // it applies the generated guidance. Atrium only reads it as structured state.
 pub const GUIDANCE_SYNC_PATH: &str = ".atrium/guidance-sync.toml";
 // Increment when the generated Agent instructions or their migration contract changes.
-pub const GUIDANCE_REVISION: u32 = 9;
+pub const GUIDANCE_REVISION: u32 = 10;
 // Keep this aligned with the manifest schema supported by the scanner.
 pub const GUIDANCE_PROTOCOL_SCHEMA: u32 = crate::manifest_schema::CURRENT_SCHEMA;
 
