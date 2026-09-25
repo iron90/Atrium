@@ -12,6 +12,7 @@ use crate::workspace_membership::ensure_project_in_workspace_roots;
 pub struct RunControl {
     pub stop: oneshot::Sender<()>,
     pub pid: Option<u32>,
+    pub project_path: String,
 }
 
 // Walking a huge repository to measure storage is expensive; a short-lived

@@ -19,6 +19,23 @@ pub async fn start_project_command(
     profile_action: Option<CommandKind>,
 ) -> Result<RunStarted, String> {
     let request = resolve_run_request(&project_path, &command_id, profile_id, profile_action)?;
+    {
+        // One run per project: two instances of the same dev server would
+        // collide over ports and build locks with confusing failures.
+        let runs = state
+            .runs
+            .lock()
+            .map_err(|_| "Run registry is unavailable".to_string())?;
+        if runs
+            .values()
+            .any(|control| control.project_path == request.project.path)
+        {
+            return Err(format!(
+                "A command is already running for project {}",
+                request.project.name
+            ));
+        }
+    }
     let context = RunContext::new(&request);
     let mut child = build_process(&request.command)?;
     let stdout = child.stdout.take();
@@ -33,6 +50,7 @@ pub async fn start_project_command(
             RunControl {
                 stop: stop_tx,
                 pid: child.id(),
+                project_path: request.project.path.clone(),
             },
         );
 
