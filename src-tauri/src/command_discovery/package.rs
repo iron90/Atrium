@@ -3,9 +3,18 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::common::{command, command_label, executable, is_safe_command_name};
+use super::common::{command, command_label, executable, has_project_file, is_safe_command_name};
 use crate::model::{CommandKind, ProjectCommand};
 use crate::project_path::read_project_text_file;
+
+pub(super) fn node_commands(path: &Path) -> Vec<ProjectCommand> {
+    let Some(package) = read_package(path) else {
+        return Vec::new();
+    };
+    let mut commands = Vec::new();
+    detect_commands(path, &package, &mut commands);
+    commands
+}
 
 pub(super) fn read_package(path: &Path) -> Option<Value> {
     let content = read_project_text_file(path, Path::new("package.json")).ok()??;
@@ -50,10 +59,6 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
             commands.push(package_command(path, manager, &name, CommandKind::Other));
         }
     }
-}
-
-fn has_project_file(path: &Path, relative: &str) -> bool {
-    crate::project_path::project_entry_exists(path, Path::new(relative)).unwrap_or(false)
 }
 
 fn package_command(path: &Path, manager: &str, script: &str, kind: CommandKind) -> ProjectCommand {
