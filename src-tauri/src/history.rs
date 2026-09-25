@@ -72,7 +72,29 @@ fn append_history_file(path: &Path, finished: &RunFinished) -> Result<(), String
     let raw = serde_json::to_string_pretty(&history)
         .map_err(|error| format!("Cannot serialize Atrium run history: {error}"))?;
     write_file_atomically(path, &raw)
-        .map_err(|error| format!("Cannot write Atrium run history: {error}"))
+        .map_err(|error| format!("Cannot write Atrium run history: {error}"))?;
+    prune_run_logs(parent, &history);
+    Ok(())
+}
+
+// Only the newest records stay reachable in the history file, so log files
+// beyond them would accumulate forever.
+fn prune_run_logs(parent: &Path, history: &[RunFinished]) {
+    let logs_directory = parent.join("logs");
+    let Ok(entries) = fs::read_dir(&logs_directory) else {
+        return;
+    };
+    let live_run_ids: std::collections::HashSet<String> =
+        history.iter().map(|record| record.run_id.clone()).collect();
+    for entry in entries.flatten() {
+        let file_name = entry.file_name().to_string_lossy().into_owned();
+        let Some(stem) = file_name.strip_suffix(".log") else {
+            continue;
+        };
+        if !live_run_ids.contains(stem) {
+            let _ = fs::remove_file(entry.path());
+        }
+    }
 }
 
 pub fn with_history_lock<T, F>(lock: &Mutex<()>, task: F) -> Result<T, String>
@@ -216,8 +238,8 @@ fn render_log(record: &RunFinished) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        append_history_file, merge_run_history, read_history_file, write_file_atomically,
-        MAX_RUN_HISTORY_BYTES,
+        append_history_file, merge_run_history, prune_run_logs, read_history_file,
+        write_file_atomically, MAX_RUN_HISTORY_BYTES,
     };
     use crate::model::{RunFinished, RunStatus};
     use std::fs;
@@ -343,6 +365,24 @@ mod tests {
             .expect("list history directory")
             .flatten()
             .any(|entry| entry.file_name().to_string_lossy().contains("corrupt")));
+
+        fs::remove_dir_all(root).expect("remove history fixture");
+    }
+
+    #[test]
+    fn prunes_log_files_without_a_live_history_record() {
+        let root = std::env::temp_dir().join(format!("atrium-history-logs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("logs")).expect("create logs fixture");
+        let path = root.join("run-history.json");
+        append_history_file(&path, &record("kept", 5)).expect("append a live record");
+        fs::write(root.join("logs/kept.log"), "live").expect("write live log");
+        fs::write(root.join("logs/orphan.log"), "orphan").expect("write orphan log");
+
+        prune_run_logs(&root, &read_history_file(&path).expect("read history"));
+
+        assert!(root.join("logs/kept.log").exists());
+        assert!(!root.join("logs/orphan.log").exists());
 
         fs::remove_dir_all(root).expect("remove history fixture");
     }
