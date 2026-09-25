@@ -174,7 +174,6 @@ mod tests {
         validate_revision,
     };
     use std::fs;
-    use std::path::Path;
     use std::process::Command;
 
     fn init_repo(name: &str) -> std::path::PathBuf {
@@ -199,11 +198,39 @@ mod tests {
 
     #[test]
     fn parses_rename_and_cjk_paths_from_nul_separated_git_output() {
-        let numstat =
-            "2\t0\t\0src/old.txt\0src/\u{65b0}.txt\04\t0\t文档 新.txt\00\t2\t文档 旧.txt\0";
-        let statuses = "R100\0src/old.txt\0src/\u{65b0}.txt\0A\0文档 新.txt\0D\0文档 旧.txt\0";
+        let nul = "\x00";
+        let numstat = [
+            "2\t0\t",
+            nul,
+            "src/old.txt",
+            nul,
+            "src/\u{65b0}.txt",
+            nul,
+            "4\t0\t文档 新.txt",
+            nul,
+            "0\t2\t文档 旧.txt",
+            nul,
+        ]
+        .concat();
+        let statuses = [
+            "R100",
+            nul,
+            "src/old.txt",
+            nul,
+            "src/\u{65b0}.txt",
+            nul,
+            "A",
+            nul,
+            "文档 新.txt",
+            nul,
+            "D",
+            nul,
+            "文档 旧.txt",
+            nul,
+        ]
+        .concat();
 
-        let records = parse_numstat_records(numstat);
+        let records = parse_numstat_records(&numstat);
         assert_eq!(
             records,
             vec![
@@ -212,7 +239,7 @@ mod tests {
                 ("文档 旧.txt".to_string(), Some(0), Some(2)),
             ]
         );
-        let statuses_by_path = parse_name_status_records(statuses);
+        let statuses_by_path = parse_name_status_records(&statuses);
         assert_eq!(
             statuses_by_path.get("src/\u{65b0}.txt").map(String::as_str),
             Some("R100")
@@ -225,9 +252,10 @@ mod tests {
 
     #[test]
     fn skips_malformed_numstat_fields_instead_of_emitting_empty_paths() {
-        let numstat = "x\ty\tbroken\0\0\03\t1\treal.txt\0";
+        let nul = "\x00";
+        let numstat = ["x\ty\tbroken", nul, nul, "3\t1\treal.txt", nul].concat();
 
-        let records = parse_numstat_records(numstat);
+        let records = parse_numstat_records(&numstat);
 
         assert_eq!(records, vec![("real.txt".to_string(), Some(3), Some(1))]);
     }
