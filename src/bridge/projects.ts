@@ -27,6 +27,10 @@ export const nativeProjectMethods = {
       excludedNames,
     }),
 
+  syncWorkspaceRoots: async (rootPaths: string[]): Promise<void> => {
+    await invoke("sync_workspace_roots_command", { rootPaths });
+  },
+
   inspectProject: async (projectPath: string): Promise<ProjectSnapshot> =>
     invoke<ProjectSnapshot>("inspect_project_command", { projectPath }),
 
@@ -49,6 +53,8 @@ export const nativeProjectMethods = {
 
 export const previewProjectMethods = {
   pickWorkspaceDirectory: async (): Promise<string | null> => null,
+
+  syncWorkspaceRoots: async (): Promise<void> => undefined,
 
   scanWorkspace: async (rootPath: string): Promise<WorkspaceSnapshot> => {
     await new Promise((resolve) => window.setTimeout(resolve, 280));

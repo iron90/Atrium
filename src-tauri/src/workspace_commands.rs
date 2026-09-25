@@ -27,6 +27,16 @@ pub async fn scan_workspace_command(
 }
 
 #[tauri::command]
+pub async fn sync_workspace_roots_command(
+    state: State<'_, AppState>,
+    root_paths: Vec<String>,
+) -> Result<(), String> {
+    let roots = root_paths.iter().map(PathBuf::from).collect::<Vec<_>>();
+    state.inner().replace_workspace_roots(&roots);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn inspect_project_command(
     state: State<'_, AppState>,
     project_path: String,

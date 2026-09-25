@@ -15,6 +15,7 @@ export interface AtriumBridge {
     rootPath: string,
     excludedNames?: string[],
   ): Promise<WorkspaceSnapshot>;
+  syncWorkspaceRoots(rootPaths: string[]): Promise<void>;
   inspectProject(projectPath: string): Promise<ProjectSnapshot>;
   cleanProjectArtifacts(
     projectPath: string,

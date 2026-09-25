@@ -39,11 +39,13 @@ export async function scanWorkspaces({
   excludeNames,
   language,
   scanWorkspace = bridge.scanWorkspace,
+  syncRoots = bridge.syncWorkspaceRoots,
 }: {
   paths: string[];
   excludeNames: string[];
   language: Language;
   scanWorkspace?: WorkspaceScanner;
+  syncRoots?: (rootPaths: string[]) => Promise<void>;
 }): Promise<WorkspaceSnapshot> {
   const normalized = normalizeWorkspacePaths(paths);
   if (!normalized.length) return emptySnapshot("");
@@ -65,6 +67,11 @@ export async function scanWorkspaces({
   }
 
   const scan = mergeWorkspaceSnapshots(snapshots, normalized[0] ?? "");
+  // Re-authorize exactly the roots that still scan, so roots removed from the
+  // list lose run/inspect/cleanup authorization in the same session.
+  void syncRoots(snapshots.map((snapshot) => snapshot.rootPath)).catch(
+    () => undefined,
+  );
   const rejected = results
     .map((result, index) =>
       result.status === "rejected"

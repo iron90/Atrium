@@ -39,6 +39,7 @@ pub fn run() {
         .manage(state::AppState::default())
         .invoke_handler(tauri::generate_handler![
             workspace_commands::scan_workspace_command,
+            workspace_commands::sync_workspace_roots_command,
             workspace_commands::inspect_project_command,
             workspace_commands::generate_project_guidance_command,
             workspace_commands::clean_project_artifacts_command,

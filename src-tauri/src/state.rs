@@ -85,6 +85,24 @@ impl AppState {
         }
     }
 
+    // The frontend owns the root list; syncing it after every scan lets a
+    // removed root lose its authorization for run/inspect/cleanup actions
+    // within the same session.
+    pub fn replace_workspace_roots(&self, root_paths: &[PathBuf]) {
+        let canonical: BTreeSet<PathBuf> = root_paths
+            .iter()
+            .filter_map(|path| path.canonicalize().ok())
+            .collect();
+        match self.workspace_roots.lock() {
+            Ok(mut roots) => {
+                *roots = canonical;
+            }
+            Err(error) => {
+                eprintln!("Atrium could not sync workspace roots: {error}");
+            }
+        }
+    }
+
     pub fn ensure_project_in_workspace(
         &self,
         project_path: &std::path::Path,
