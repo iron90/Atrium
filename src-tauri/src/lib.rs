@@ -21,6 +21,7 @@ mod run_context;
 mod run_supervisor;
 mod run_validation;
 mod runner;
+mod scan_cache;
 mod scanner;
 mod state;
 mod storage;

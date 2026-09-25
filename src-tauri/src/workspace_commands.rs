@@ -17,8 +17,9 @@ pub async fn scan_workspace_command(
 ) -> Result<WorkspaceSnapshot, String> {
     let excluded_names = excluded_names.unwrap_or_default();
     let app_state = state.inner().clone();
+    let scan_cache = state.inner().scan_cache.clone();
     let snapshot = run_blocking("Workspace scan", move || {
-        scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names)
+        scan_workspace_with_exclusions(Path::new(&root_path), &excluded_names, &scan_cache)
     })
     .await?;
     app_state.register_workspace_root(PathBuf::from(&snapshot.root_path));

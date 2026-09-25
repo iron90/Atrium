@@ -3,13 +3,14 @@ use std::fs;
 use std::path::Path;
 
 use crate::model::WorkspaceSnapshot;
-use crate::project_scan::scan_project;
+use crate::scan_cache::ScanCache;
 use crate::time::now_millis;
 use crate::workspace_policy::{is_ignored_name, is_project_candidate};
 
 pub fn scan_workspace_with_exclusions(
     root_path: &Path,
     excluded_names: &[String],
+    scan_cache: &ScanCache,
 ) -> Result<WorkspaceSnapshot, String> {
     let root = root_path
         .canonicalize()
@@ -54,7 +55,7 @@ pub fn scan_workspace_with_exclusions(
                 continue;
             }
         }
-        match scan_project(&path) {
+        match scan_cache.cached_or_scan(&path) {
             Some(project) if seen_projects.insert(project.id.clone()) => projects.push(project),
             Some(_) => {}
             None => warnings.push(format!("Skipped unreadable project: {}", path.display())),
@@ -121,7 +122,7 @@ fn resolve_workspace_entry(
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_workspace_entry, scan_workspace_with_exclusions};
+    use super::{resolve_workspace_entry, scan_workspace_with_exclusions, ScanCache};
     use std::path::Path;
 
     #[test]
@@ -184,7 +185,8 @@ mod tests {
         fs::write(project.join("package.json"), "{}").expect("write project marker");
         symlink(&project, root.join("project-link")).expect("create internal symlink");
 
-        let snapshot = scan_workspace_with_exclusions(&root, &[]).expect("scan workspace");
+        let snapshot = scan_workspace_with_exclusions(&root, &[], &ScanCache::default())
+            .expect("scan workspace");
         assert_eq!(snapshot.projects.len(), 1);
         assert_eq!(
             snapshot.projects[0].path,

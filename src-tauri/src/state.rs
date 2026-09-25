@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use tokio::sync::{oneshot, Semaphore};
 
+use crate::scan_cache::ScanCache;
 use crate::workspace_membership::ensure_project_in_workspace_roots;
 
 pub struct RunControl {
@@ -17,6 +18,7 @@ pub struct AppState {
     // A project detail inspection can walk a very large repository. Keep
     // multiple UI requests from multiplying that filesystem pressure.
     pub project_inspection_gate: Arc<Semaphore>,
+    pub scan_cache: ScanCache,
     workspace_roots: Arc<Mutex<BTreeSet<PathBuf>>>,
 }
 
@@ -26,6 +28,7 @@ impl Default for AppState {
             runs: Arc::new(Mutex::new(HashMap::new())),
             history_lock: Arc::new(Mutex::new(())),
             project_inspection_gate: Arc::new(Semaphore::new(1)),
+            scan_cache: ScanCache::default(),
             workspace_roots: Arc::new(Mutex::new(BTreeSet::new())),
         }
     }
