@@ -36,7 +36,14 @@ pub fn scan_project_with_storage(
     let icon_inspection = inspect_icon(&path);
     let protocol = build_protocol_status(&configuration, &icon_inspection.conformance);
     let repo = read_git_snapshot(&path);
-    let modified_at = read_project_modified_at(&path);
+    // The root directory's own mtime only moves when direct children change;
+    // the latest commit time is the truthful "last activity" signal, with the
+    // directory mtime as fallback for non-git directories.
+    let modified_at = repo
+        .as_ref()
+        .and_then(|snapshot| snapshot.last_commit.as_ref())
+        .map(|commit| commit.timestamp.saturating_mul(1000))
+        .or_else(|| read_project_modified_at(&path));
     let description = read_project_description(&path);
     let path_string = path.to_string_lossy().to_string();
     let storage = include_storage.then(|| inspect_project_storage(&path, &configuration.cleanup));
