@@ -44,4 +44,36 @@ describe("project actions", () => {
     openRemote.mockRestore();
     openLink.mockRestore();
   });
+
+  it("requires confirmation before opening a file:// link", async () => {
+    const windowConfirm = vi
+      .spyOn(window, "confirm")
+      .mockImplementation(() => false);
+    const openLink = vi
+      .spyOn(bridge, "openProjectLink")
+      .mockResolvedValue(undefined);
+    const fileProject = {
+      ...project,
+      links: [
+        {
+          id: "local-file",
+          label: "Local file",
+          url: "file:///tmp/report.html",
+          kind: null,
+        },
+      ],
+    };
+
+    await openProjectAction("link", fileProject, "local-file");
+
+    expect(windowConfirm).toHaveBeenCalled();
+    expect(openLink).not.toHaveBeenCalled();
+
+    windowConfirm.mockImplementation(() => true);
+    await openProjectAction("link", fileProject, "local-file");
+    expect(openLink).toHaveBeenCalledWith(fileProject.path, "local-file");
+
+    windowConfirm.mockRestore();
+    openLink.mockRestore();
+  });
 });
