@@ -43,6 +43,16 @@ pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf,
     }
 
     let candidate = root.join(relative);
+    // Every other project read rejects symlink traversal component-by-
+    // component; the icon path follows the same policy, not just
+    // canonicalize containment.
+    if crate::project_path::has_symbolic_link_component(root, &candidate)
+        .map_err(|error| format!("identity.icon cannot be inspected: {error:?}"))?
+    {
+        return Err(format!(
+            "identity.icon cannot traverse symbolic links: {value}"
+        ));
+    }
     let resolved = candidate
         .canonicalize()
         .map_err(|error| format!("Icon file {value} cannot be resolved: {error}"))?;

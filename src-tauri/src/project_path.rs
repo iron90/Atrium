@@ -227,7 +227,7 @@ pub(crate) fn resolve_existing_path_inside_project(
     Ok(canonical_target)
 }
 
-fn has_symbolic_link_component(
+pub(crate) fn has_symbolic_link_component(
     root: &Path,
     target: &Path,
 ) -> Result<bool, ExistingProjectPathError> {
