@@ -11,6 +11,7 @@ use uuid::Uuid;
 use crate::model::RunFinished;
 use crate::os_open;
 use crate::run_validation::validate_run_id;
+use crate::time::now_millis;
 
 const MAX_RUN_HISTORY: usize = 100;
 const MAX_RUN_HISTORY_BYTES: u64 = 64 * 1024 * 1024;
@@ -20,15 +21,23 @@ pub fn load_run_history(app: &AppHandle) -> Result<Vec<RunFinished>, String> {
     read_history_file(&path)
 }
 
+// A corrupt or oversized history file must never wedge the history forever:
+// it is moved aside under a `.corrupt-` name and history resumes empty.
 fn read_history_file(path: &Path) -> Result<Vec<RunFinished>, String> {
     match fs::metadata(path) {
-        Ok(metadata) if metadata.len() > MAX_RUN_HISTORY_BYTES => Err(format!(
-            "Atrium run history exceeds the {} MiB limit",
-            MAX_RUN_HISTORY_BYTES / (1024 * 1024)
-        )),
+        Ok(metadata) if metadata.len() > MAX_RUN_HISTORY_BYTES => {
+            quarantine_history(path);
+            Ok(Vec::new())
+        }
         Ok(_) => match fs::read_to_string(path) {
-            Ok(raw) => serde_json::from_str(&raw)
-                .map_err(|error| format!("Cannot parse Atrium run history: {error}")),
+            Ok(raw) => match serde_json::from_str(&raw) {
+                Ok(history) => Ok(history),
+                Err(parse_error) => {
+                    eprintln!("Atrium quarantined an unreadable run history file: {parse_error}");
+                    quarantine_history(path);
+                    Ok(Vec::new())
+                }
+            },
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
             Err(error) => Err(format!("Cannot read Atrium run history: {error}")),
         },
@@ -37,11 +46,24 @@ fn read_history_file(path: &Path) -> Result<Vec<RunFinished>, String> {
     }
 }
 
+fn quarantine_history(path: &Path) {
+    let quarantined = path.with_extension(format!("json.corrupt-{}", now_millis()));
+    if let Err(error) = fs::rename(path, &quarantined) {
+        eprintln!(
+            "Atrium could not quarantine the run history file {}: {error}",
+            quarantined.display()
+        );
+    }
+}
+
 pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(), String> {
-    let mut history = load_run_history(app)?;
+    append_history_file(&history_path(app)?, finished)
+}
+
+fn append_history_file(path: &Path, finished: &RunFinished) -> Result<(), String> {
+    let mut history = read_history_file(path)?;
     history = merge_run_history(history, finished);
 
-    let path = history_path(app)?;
     let parent = path
         .parent()
         .ok_or_else(|| "Cannot determine Atrium history directory".to_string())?;
@@ -49,7 +71,7 @@ pub fn append_run_history(app: &AppHandle, finished: &RunFinished) -> Result<(),
         .map_err(|error| format!("Cannot create Atrium history directory: {error}"))?;
     let raw = serde_json::to_string_pretty(&history)
         .map_err(|error| format!("Cannot serialize Atrium run history: {error}"))?;
-    write_file_atomically(&path, &raw)
+    write_file_atomically(path, &raw)
         .map_err(|error| format!("Cannot write Atrium run history: {error}"))
 }
 
@@ -194,7 +216,8 @@ fn render_log(record: &RunFinished) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        merge_run_history, read_history_file, write_file_atomically, MAX_RUN_HISTORY_BYTES,
+        append_history_file, merge_run_history, read_history_file, write_file_atomically,
+        MAX_RUN_HISTORY_BYTES,
     };
     use crate::model::{RunFinished, RunStatus};
     use std::fs;
@@ -274,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_history_files_over_the_size_limit() {
+    fn quarantines_oversized_history_files_and_resumes_empty() {
         let root =
             std::env::temp_dir().join(format!("atrium-history-size-limit-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
@@ -289,9 +312,38 @@ mod tests {
             .expect("extend oversized history fixture");
         drop(file);
 
-        let error = read_history_file(&path).expect_err("oversized history should fail");
+        let history = read_history_file(&path).expect("oversized history self-heals");
 
-        assert!(error.contains("64 MiB limit"));
+        assert!(history.is_empty());
+        assert!(!path.exists(), "the oversized file was moved aside");
+        assert!(fs::read_dir(&root)
+            .expect("list history directory")
+            .flatten()
+            .any(|entry| entry.file_name().to_string_lossy().contains("corrupt")));
+        fs::remove_dir_all(root).expect("remove history fixture");
+    }
+
+    #[test]
+    fn quarantines_corrupt_history_files_and_appends_fresh_records() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-history-corrupt-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create history fixture");
+        let path = root.join("run-history.json");
+        fs::write(&path, "{ not json").expect("write corrupt history");
+
+        let history = read_history_file(&path).expect("corrupt history self-heals");
+        assert!(history.is_empty());
+
+        append_history_file(&path, &record("fresh", 5)).expect("append after self-heal");
+        let history = read_history_file(&path).expect("read healed history");
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].run_id, "fresh");
+        assert!(fs::read_dir(&root)
+            .expect("list history directory")
+            .flatten()
+            .any(|entry| entry.file_name().to_string_lossy().contains("corrupt")));
+
         fs::remove_dir_all(root).expect("remove history fixture");
     }
 }
