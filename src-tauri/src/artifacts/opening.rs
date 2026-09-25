@@ -41,5 +41,80 @@ pub fn open_declared_artifact(
                 "Artifact path cannot traverse symbolic links".to_string()
             }
         })?;
-    os_open::open_path(&canonical_target).map_err(|error| format!("Cannot open artifact: {error}"))
+    let metadata = std::fs::metadata(&canonical_target)
+        .map_err(|error| format!("Cannot inspect artifact: {error}"))?;
+    if os_open::is_executable_file(&metadata) {
+        return Err(
+            "Artifact is an executable file; Atrium only reveals artifacts in the file manager"
+                .to_string(),
+        );
+    }
+    os_open::reveal_path(&canonical_target)
+        .map_err(|error| format!("Cannot open artifact: {error}"))
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::open_declared_artifact;
+    use std::fs;
+    use std::path::Path;
+
+    fn fixture_project(name: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("atrium-artifact-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 1
+
+[[platforms]]
+id = "macos"
+
+[[channels]]
+id = "local"
+
+[[build_profiles]]
+id = "local"
+platform = "macos"
+channel = "local"
+artifacts = ["dist/tool"]
+"#,
+        )
+        .expect("write manifest");
+        fs::create_dir_all(root.join("dist")).expect("create dist directory");
+        root
+    }
+
+    // Only xdg-open dispatches by file type, so executable refusal is a
+    // Linux-only capability error; `open -R` and `explorer /select` reveal.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn refuses_to_open_an_executable_artifact_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = fixture_project("executable");
+        let artifact = root.join("dist/tool");
+        fs::write(&artifact, "#!/bin/sh\necho hi\n").expect("write artifact");
+        fs::set_permissions(&artifact, fs::Permissions::from_mode(0o755))
+            .expect("make artifact executable");
+
+        let error = open_declared_artifact(&root, "local", "dist/tool")
+            .expect_err("executable artifacts are not opened");
+
+        assert!(error.contains("executable"), "error: {error}");
+
+        fs::remove_dir_all(root).expect("remove fixture project");
+    }
+
+    #[test]
+    fn undeclared_artifact_paths_are_rejected() {
+        let root = fixture_project("undeclared");
+
+        let error =
+            open_declared_artifact(&root, "local", "dist/other").expect_err("must be declared");
+        assert!(error.contains("not declared"), "error: {error}");
+
+        let _ = Path::new(&root).canonicalize();
+        fs::remove_dir_all(root).expect("remove fixture project");
+    }
 }
