@@ -1,4 +1,5 @@
-import type { ProjectCommand, ProjectSnapshot, RunStarted } from "../../bridge";
+import type { ProjectCommand, ProjectSnapshot } from "../../bridge";
+import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
 import { commandLabel } from "./presentation";
@@ -8,7 +9,6 @@ import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 export interface ProjectCommandsSectionProps {
   project: ProjectSnapshot;
   isLoading: boolean;
-  activeRun?: RunStarted;
   onRun: (command: ProjectCommand) => void;
   rawCommandsRevealed: boolean;
   onRevealRawCommands: () => void;
@@ -17,12 +17,12 @@ export interface ProjectCommandsSectionProps {
 export function ProjectCommandsSection({
   project,
   isLoading,
-  activeRun,
   onRun,
   rawCommandsRevealed,
   onRevealRawCommands,
 }: ProjectCommandsSectionProps) {
   const { language, t } = useI18n();
+  const { activeRun } = useRunStream();
   const primaryCommands = project.commands.filter(
     (command) => command.kind !== "other",
   );

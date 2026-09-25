@@ -29,6 +29,10 @@ import { useProjectMetaState } from "./features/projects/use-project-meta-state"
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
 import { useProjectWorkspace } from "./features/projects/use-project-workspace";
 import { useProjectRunner } from "./features/runs/use-project-runner";
+import {
+  RunStreamContext,
+  type RunStreamValue,
+} from "./features/runs/run-stream-context";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
@@ -51,6 +55,8 @@ import type {
   WorkspaceSnapshot,
 } from "./bridge";
 import "./app.css";
+
+const EMPTY_OUTPUT_LINES: string[] = [];
 
 export default function App() {
   const nativeRuntime = isTauriRuntime();
@@ -462,6 +468,13 @@ export default function App() {
     () => void scanWorkspace(),
     [scanWorkspace],
   );
+  const runStreamValue = useMemo<RunStreamValue>(
+    () => ({
+      activeRun,
+      outputLines: activeRun ? outputLines : EMPTY_OUTPUT_LINES,
+    }),
+    [activeRun, outputLines],
+  );
   const inspector = useMemo<ProjectInspectorProps>(
     () => ({
       project: selectedProject,
@@ -470,11 +483,9 @@ export default function App() {
           ? inspectorProject
           : undefined,
       isLoading: isLoadingDetails,
-      activeRun,
       lastFinishedRun,
       runHistoryRefreshToken,
       onRunHistoryError: handleWorkspaceError,
-      outputLines,
       onRun: handleInspectorRun,
       onRefreshProject: handleInspectorRefresh,
       isRefreshing: refreshingProjectId === selectedProject?.id,
@@ -498,7 +509,6 @@ export default function App() {
       onOpenProjectAction: handleInspectorProjectAction,
     }),
     [
-      activeRun,
       agentPrompt,
       cancelCleanup,
       cleanupConfirmation,
@@ -522,7 +532,6 @@ export default function App() {
       isLoadingDetails,
       isWritingGuidance,
       lastFinishedRun,
-      outputLines,
       refreshingProjectId,
       runHistoryRefreshToken,
       selectedProject,
@@ -532,6 +541,7 @@ export default function App() {
 
   return (
     <I18nProvider value={i18nValue}>
+      <RunStreamContext.Provider value={runStreamValue}>
       <div className="app-shell" data-theme={theme} data-layout={layout}>
         <AppSidebar
           activePage={activePage}
@@ -620,6 +630,7 @@ export default function App() {
           ) : null}
         </div>
       </div>
+      </RunStreamContext.Provider>
     </I18nProvider>
   );
 }

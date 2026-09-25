@@ -1,21 +1,18 @@
-import type { RunStarted } from "../../bridge";
 import type { FinishedRunRecord } from "../runs/use-run-event-stream";
+import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { InspectorSection } from "./InspectorPrimitives";
 
 export function ProjectRunSection({
-  activeRun,
   lastFinishedRun,
-  outputLines,
   onStop,
 }: {
-  activeRun?: RunStarted;
   lastFinishedRun?: FinishedRunRecord;
-  outputLines: string[];
   onStop: () => void;
 }) {
   const { t } = useI18n();
+  const { activeRun, outputLines } = useRunStream();
   if (activeRun) {
     return (
       <InspectorSection

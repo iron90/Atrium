@@ -2,8 +2,8 @@ import type {
   ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
-  RunStarted,
 } from "../../bridge";
+import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { BuildProfileCard } from "./BuildProfileCard";
@@ -12,13 +12,11 @@ import { InspectorSection } from "./InspectorPrimitives";
 export function ProjectBuildProfilesSection({
   project,
   protocolReady,
-  activeRun,
   onRun,
   onOpenArtifact,
 }: {
   project: ProjectSnapshot;
   protocolReady: boolean;
-  activeRun?: RunStarted;
   onRun: (
     command: ProjectCommand,
     profileId?: string,
@@ -31,6 +29,7 @@ export function ProjectBuildProfilesSection({
   ) => void;
 }) {
   const { t } = useI18n();
+  const { activeRun } = useRunStream();
   const buildProfiles = project.buildProfiles;
   const canExecuteProfiles = project.configuration.status === "configured";
   const showConfigurationGuidance =

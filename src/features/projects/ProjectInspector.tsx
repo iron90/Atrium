@@ -4,7 +4,6 @@ import type {
   ProfileAction,
   ProjectCommand,
   ProjectSnapshot,
-  RunStarted,
 } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { ProjectBuildProfilesSection } from "./ProjectBuildProfilesSection";
@@ -26,11 +25,9 @@ export interface ProjectInspectorProps {
   project?: ProjectSnapshot;
   details?: ProjectSnapshot;
   isLoading: boolean;
-  activeRun?: RunStarted;
   lastFinishedRun?: FinishedRunRecord;
   runHistoryRefreshToken?: number;
   onRunHistoryError?: (message: string | null) => void;
-  outputLines: string[];
   onRun: (
     command: ProjectCommand,
     profileId?: string,
@@ -70,11 +67,9 @@ export function ProjectInspector({
   project,
   details,
   isLoading,
-  activeRun,
   lastFinishedRun,
   runHistoryRefreshToken,
   onRunHistoryError,
-  outputLines,
   onRun,
   onRefreshProject,
   isRefreshing,
@@ -159,24 +154,17 @@ export function ProjectInspector({
       <ProjectBuildProfilesSection
         project={inspectedProject}
         protocolReady={protocolReady}
-        activeRun={activeRun}
         onRun={onRun}
         onOpenArtifact={onOpenArtifact}
       />
       <ProjectCommandsSection
         project={inspectedProject}
         isLoading={isLoading}
-        activeRun={activeRun}
         onRun={onRun}
         rawCommandsRevealed={rawCommandsRevealed}
         onRevealRawCommands={() => setRawCommandsRevealedFor(project.id)}
       />
-      <ProjectRunSection
-        activeRun={activeRun}
-        lastFinishedRun={lastFinishedRun}
-        outputLines={outputLines}
-        onStop={onStop}
-      />
+      <ProjectRunSection lastFinishedRun={lastFinishedRun} onStop={onStop} />
       <ProjectRunHistorySection
         project={project}
         refreshToken={runHistoryRefreshToken}

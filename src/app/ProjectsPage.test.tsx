@@ -11,7 +11,6 @@ afterEach(() => {
 
 const inspector = {
   isLoading: false,
-  outputLines: [],
   onRun: () => undefined,
   onRefreshProject: () => undefined,
   isRefreshing: false,

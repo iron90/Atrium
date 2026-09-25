@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { RunFinished, RunStarted } from "../../bridge";
 import type { FinishedRunRecord } from "../runs/use-run-event-stream";
+import { RunStreamContext } from "../runs/run-stream-context";
 import { ProjectRunSection } from "./ProjectRunSection";
 
 const started: RunStarted = {
@@ -40,9 +41,7 @@ afterEach(cleanup);
 
 describe("ProjectRunSection", () => {
   it("returns nothing without an active run or a finished result", () => {
-    const { container } = render(
-      <ProjectRunSection outputLines={[]} onStop={() => undefined} />,
-    );
+    const { container } = render(<ProjectRunSection onStop={() => undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -54,7 +53,6 @@ describe("ProjectRunSection", () => {
     render(
       <ProjectRunSection
         lastFinishedRun={lastFinishedRun}
-        outputLines={[]}
         onStop={() => undefined}
       />,
     );
@@ -64,14 +62,16 @@ describe("ProjectRunSection", () => {
     expect(screen.getByText("boom")).toBeInTheDocument();
   });
 
-  it("prefers the live run over a previous finished result", () => {
+  it("reads the live run from the run stream context", () => {
     render(
-      <ProjectRunSection
-        activeRun={started}
-        lastFinishedRun={{ run: finished, lines: ["old"] }}
-        outputLines={["streaming"]}
-        onStop={() => undefined}
-      />,
+      <RunStreamContext.Provider
+        value={{ activeRun: started, outputLines: ["streaming"] }}
+      >
+        <ProjectRunSection
+          lastFinishedRun={{ run: finished, lines: ["old"] }}
+          onStop={() => undefined}
+        />
+      </RunStreamContext.Provider>,
     );
 
     expect(screen.getByText("Live output")).toBeInTheDocument();
