@@ -1,10 +1,14 @@
 use std::io::{self, Read};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
+use std::time::{Duration, Instant};
 
 const MAX_GIT_STDOUT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_GIT_STDERR_BYTES: usize = 64 * 1024;
+// A wedged git call (for example on a stalled network mount) must not block
+// scans or runs forever; the process is killed and the fact degrades.
+const GIT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(super) fn run_git(project_path: &Path, args: &[&str]) -> Option<String> {
     let output = run_git_process(project_path, args).ok()?;
@@ -78,9 +82,7 @@ fn run_git_process(project_path: &Path, args: &[&str]) -> Result<GitProcessOutpu
         .ok_or_else(|| "Cannot capture git errors".to_string())?;
     let stdout_reader = thread::spawn(move || read_limited(stdout, MAX_GIT_STDOUT_BYTES));
     let stderr_reader = thread::spawn(move || read_limited(stderr, MAX_GIT_STDERR_BYTES));
-    let status = child
-        .wait()
-        .map_err(|error| format!("Cannot wait for git: {error}"))?;
+    let status = wait_with_timeout(&mut child, GIT_TIMEOUT)?;
     let stdout = stdout_reader
         .join()
         .map_err(|_| "Git output reader failed".to_string())?
@@ -95,6 +97,39 @@ fn run_git_process(project_path: &Path, args: &[&str]) -> Result<GitProcessOutpu
         stdout,
         stderr,
     })
+}
+
+fn wait_with_timeout(child: &mut Child, timeout: Duration) -> Result<ExitStatus, String> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return Ok(status),
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    let _ = child.kill();
+                    // A process stuck in an uninterruptible syscall can ignore
+                    // SIGKILL; give up reaping instead of blocking the caller
+                    // forever. The reader threads are abandoned with it.
+                    for _ in 0..4 {
+                        if child
+                            .try_wait()
+                            .map(|exited| exited.is_some())
+                            .unwrap_or(true)
+                        {
+                            break;
+                        }
+                        thread::sleep(Duration::from_millis(25));
+                    }
+                    return Err(format!(
+                        "Git command timed out after {} seconds",
+                        timeout.as_secs()
+                    ));
+                }
+                thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => return Err(format!("Cannot wait for git: {error}")),
+        }
+    }
 }
 
 struct LimitedOutput {
@@ -121,9 +156,11 @@ fn read_limited<R: Read>(mut reader: R, limit: usize) -> io::Result<LimitedOutpu
 
 #[cfg(test)]
 mod tests {
-    use super::{read_limited, run_git};
+    use super::{read_limited, run_git, wait_with_timeout};
     use std::fs;
     use std::io::Cursor;
+    use std::process::Command;
+    use std::time::{Duration, Instant};
 
     #[test]
     fn drains_streams_but_retains_only_the_configured_limit() {
@@ -139,6 +176,24 @@ mod tests {
 
         assert_eq!(result.bytes, b"1234");
         assert!(!result.truncated);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn times_out_a_hung_child_process() {
+        let started = Instant::now();
+        let mut child = Command::new("sleep")
+            .arg("5")
+            .spawn()
+            .expect("spawn sleep process");
+
+        let result = wait_with_timeout(&mut child, Duration::from_millis(100));
+
+        assert!(result.is_err(), "a hung child must time out");
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "timeout must not wait for the child to finish"
+        );
     }
 
     #[test]
