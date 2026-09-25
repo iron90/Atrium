@@ -27,7 +27,14 @@ export function ProjectListRow({
       className={`project-row ${project.id === selectedId ? "is-selected" : ""}`}
       role="listitem"
       data-project-id={project.id}
+      aria-current={project.id === selectedId ? "true" : undefined}
+      tabIndex={0}
       onClick={() => onSelect(project.id)}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onSelect(project.id);
+      }}
     >
       <ProjectIdentityCell project={project} onSelect={onSelect} />
       <ProjectGitCell project={project} />

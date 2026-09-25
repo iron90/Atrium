@@ -131,6 +131,9 @@ export function BuildProfileCard({
                   : runBlockedUntilBuild
                     ? t("buildRequiredToRun")
                     : command.displayCommand;
+          // Disabled buttons expose their reason through the card-level
+          // visible issue text (below), linked via aria-describedby.
+          const issueHintId = `profile-issue-${profile.id.replace(/\s+/g, "-")}`;
           const actionButton = (
             <button
               className={`profile-action command-${action}`}
@@ -139,6 +142,11 @@ export function BuildProfileCard({
               onClick={() => onRun(command, profile.id, action)}
               disabled={actionDisabled}
               title={actionTitle}
+              aria-describedby={
+                hostMismatch || hostVerificationPending || profile.issues.length
+                  ? issueHintId
+                  : undefined
+              }
             >
               {action === "run"
                 ? t("run")
@@ -205,11 +213,26 @@ export function BuildProfileCard({
         )}
       </div>
       {profile.issues.length ? (
-        <span className="profile-issue">{profile.issues[0]}</span>
+        <span
+          className="profile-issue"
+          id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
+        >
+          {profile.issues[0]}
+        </span>
       ) : profile.hostMismatchActions.length ? (
-        <span className="profile-issue">{profileHostMessage}</span>
+        <span
+          className="profile-issue"
+          id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
+        >
+          {profileHostMessage}
+        </span>
       ) : profile.unverifiedActions.length ? (
-        <span className="profile-issue">{profileVerificationMessage}</span>
+        <span
+          className="profile-issue"
+          id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
+        >
+          {profileVerificationMessage}
+        </span>
       ) : null}
     </div>
   );

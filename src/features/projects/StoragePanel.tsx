@@ -3,6 +3,7 @@ import type {
   ProjectSnapshot,
   ProjectStorage,
 } from "../../bridge";
+import { useEffect, useRef } from "react";
 import { useI18n } from "../../i18n";
 import { fill, formatBytes } from "../../shared/format";
 import { storageKindLabel } from "./presentation";
@@ -40,6 +41,38 @@ export function StoragePanel({
   onConfirmCleanup,
 }: StoragePanelProps) {
   const { t } = useI18n();
+  const confirmationRef = useRef<HTMLDivElement | null>(null);
+
+  // A modal dialog that never receives focus (and lets Tab wander into the
+  // page behind it) is worse than none for keyboard and screen reader users.
+  useEffect(() => {
+    if (!cleanupConfirmation) return undefined;
+    const dialog = confirmationRef.current;
+    dialog?.querySelector<HTMLButtonElement>("button")?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancelCleanup();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>("button"),
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [cleanupConfirmation, onCancelCleanup]);
 
   return (
     <div className="storage-panel">
@@ -148,6 +181,7 @@ export function StoragePanel({
           ) : null}
           {cleanupConfirmation ? (
             <div
+              ref={confirmationRef}
               className="cleanup-confirmation"
               role="dialog"
               aria-modal="true"
