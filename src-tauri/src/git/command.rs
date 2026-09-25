@@ -43,12 +43,29 @@ struct GitProcessOutput {
 }
 
 fn run_git_process(project_path: &Path, args: &[&str]) -> Result<GitProcessOutput, String> {
-    let mut child = Command::new("git")
+    let mut command = Command::new("git");
+    command
+        // Atrium only observes repositories: optional locks make `git status`
+        // write index/untracked-cache updates, and repo-local fsmonitor or
+        // untracked-cache config can spawn daemons or write cache files.
+        .arg("--no-optional-locks")
+        .arg("-c")
+        .arg("core.fsmonitor=false")
+        .arg("-c")
+        .arg("core.untrackedCache=false")
         .arg("-C")
         .arg(project_path)
         .args(args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    // Inherited GIT_* variables (GIT_DIR, GIT_WORK_TREE, ...) would redirect
+    // git at repositories outside the scanned project.
+    for (variable, _) in std::env::vars_os() {
+        if variable.to_string_lossy().starts_with("GIT_") {
+            command.env_remove(&variable);
+        }
+    }
+    let mut child = command
         .spawn()
         .map_err(|error| format!("Cannot run git: {error}"))?;
     let stdout = child
@@ -104,7 +121,8 @@ fn read_limited<R: Read>(mut reader: R, limit: usize) -> io::Result<LimitedOutpu
 
 #[cfg(test)]
 mod tests {
-    use super::read_limited;
+    use super::{read_limited, run_git};
+    use std::fs;
     use std::io::Cursor;
 
     #[test]
@@ -121,5 +139,32 @@ mod tests {
 
         assert_eq!(result.bytes, b"1234");
         assert!(!result.truncated);
+    }
+
+    #[test]
+    fn ignores_inherited_git_environment_variables() {
+        let root = std::env::temp_dir().join(format!("atrium-git-env-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create fixture repo");
+        run_git(&root, &["init"]).expect("git init");
+        run_git(&root, &["config", "user.email", "atrium@example.com"]).expect("git config email");
+        run_git(&root, &["config", "user.name", "Atrium Test"]).expect("git config name");
+        fs::write(root.join("file.txt"), "content\n").expect("write file");
+        run_git(&root, &["add", "."]).expect("git add");
+        run_git(&root, &["commit", "-m", "init", "file.txt"]).expect("git commit");
+
+        // If GIT_DIR were inherited, git would inspect the empty directory
+        // below instead of the fixture repository and return no log output.
+        let unrelated = root.join("unrelated");
+        fs::create_dir_all(&unrelated).expect("create unrelated directory");
+        std::env::set_var("GIT_DIR", &unrelated);
+
+        let log = run_git(&root, &["log", "--oneline", "-n", "1"]);
+
+        std::env::remove_var("GIT_DIR");
+        let log = log.expect("log should use the repository, not the inherited GIT_DIR");
+        assert!(log.contains("init"), "log: {log}");
+
+        fs::remove_dir_all(root).expect("remove fixture repo");
     }
 }
