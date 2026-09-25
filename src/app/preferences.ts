@@ -107,10 +107,31 @@ export const persistLocalPreferences = (
 ): void => {
   if (typeof window === "undefined") return;
   try {
-    const serialized = JSON.stringify(preferences);
-    if (serialized.length > MAX_PREFERENCES_BYTES) return;
+    const serialized = serializeWithinBudget(preferences);
+    if (!serialized) return;
     window.localStorage.setItem(PREFERENCES_STORAGE_KEY, serialized);
   } catch {
     // Preferences are best effort; repository facts never depend on them.
   }
+};
+
+// projectMeta is the unbounded part (one entry per project path ever seen).
+// Dropping oldest entries keeps favorites and hidden flags persisting when
+// the budget is hit instead of silently discarding every future write.
+const serializeWithinBudget = (preferences: LocalPreferences): string | null => {
+  if (JSON.stringify(preferences).length <= MAX_PREFERENCES_BYTES) {
+    return JSON.stringify(preferences);
+  }
+  const metaEntries = Object.entries(preferences.projectMeta ?? {});
+  for (let drop = 0; drop < metaEntries.length; drop += 1) {
+    const candidate: LocalPreferences = {
+      ...preferences,
+      projectMeta: Object.fromEntries(metaEntries.slice(drop)),
+    };
+    const serialized = JSON.stringify(candidate);
+    if (serialized.length <= MAX_PREFERENCES_BYTES) {
+      return serialized;
+    }
+  }
+  return null;
 };

@@ -94,4 +94,24 @@ describe("local preferences", () => {
 
     expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBe(previous);
   });
+
+  it("keeps persisting favorites by pruning oldest project meta entries", () => {
+    const meta: Record<string, { favorite: boolean; hidden: boolean }> = {};
+    for (let index = 0; index < 2048; index += 1) {
+      meta[`/very/long/workspace/path/project-${index}`] = {
+        favorite: index === 2047,
+        hidden: false,
+      };
+    }
+    persistLocalPreferences({ rootPath: "/workspace", projectMeta: meta });
+
+    persistLocalPreferences({
+      rootPath: "/workspace",
+      projectMeta: meta,
+    });
+    const serialized = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
+    expect(serialized).not.toBeNull();
+    expect(serialized!.length).toBeLessThanOrEqual(MAX_PREFERENCES_BYTES);
+    expect(serialized).toContain("project-2047");
+  });
 });
