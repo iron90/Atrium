@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
 import { errorMessage } from "../../shared/errors";
+import {
+  SCAN_TIMEOUT_MESSAGE,
+  SCAN_TIMEOUT_MS,
+  withTimeout,
+} from "../../shared/with-timeout";
 
 export interface ProjectDetailLifecycleState {
   inspectorProject?: ProjectSnapshot;
@@ -121,7 +126,11 @@ export function useProjectDetailLifecycle({
       onError(null);
       detailRequest.current += 1;
       try {
-        const details = await inspectProject(project.path);
+        const details = await withTimeout(
+          inspectProject(project.path),
+          SCAN_TIMEOUT_MS,
+          SCAN_TIMEOUT_MESSAGE,
+        );
         onProjectRefreshed(project, details);
         const isStillSelected = selectedProjectIdRef.current === project.id;
         if (isStillSelected) {

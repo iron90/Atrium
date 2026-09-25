@@ -3,6 +3,11 @@ import type { WorkspaceSnapshot } from "../../bridge";
 import { translate, type Language } from "../../i18n";
 import type { WorkspaceMessage } from "../../shared/activity";
 import { errorMessage } from "../../shared/errors";
+import {
+  SCAN_TIMEOUT_MESSAGE,
+  SCAN_TIMEOUT_MS,
+  withTimeout,
+} from "../../shared/with-timeout";
 import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
 import { LatestRequestGate } from "./scan-request-gate";
@@ -103,11 +108,15 @@ export function useWorkspaceScanLifecycle({
 
     let disposed = false;
     const requestId = scanRequests.begin();
-    void scanWorkspacesFn({
-      paths: savedPaths,
-      excludeNames: excludeNamesRef.current,
-      language: languageRef.current,
-    })
+    void withTimeout(
+      scanWorkspacesFn({
+        paths: savedPaths,
+        excludeNames: excludeNamesRef.current,
+        language: languageRef.current,
+      }),
+      SCAN_TIMEOUT_MS,
+      SCAN_TIMEOUT_MESSAGE,
+    )
       .then((nextSnapshot) => {
         if (!nextSnapshot || disposed || !scanRequests.isCurrent(requestId)) {
           return;
@@ -142,11 +151,15 @@ export function useWorkspaceScanLifecycle({
       const requestId = scanRequests.begin();
       onMessage({ type: "refreshingWorkspace" });
       try {
-        const nextSnapshot = await scanWorkspacesFn({
-          paths: workspacePaths,
-          excludeNames: excludeNamesRef.current,
-          language: languageRef.current,
-        });
+        const nextSnapshot = await withTimeout(
+          scanWorkspacesFn({
+            paths: workspacePaths,
+            excludeNames: excludeNamesRef.current,
+            language: languageRef.current,
+          }),
+          SCAN_TIMEOUT_MS,
+          SCAN_TIMEOUT_MESSAGE,
+        );
         if (disposed || !scanRequests.isCurrent(requestId)) return;
         const changed =
           workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
@@ -211,11 +224,15 @@ export function useWorkspaceScanLifecycle({
     onMessage({ type: "scanning" });
     const requestId = scanRequests.begin();
     try {
-      const nextSnapshot = await scanWorkspacesFn({
-        paths: nextPaths,
-        excludeNames,
-        language,
-      });
+      const nextSnapshot = await withTimeout(
+        scanWorkspacesFn({
+          paths: nextPaths,
+          excludeNames,
+          language,
+        }),
+        SCAN_TIMEOUT_MS,
+        SCAN_TIMEOUT_MESSAGE,
+      );
       if (!scanRequests.isCurrent(requestId)) return;
       applyScannedSnapshot(nextSnapshot);
       onMessage({ type: "projects", count: nextSnapshot.projects.length });
