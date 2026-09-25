@@ -254,6 +254,8 @@ BuildProfile
   checkCommandId?
   buildCommandId?
   hostRequirements: { run?: HostOs[]; check?: HostOs[]; build?: HostOs[] }
+  verification: { run?: HostOs[]; check?: HostOs[]; build?: HostOs[] }
+  hostMismatchActions / unverifiedActions
   source: manifest key
   region? / payment?  (reserved for later variants)
   artifacts: string[]             # explicit files or directories produced by this profile
@@ -263,10 +265,14 @@ BuildProfile
 BuildProfile 是“平台 + 渠道 + 项目命令绑定”的组合。对于正式的目标操作，
 用户先选择配置，Atrium 再调用该配置绑定的仓库命令。
 
-`hostRequirements` 是按操作区分的“已验证成功宿主”允许列表，不是操作系统兼容性
-推断。项目 Agent 只有在对应宿主上完整执行同一条命令，并满足最终退出码、目标启动或
-实际构建产物等成功后置条件后，才能把该宿主写入 manifest。目标平台、目标三元组、
-runner 名称、工具存在或中间步骤成功都不能作为证明；没有通过验证的宿主不能声明。
+`hostRequirements` 是按操作区分的宿主兼容性下限（允许执行的环境），不是验证
+结论；`verification` 是按操作区分的“已验证成功宿主”上限证据。项目 Agent 只有
+在对应宿主上完整执行同一条命令，并满足最终退出码、目标启动或实际构建产物等
+成功后置条件后，才能把该宿主写入 `verification`。目标平台、目标三元组、
+runner 名称、工具存在或中间步骤成功都不能作为证明。宿主不匹配属于“延后验证”，
+不是失败，不能导致删除命令绑定或宿主要求。Atrium 只把 `verification` 作为
+manifest 中的结构化声明读取并据此门控执行，不认证、不复测；其准确性由项目
+Agent 负责。
 
 项目文件中自动发现的 `ProjectCommand` 则属于独立的仓库命令入口。它们不会
 因为是否被 Profile 引用而被合并或过滤；用户确认显示后，可以直接执行其中

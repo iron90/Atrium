@@ -193,6 +193,13 @@ disabled on a matching host until that host appears in `verification`. Schema 1
 and schema 2 profiles remain readable while their project Agent migrates them
 to schema 3.
 
+`verification` records are declarations made by the project Agent, not
+measurements taken by Atrium. Atrium reads them as structured manifest state and
+gates profile actions on them; it does not certify, re-run, or audit the
+underlying verification. A "verified" status in the UI therefore means "the
+project Agent claims this action passed on this host", and the project Agent
+owns the responsibility for its accuracy.
+
 Before adding a host to `verification`, the project Agent must inspect the exact
 program, arguments, working directory, expanded scripts, SDKs, and toolchain,
 then run the exact command bound in the manifest on that host. The evidence is
