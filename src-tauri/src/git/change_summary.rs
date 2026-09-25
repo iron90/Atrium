@@ -52,35 +52,25 @@ fn read_changed_files(
     from: &str,
     to: &str,
 ) -> Result<Vec<GitFileChange>, String> {
-    let numstat = run_git_required(project_path, &["diff", "--numstat", from, to, "--"])?;
-    let statuses = run_git_required(project_path, &["diff", "--name-status", from, to, "--"])?;
-    let mut status_by_path = HashMap::new();
-    for line in statuses.lines() {
-        let mut fields = line.splitn(2, '\t');
-        let Some(status) = fields.next() else {
-            continue;
-        };
-        let Some(path) = fields.next() else { continue };
-        status_by_path.insert(path.to_string(), status.to_string());
-    }
+    // -z output is NUL-separated and never quotes paths, so non-ASCII names
+    // and rename source/destination pairs arrive verbatim.
+    let numstat = run_git_required(project_path, &["diff", "--numstat", "-z", from, to, "--"])?;
+    let statuses = run_git_required(
+        project_path,
+        &["diff", "--name-status", "-z", from, to, "--"],
+    )?;
+    let mut status_by_path = parse_name_status_records(&statuses);
 
     let mut files = Vec::new();
-    for line in numstat.lines() {
-        let mut fields = line.splitn(3, '\t');
-        let Some(additions) = fields.next() else {
-            continue;
-        };
-        let Some(deletions) = fields.next() else {
-            continue;
-        };
-        let Some(path) = fields.next() else { continue };
+    for (path, additions, deletions) in parse_numstat_records(&numstat) {
+        let status = status_by_path
+            .remove(&path)
+            .unwrap_or_else(|| "M".to_string());
         files.push(GitFileChange {
-            path: path.to_string(),
-            status: status_by_path
-                .remove(path)
-                .unwrap_or_else(|| "M".to_string()),
-            additions: additions.parse().ok(),
-            deletions: deletions.parse().ok(),
+            path,
+            status,
+            additions,
+            deletions,
         });
     }
     for (path, status) in status_by_path {
@@ -93,6 +83,74 @@ fn read_changed_files(
     }
     files.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(files)
+}
+
+// numstat -z emits `added\tdeleted\t` followed by one NUL-terminated path, or
+// for renames by an empty field, the source path, and the destination path,
+// each NUL-terminated (verified against git output).
+fn parse_numstat_records(raw: &str) -> Vec<(String, Option<u64>, Option<u64>)> {
+    let fields: Vec<&str> = raw.split('\0').collect();
+    let mut records = Vec::new();
+    let mut index = 0;
+    while index < fields.len() {
+        let record = fields[index];
+        index += 1;
+        if record.is_empty() {
+            continue;
+        }
+        let mut parts = record.splitn(3, '\t');
+        let Some(additions) = parts.next().and_then(|value| value.parse().ok()) else {
+            continue;
+        };
+        let Some(deletions) = parts.next().and_then(|value| value.parse().ok()) else {
+            continue;
+        };
+        let Some(first_path) = parts.next() else {
+            continue;
+        };
+        if first_path.is_empty() {
+            // Rename record: the destination path is what survives the change.
+            if index + 1 < fields.len()
+                && !fields[index].is_empty()
+                && !fields[index + 1].is_empty()
+            {
+                records.push((
+                    fields[index + 1].to_string(),
+                    Some(additions),
+                    Some(deletions),
+                ));
+                index += 2;
+            }
+            continue;
+        }
+        records.push((first_path.to_string(), Some(additions), Some(deletions)));
+    }
+    records
+}
+
+// name-status -z emits a status token followed by one path, or for
+// copies/renames (X100-style tokens) by source and destination paths.
+fn parse_name_status_records(raw: &str) -> HashMap<String, String> {
+    let fields: Vec<&str> = raw.split('\0').collect();
+    let mut statuses = HashMap::new();
+    let mut index = 0;
+    while index < fields.len() {
+        let status = fields[index];
+        index += 1;
+        if status.is_empty() {
+            continue;
+        }
+        let is_pair = status.starts_with('R') || status.starts_with('C');
+        let Some(path) = fields.get(index + if is_pair { 1 } else { 0 }) else {
+            break;
+        };
+        let key = if is_pair { *path } else { path };
+        if !key.is_empty() {
+            statuses.insert(key.to_string(), status.to_string());
+        }
+        index += if is_pair { 2 } else { 1 };
+    }
+    statuses
 }
 
 fn validate_revision(value: &str) -> Result<String, String> {
@@ -111,7 +169,112 @@ fn validate_revision(value: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_revision;
+    use super::{
+        parse_name_status_records, parse_numstat_records, read_git_change_summary,
+        validate_revision,
+    };
+    use std::fs;
+    use std::path::Path;
+    use std::process::Command;
+
+    fn init_repo(name: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("atrium-git-summary-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create fixture repo");
+        let git = |args: &[&str]| {
+            let status = Command::new("git")
+                .arg("-C")
+                .arg(&root)
+                .args(args)
+                .status()
+                .expect("run git");
+            assert!(status.success(), "git {args:?} failed");
+        };
+        git(&["init", "-q"]);
+        git(&["config", "user.email", "atrium@example.com"]);
+        git(&["config", "user.name", "Atrium Test"]);
+        root
+    }
+
+    #[test]
+    fn parses_rename_and_cjk_paths_from_nul_separated_git_output() {
+        let numstat =
+            "2\t0\t\0src/old.txt\0src/\u{65b0}.txt\04\t0\t文档 新.txt\00\t2\t文档 旧.txt\0";
+        let statuses = "R100\0src/old.txt\0src/\u{65b0}.txt\0A\0文档 新.txt\0D\0文档 旧.txt\0";
+
+        let records = parse_numstat_records(numstat);
+        assert_eq!(
+            records,
+            vec![
+                ("src/\u{65b0}.txt".to_string(), Some(2), Some(0)),
+                ("文档 新.txt".to_string(), Some(4), Some(0)),
+                ("文档 旧.txt".to_string(), Some(0), Some(2)),
+            ]
+        );
+        let statuses_by_path = parse_name_status_records(statuses);
+        assert_eq!(
+            statuses_by_path.get("src/\u{65b0}.txt").map(String::as_str),
+            Some("R100")
+        );
+        assert_eq!(
+            statuses_by_path.get("文档 新.txt").map(String::as_str),
+            Some("A")
+        );
+    }
+
+    #[test]
+    fn skips_malformed_numstat_fields_instead_of_emitting_empty_paths() {
+        let numstat = "x\ty\tbroken\0\0\03\t1\treal.txt\0";
+
+        let records = parse_numstat_records(numstat);
+
+        assert_eq!(records, vec![("real.txt".to_string(), Some(3), Some(1))]);
+    }
+
+    #[test]
+    fn summarizes_renames_and_non_ascii_paths_from_a_real_repository() {
+        let root = init_repo("renames");
+        fs::write(root.join("文件 甲.txt"), "line\n").expect("write CJK file");
+        fs::create_dir_all(root.join("src")).expect("create src");
+        fs::write(root.join("src/old.txt"), "kept\n").expect("write old");
+        let git = |args: &[&str]| {
+            assert!(Command::new("git")
+                .arg("-C")
+                .arg(&root)
+                .args(args)
+                .status()
+                .expect("run git")
+                .success());
+        };
+        git(&["add", "-A"]);
+        git(&["commit", "-qm", "init"]);
+        git(&["mv", "src/old.txt", "src/新.txt"]);
+        git(&["commit", "-qm", "rename"]);
+        fs::write(root.join("src/新.txt"), "kept\nmore\n").expect("edit renamed file");
+        git(&["add", "-A"]);
+        git(&["commit", "-qm", "edit"]);
+
+        let summary =
+            read_git_change_summary(&root, "HEAD~2", Some("HEAD")).expect("summarize changes");
+
+        let renamed = summary
+            .files
+            .iter()
+            .find(|file| file.path == "src/新.txt")
+            .expect("renamed destination path is reported");
+        assert!(
+            renamed.status.starts_with('R'),
+            "rename status, got {}",
+            renamed.status
+        );
+        assert_eq!(renamed.additions, Some(1));
+        // The rename destination arrives verbatim: no tab-joined pair, no
+        // octal-escaped CJK bytes.
+        assert!(summary.files.iter().all(|file| !file.path.contains('\t')));
+
+        fs::remove_dir_all(root).expect("remove fixture repo");
+    }
 
     #[test]
     fn accepts_revision_names_and_trims_outer_whitespace() {
