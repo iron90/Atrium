@@ -41,10 +41,26 @@ pub async fn inspect_project_command(
         .acquire_owned()
         .await
         .map_err(|_| "Project inspection gate is unavailable".to_string())?;
+    let app_state = state.inner().clone();
     run_blocking("Project inspection", move || {
         let _inspection_permit = inspection_permit;
-        scan_project_with_storage(Path::new(&project_path), true)
-            .ok_or_else(|| "Project path cannot be scanned".to_string())
+        let project_root = Path::new(&project_path);
+        if let Some(cached_storage) = app_state.storage_metrics_cache.lookup(project_root) {
+            let Some(mut project) = scan_project(project_root) else {
+                return Err("Project path cannot be scanned".to_string());
+            };
+            project.storage = Some(cached_storage);
+            return Ok(project);
+        }
+        let Some(project) = scan_project_with_storage(project_root, true) else {
+            return Err("Project path cannot be scanned".to_string());
+        };
+        if let Some(storage) = &project.storage {
+            app_state
+                .storage_metrics_cache
+                .store(project_root, storage.clone());
+        }
+        Ok(project)
     })
     .await
 }
@@ -66,10 +82,14 @@ pub async fn clean_project_artifacts_command(
         .acquire_owned()
         .await
         .map_err(|_| "Project inspection gate is unavailable".to_string())?;
+    let app_state = state.inner().clone();
     run_blocking("Project cleanup", move || {
         let _inspection_permit = inspection_permit;
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;
+        app_state
+            .storage_metrics_cache
+            .invalidate(Path::new(&project_path));
         clean_project_artifacts_selected_with_progress(
             Path::new(&project_path),
             &project.cleanup,
