@@ -27,14 +27,17 @@ export const nativeRunMethods = {
 };
 
 export const previewRunMethods = {
-  // The parameter is declared so the demo bridge cannot silently drift from
-  // the native contract; the preview has no profile-action simulation.
+  // profileAction is accepted for contract parity; the preview has no
+  // profile-action simulation to feed it into.
   runProjectCommand: async (
     projectPath: string,
     commandId: string,
     profileId?: string,
-    _profileAction?: ProfileAction,
-  ): Promise<RunStarted> => fakeRun(projectPath, commandId, profileId),
+    profileAction?: ProfileAction,
+  ): Promise<RunStarted> => {
+    void profileAction;
+    return fakeRun(projectPath, commandId, profileId);
+  },
 
   listRunHistory: async (): Promise<RunFinished[]> => [],
 

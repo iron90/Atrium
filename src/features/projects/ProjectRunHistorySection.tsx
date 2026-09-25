@@ -37,6 +37,7 @@ export function ProjectRunHistorySection({
   const loadKey = `${project.id}:${refreshToken}`;
   const [state, setState] = useState<HistoryLoadState | null>(null);
   const [copiedRunId, setCopiedRunId] = useState<string | null>(null);
+  const [copyFailedRunId, setCopyFailedRunId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,12 +80,29 @@ export function ProjectRunHistorySection({
   };
 
   const handleCopyLog = async (record: RunFinished) => {
-    if (!navigator.clipboard) return;
-    await navigator.clipboard.writeText(renderRunLogText(record));
-    setCopiedRunId(record.runId);
-    window.setTimeout(() => {
-      setCopiedRunId((current) => (current === record.runId ? null : current));
-    }, 2000);
+    if (!navigator.clipboard) {
+      setCopyFailedRunId(record.runId);
+      window.setTimeout(() => {
+        setCopyFailedRunId((current) =>
+          current === record.runId ? null : current,
+        );
+      }, 2000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(renderRunLogText(record));
+      setCopiedRunId(record.runId);
+      window.setTimeout(() => {
+        setCopiedRunId((current) => (current === record.runId ? null : current));
+      }, 2000);
+    } catch {
+      setCopyFailedRunId(record.runId);
+      window.setTimeout(() => {
+        setCopyFailedRunId((current) =>
+          current === record.runId ? null : current,
+        );
+      }, 2000);
+    }
   };
 
   return (
@@ -126,7 +144,9 @@ export function ProjectRunHistorySection({
                 >
                   {copiedRunId === record.runId
                     ? t("runLogCopied")
-                    : t("copyRunLog")}
+                    : copyFailedRunId === record.runId
+                      ? t("copyFailed")
+                      : t("copyRunLog")}
                 </button>
                 <button
                   className="text-button"

@@ -268,6 +268,7 @@ export const en = {
   deletions: "deletions",
   copyChanges: "Copy JSON",
   changesCopied: "Changes copied",
+  copyFailed: "Copy failed",
   noChanges: "No changes in this range.",
   invalidRevision: "Revision is invalid.",
 } as const;
@@ -529,6 +530,7 @@ export const zh: Record<keyof typeof en, string> = {
   deletions: "删除",
   copyChanges: "复制 JSON",
   changesCopied: "变更已复制",
+  copyFailed: "复制失败",
   noChanges: "该范围内没有变更。",
   invalidRevision: "版本引用无效。",
 };

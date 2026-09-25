@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
@@ -6,6 +7,7 @@ import { useGitChangeSummary } from "./use-git-change-summary";
 
 export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
   const { t } = useI18n();
+  const [copyState, setCopyState] = useState<"copied" | "failed" | null>(null);
   const {
     revisionOptions,
     fromRevision,
@@ -109,13 +111,31 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
               ) : null}
               <button
                 type="button"
-                onClick={() =>
-                  void navigator.clipboard?.writeText(
+                onClick={() => {
+                  const copy = navigator.clipboard?.writeText(
                     JSON.stringify(changeSummary, null, 2),
-                  )
-                }
+                  );
+                  if (!copy) {
+                    setCopyState("failed");
+                    window.setTimeout(() => setCopyState(null), 2000);
+                    return;
+                  }
+                  copy
+                    .then(() => {
+                      setCopyState("copied");
+                      window.setTimeout(() => setCopyState(null), 2000);
+                    })
+                    .catch(() => {
+                      setCopyState("failed");
+                      window.setTimeout(() => setCopyState(null), 2000);
+                    });
+                }}
               >
-                {t("copyChanges")}
+                {copyState === "copied"
+                  ? t("changesCopied")
+                  : copyState === "failed"
+                    ? t("copyFailed")
+                    : t("copyChanges")}
               </button>
             </div>
           ) : null}
