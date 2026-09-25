@@ -1,7 +1,6 @@
 use std::process::Stdio;
 
 use tauri::{AppHandle, Emitter};
-use tokio::process::Command;
 use tokio::sync::oneshot;
 
 use crate::history::{append_run_history, with_history_lock};
@@ -29,7 +28,13 @@ pub async fn start_project_command(
         .runs
         .lock()
         .map_err(|_| "Run registry is unavailable".to_string())?
-        .insert(context.run_id().to_string(), RunControl { stop: stop_tx });
+        .insert(
+            context.run_id().to_string(),
+            RunControl {
+                stop: stop_tx,
+                pid: child.id(),
+            },
+        );
 
     let started = context.started();
     if let Err(error) = app.emit("run-started", &started) {
@@ -109,12 +114,21 @@ pub fn stop_project_run(state: &AppState, run_id: &str) -> Result<(), String> {
 }
 
 fn build_process(command: &ProjectCommand) -> Result<tokio::process::Child, String> {
-    Command::new(&command.program)
+    let mut process = std::process::Command::new(&command.program);
+    process
         .args(&command.args)
         .current_dir(&command.working_directory)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .kill_on_drop(true)
+        .stderr(Stdio::piped());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        // Own process group so cancellation can reach grandchildren too.
+        process.process_group(0);
+    }
+    let mut tokio_command = tokio::process::Command::from(process);
+    tokio_command.kill_on_drop(true);
+    tokio_command
         .spawn()
         .map_err(|error| format!("Cannot start {}: {error}", command.display_command))
 }

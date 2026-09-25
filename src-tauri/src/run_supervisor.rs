@@ -36,6 +36,11 @@ pub(crate) async fn supervise_process(
         }
     };
     let (status, cancelled) = if cancellation_requested {
+        // Cancel reaches the whole process tree: repo commands commonly spawn
+        // grandchildren (npm -> vite, sh gradlew -> java) that must die too.
+        if let Some(pid) = child.id() {
+            crate::process_tree::kill_process_tree(pid);
+        }
         let status = match child.kill().await {
             Ok(()) => match child.wait().await {
                 Ok(status) => Some(status),

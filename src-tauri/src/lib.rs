@@ -12,6 +12,7 @@ mod manifest_projection;
 mod manifest_schema;
 mod model;
 mod os_open;
+mod process_tree;
 mod project_metadata;
 mod project_path;
 mod project_scan;
@@ -32,6 +33,8 @@ mod workspace_commands;
 mod workspace_membership;
 mod workspace_policy;
 mod workspace_scan;
+
+use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()
@@ -54,6 +57,11 @@ pub fn run() {
             tool_commands::external::open_project_remote_command,
             tool_commands::external::open_project_link_command
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Atrium");
+        .build(tauri::generate_context!())
+        .expect("error while building Atrium")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                app_handle.state::<state::AppState>().kill_all_runs();
+            }
+        });
 }

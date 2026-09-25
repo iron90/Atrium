@@ -11,6 +11,7 @@ use crate::workspace_membership::ensure_project_in_workspace_roots;
 
 pub struct RunControl {
     pub stop: oneshot::Sender<()>,
+    pub pid: Option<u32>,
 }
 
 // Walking a huge repository to measure storage is expensive; a short-lived
@@ -112,6 +113,20 @@ impl AppState {
             .lock()
             .map_err(|_| "Workspace registry is unavailable".to_string())?;
         ensure_project_in_workspace_roots(&roots, project_path)
+    }
+
+    // Synchronous best-effort teardown for application exit: the async
+    // supervision tasks may never run again once the event loop stops.
+    pub fn kill_all_runs(&self) {
+        let Ok(mut runs) = self.runs.lock() else {
+            return;
+        };
+        for (_, control) in runs.drain() {
+            let _ = control.stop.send(());
+            if let Some(pid) = control.pid {
+                crate::process_tree::kill_process_tree(pid);
+            }
+        }
     }
 }
 
