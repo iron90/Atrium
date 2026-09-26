@@ -47,6 +47,7 @@ import {
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
+import { useTransientActivityMessage } from "./app/use-transient-activity";
 import type {
   ProfileAction,
   ProjectCommand,
@@ -178,6 +179,11 @@ export default function App() {
   const handleActivityMessage = useCallback((message: ActivityMessage) => {
     setActivityMessage(message);
   }, []);
+  const clearActivityMessage = useCallback(
+    () => setActivityMessage(null),
+    [],
+  );
+  useTransientActivityMessage(activityMessage, clearActivityMessage);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
   }, []);
