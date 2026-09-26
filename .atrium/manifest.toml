@@ -1,11 +1,10 @@
-schema = 1
-profile = "tauri-react"
+schema = 3
 
 [identity]
 icon = "src-tauri/icons/icon.png"
 
 [cleanup]
-cache = ["node_modules/.cache"]
+cache = ["node_modules/.vite"]
 build = ["dist", "src-tauri/target"]
 
 [[platforms]]
@@ -32,8 +31,23 @@ artifacts = [
 
 [build_profiles.commands]
 run = "package.json#scripts.dev"
-check = "package.json#scripts.test"
+check = "package.json#scripts.quality"
 build = "package.json#scripts.build:macos"
+
+# Lower compatibility boundary. CI exercises the quality gate on all three
+# hosts; the desktop run entry and the macOS bundle only apply on macOS.
+[build_profiles.host_requirements]
+run = ["macos"]
+check = ["macos", "windows", "linux"]
+build = ["macos"]
+
+# Hosts where the exact bound command passed the required postconditions on
+# this machine. run stays unverified: see the integration report — the
+# running Atrium instance holds the fixed dev port and Atrium processes must
+# not be terminated.
+[build_profiles.verification]
+check = ["macos"]
+build = ["macos"]
 
 [[build_profiles]]
 id = "windows-local-development"
@@ -47,5 +61,10 @@ artifacts = [
 
 [build_profiles.commands]
 run = "package.json#scripts.dev"
-check = "package.json#scripts.test"
+check = "package.json#scripts.quality"
 build = "package.json#scripts.build:windows"
+
+[build_profiles.host_requirements]
+run = ["windows"]
+check = ["macos", "windows", "linux"]
+build = ["windows"]
