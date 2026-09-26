@@ -36,15 +36,23 @@ describe("configuration Agent prompt", () => {
     expect(prompt).toContain(`project "${project.name}"`);
     expect(prompt).toContain("- .atrium/guidance.toml");
     expect(prompt).toContain("- .atrium/reports/project-configuration.md");
-    expect(prompt).toContain("The rules in the guidance report are authoritative");
+    expect(prompt).toContain(
+      "The rules in the guidance report are authoritative",
+    );
     expect(prompt).toContain("1. ");
     expect(prompt).toContain("8. ");
     expect(prompt).toContain("BEGIN ATRIUM MANAGED RULES");
     expect(prompt).toContain("AGENTS.md");
     expect(prompt).toContain("[build_profiles.verification]");
-    expect(prompt).toContain("a host mismatch is deferred verification, not a failure");
-    expect(prompt).toContain("Never write an unverified host into verification");
-    expect(prompt).toContain("Never narrow the check scope just to obtain exit code 0");
+    expect(prompt).toContain(
+      "a host mismatch is deferred verification, not a failure",
+    );
+    expect(prompt).toContain(
+      "Never write an unverified host into verification",
+    );
+    expect(prompt).toContain(
+      "Never narrow the check scope just to obtain exit code 0",
+    );
     expect(prompt).toContain("verification matrix");
     expect(prompt).toContain("do not update guidance-sync");
     expect(prompt).toContain("Do not launch, control, or terminate Atrium");

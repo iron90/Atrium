@@ -10,9 +10,9 @@ describe("withTimeout", () => {
 
   it("propagates the task error without waiting for the deadline", async () => {
     const failure = Promise.reject(new Error("boom"));
-    await expect(
-      withTimeout(failure, 10_000, "too slow"),
-    ).rejects.toThrow("boom");
+    await expect(withTimeout(failure, 10_000, "too slow")).rejects.toThrow(
+      "boom",
+    );
   });
 
   it("rejects with the timeout message when the task hangs", async () => {

@@ -37,9 +37,7 @@ export const openProjectAction = async (
       return;
     case "link": {
       if (!linkId) return;
-      const link = project.links.find(
-        (candidate) => candidate.id === linkId,
-      );
+      const link = project.links.find((candidate) => candidate.id === linkId);
       if (
         link?.url.startsWith("file://") &&
         !(await confirmFileLink(link.url))

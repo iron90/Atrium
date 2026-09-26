@@ -41,7 +41,9 @@ afterEach(cleanup);
 
 describe("ProjectRunSection", () => {
   it("returns nothing without an active run or a finished result", () => {
-    const { container } = render(<ProjectRunSection onStop={() => undefined} />);
+    const { container } = render(
+      <ProjectRunSection onStop={() => undefined} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 

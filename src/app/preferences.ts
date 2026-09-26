@@ -118,7 +118,9 @@ export const persistLocalPreferences = (
 // projectMeta is the unbounded part (one entry per project path ever seen).
 // Dropping oldest entries keeps favorites and hidden flags persisting when
 // the budget is hit instead of silently discarding every future write.
-const serializeWithinBudget = (preferences: LocalPreferences): string | null => {
+const serializeWithinBudget = (
+  preferences: LocalPreferences,
+): string | null => {
   if (JSON.stringify(preferences).length <= MAX_PREFERENCES_BYTES) {
     return JSON.stringify(preferences);
   }

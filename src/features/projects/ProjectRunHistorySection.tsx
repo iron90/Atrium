@@ -93,7 +93,9 @@ export function ProjectRunHistorySection({
       await navigator.clipboard.writeText(renderRunLogText(record));
       setCopiedRunId(record.runId);
       window.setTimeout(() => {
-        setCopiedRunId((current) => (current === record.runId ? null : current));
+        setCopiedRunId((current) =>
+          current === record.runId ? null : current,
+        );
       }, 2000);
     } catch {
       setCopyFailedRunId(record.runId);

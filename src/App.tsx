@@ -179,10 +179,7 @@ export default function App() {
   const handleActivityMessage = useCallback((message: ActivityMessage) => {
     setActivityMessage(message);
   }, []);
-  const clearActivityMessage = useCallback(
-    () => setActivityMessage(null),
-    [],
-  );
+  const clearActivityMessage = useCallback(() => setActivityMessage(null), []);
   useTransientActivityMessage(activityMessage, clearActivityMessage);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
@@ -548,94 +545,94 @@ export default function App() {
   return (
     <I18nProvider value={i18nValue}>
       <RunStreamContext.Provider value={runStreamValue}>
-      <div className="app-shell" data-theme={theme} data-layout={layout}>
-        <AppSidebar
-          activePage={activePage}
-          onPageChange={setActivePage}
-          activity={{
-            activeRun: globalActiveRun,
-            onStop: () =>
-              globalActiveRun
-                ? handleStopRun(globalActiveRun.runId)
-                : undefined,
-            projectName: globalActiveRunProject?.name,
-          }}
-        />
+        <div className="app-shell" data-theme={theme} data-layout={layout}>
+          <AppSidebar
+            activePage={activePage}
+            onPageChange={setActivePage}
+            activity={{
+              activeRun: globalActiveRun,
+              onStop: () =>
+                globalActiveRun
+                  ? handleStopRun(globalActiveRun.runId)
+                  : undefined,
+              projectName: globalActiveRunProject?.name,
+            }}
+          />
 
-        <div className="main-column-shell">
-          <main ref={mainColumnRef} className="main-column">
-            <PageTransition pageKey={activePage}>
-              {(page) => {
-                const heading = headingForPage(page);
-                return (
-                  <div className="page-view" data-page={page}>
-                    <header className="topbar">
-                      <div className="page-heading">
-                        <h1>{heading.title}</h1>
-                        <p>{heading.body}</p>
-                      </div>
-                    </header>
+          <div className="main-column-shell">
+            <main ref={mainColumnRef} className="main-column">
+              <PageTransition pageKey={activePage}>
+                {(page) => {
+                  const heading = headingForPage(page);
+                  return (
+                    <div className="page-view" data-page={page}>
+                      <header className="topbar">
+                        <div className="page-heading">
+                          <h1>{heading.title}</h1>
+                          <p>{heading.body}</p>
+                        </div>
+                      </header>
 
-                    {error ? (
-                      <div className="error-banner" role="alert">
-                        {error}
-                      </div>
-                    ) : null}
-                    {activityMessage ? (
-                      <div className="status-banner" role="status">
-                        {formatActivityMessage(activityMessage, language)}
-                      </div>
-                    ) : null}
+                      {error ? (
+                        <div className="error-banner" role="alert">
+                          {error}
+                        </div>
+                      ) : null}
+                      {activityMessage ? (
+                        <div className="status-banner" role="status">
+                          {formatActivityMessage(activityMessage, language)}
+                        </div>
+                      ) : null}
 
-                    {page === "settings" ? (
-                      <SettingsPanel
-                        theme={theme}
-                        setTheme={setTheme}
-                        layout={layout}
-                        setLayout={handleLayoutChange}
-                        language={language}
-                        setLanguage={setLanguage}
-                        workspacePaths={workspacePaths}
-                        onWorkspacePathsChange={updateWorkspacePaths}
-                        excludeNames={excludeNames}
-                        setExcludeNames={setExcludeNames}
-                        onScan={handleScanWorkspace}
-                        isScanning={isScanning}
-                      />
-                    ) : page === "git" ? (
-                      <GitHistoryView
-                        key={selectedProject?.id ?? "none"}
-                        projects={snapshot.projects}
-                        selectedId={selectedProject?.id}
-                        onSelect={selectProject}
-                      />
-                    ) : (
-                      <ProjectsPage
-                        layout={layout}
-                        snapshot={snapshot}
-                        visibleProjects={visibleProjects}
-                        projectList={projectList}
-                        inspector={inspector}
-                      />
-                    )}
-                  </div>
-                );
-              }}
-            </PageTransition>
-          </main>
-          {mainScrollThumb.visible ? (
-            <div className="main-scrollbar" aria-hidden="true">
-              <span
-                className="main-scrollbar-thumb"
-                style={{
-                  height: `${mainScrollThumb.height}px`,
-                  transform: `translateY(${mainScrollThumb.top}px)`,
+                      {page === "settings" ? (
+                        <SettingsPanel
+                          theme={theme}
+                          setTheme={setTheme}
+                          layout={layout}
+                          setLayout={handleLayoutChange}
+                          language={language}
+                          setLanguage={setLanguage}
+                          workspacePaths={workspacePaths}
+                          onWorkspacePathsChange={updateWorkspacePaths}
+                          excludeNames={excludeNames}
+                          setExcludeNames={setExcludeNames}
+                          onScan={handleScanWorkspace}
+                          isScanning={isScanning}
+                        />
+                      ) : page === "git" ? (
+                        <GitHistoryView
+                          key={selectedProject?.id ?? "none"}
+                          projects={snapshot.projects}
+                          selectedId={selectedProject?.id}
+                          onSelect={selectProject}
+                        />
+                      ) : (
+                        <ProjectsPage
+                          layout={layout}
+                          snapshot={snapshot}
+                          visibleProjects={visibleProjects}
+                          projectList={projectList}
+                          inspector={inspector}
+                        />
+                      )}
+                    </div>
+                  );
                 }}
-              />
-            </div>
-          ) : null}
+              </PageTransition>
+            </main>
+            {mainScrollThumb.visible ? (
+              <div className="main-scrollbar" aria-hidden="true">
+                <span
+                  className="main-scrollbar-thumb"
+                  style={{
+                    height: `${mainScrollThumb.height}px`,
+                    transform: `translateY(${mainScrollThumb.top}px)`,
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
       </RunStreamContext.Provider>
     </I18nProvider>
   );
