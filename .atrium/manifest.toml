@@ -42,10 +42,11 @@ check = ["macos", "windows", "linux"]
 build = ["macos"]
 
 # Hosts where the exact bound command passed the required postconditions on
-# this machine. run stays unverified: see the integration report — the
-# running Atrium instance holds the fixed dev port and Atrium processes must
-# not be terminated.
+# this machine (run: desktop target started with devUrl readiness/smoke 200;
+# check: full quality gate exit 0; build: exit 0 with both declared artifacts
+# produced during that run).
 [build_profiles.verification]
+run = ["macos"]
 check = ["macos"]
 build = ["macos"]
 
