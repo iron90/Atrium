@@ -1,4 +1,5 @@
 import type { ProjectSnapshot } from "../../bridge";
+import { FiRefreshCw } from "react-icons/fi";
 import { useI18n } from "../../i18n";
 import { ProjectIconView } from "./ProjectIconView";
 
@@ -29,7 +30,7 @@ export function ProjectInspectorHeader({
         title={t("refreshProject")}
       >
         <span className="inspector-refresh-glyph" aria-hidden="true">
-          ⟳
+          <FiRefreshCw />
         </span>
         <span className="sr-only">
           {isRefreshing ? t("refreshingProject") : t("refreshProject")}

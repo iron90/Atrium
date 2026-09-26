@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { demoSnapshot } from "../../bridge/fake-bridge";
 import { ProjectInspectorHeader } from "./ProjectInspectorHeader";
@@ -21,7 +21,7 @@ describe("project inspector header", () => {
     const { rerender } = renderHeader(false);
     const button = screen.getByRole("button", { name: "Refresh project" });
 
-    expect(within(button).getByText("⟳")).toBeInTheDocument();
+    expect(button.querySelector("svg")).not.toBeNull();
 
     rerender(
       <ProjectInspectorHeader
@@ -31,13 +31,8 @@ describe("project inspector header", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Refreshing…" })).toHaveClass(
-      "is-refreshing",
-    );
-    expect(
-      within(screen.getByRole("button", { name: "Refreshing…" })).getByText(
-        "⟳",
-      ),
-    ).toBeInTheDocument();
+    const refreshedButton = screen.getByRole("button", { name: "Refreshing…" });
+    expect(refreshedButton).toHaveClass("is-refreshing");
+    expect(refreshedButton.querySelector("svg")).not.toBeNull();
   });
 });

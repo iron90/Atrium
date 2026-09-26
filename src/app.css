@@ -1059,6 +1059,15 @@ button[aria-busy="true"] {
   display: block;
   line-height: 1;
 }
+/* The SVG glyph is symmetric inside its viewBox, so the spin animation
+   rotates around its own center instead of orbiting an off-center text
+   glyph. */
+.inspector-refresh-glyph svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+  margin: 0 auto;
+}
 .inspector-refresh.is-refreshing .inspector-refresh-glyph {
   animation: status-spinner-spin 0.9s linear infinite;
 }
