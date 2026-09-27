@@ -124,14 +124,9 @@ export function StoragePanel({
             onClick={() => onCleanArtifacts(project)}
             disabled={isCleaningArtifacts || !cleanupSelection.length}
           >
-            {isCleaningArtifacts ? (
-              <span className="cleanup-button-progress-label">
-                <span>{t("cleaningArtifacts")}</span>
-                <strong>{cleanupProgress?.percent ?? 0}%</strong>
-              </span>
-            ) : (
-              t("cleanSelected")
-            )}
+            {/* The percent lives in the progress block below; a second one
+                inside the button reads as two competing progress displays. */}
+            {isCleaningArtifacts ? t("cleaningArtifacts") : t("cleanSelected")}
           </button>
           {isCleaningArtifacts ? (
             <div className="cleanup-progress" role="status" aria-live="polite">
