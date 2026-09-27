@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -15,6 +16,12 @@ pub(crate) struct PathMetrics {
 #[derive(Default)]
 pub(crate) struct PathMetricsCache {
     metrics: HashMap<PathBuf, PathMetrics>,
+    // Hard links share one inode, so the same storage can be reached through
+    // several paths (rustc's incremental cache hardlinks every session's
+    // object files). Counting per path would multiply the project's apparent
+    // size; like du/df, only the first path seen contributes.
+    #[cfg(unix)]
+    counted_inodes: HashSet<(u64, u64)>,
 }
 
 impl PathMetricsCache {
@@ -57,6 +64,21 @@ impl PathMetricsCache {
             );
         }
         if metadata.is_file() {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::MetadataExt;
+                if metadata.nlink() > 1
+                    && !self.counted_inodes.insert((metadata.dev(), metadata.ino()))
+                {
+                    return (
+                        PathMetrics {
+                            is_complete: true,
+                            ..PathMetrics::default()
+                        },
+                        false,
+                    );
+                }
+            }
             return (
                 PathMetrics {
                     bytes: metadata.len(),
@@ -206,6 +228,35 @@ mod tests {
         assert_eq!(cached_path_count, 2, "only directories are cached");
 
         fs::remove_dir_all(root).expect("remove metrics fixture");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn counts_hardlinked_paths_once_like_disk_usage() {
+        use std::os::unix::fs::MetadataExt;
+
+        let root =
+            std::env::temp_dir().join(format!("atrium-metrics-hardlink-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create hardlink fixture");
+        fs::write(root.join("original"), b"metrics").expect("write original file");
+        let original = fs::metadata(root.join("original")).expect("stat original file");
+        fs::hard_link(root.join("original"), root.join("alias")).expect("hard link original");
+        assert_eq!(
+            fs::metadata(root.join("alias"))
+                .expect("stat alias file")
+                .ino(),
+            original.ino()
+        );
+        fs::write(root.join("unrelated"), b"12345").expect("write unrelated file");
+
+        let metrics = measure_path(&root);
+
+        // 7 bytes for the shared inode once, 5 for the unrelated file.
+        assert_eq!(metrics.bytes, 12);
+        assert_eq!(metrics.file_count, 2);
+
+        fs::remove_dir_all(root).expect("remove hardlink fixture");
     }
 
     #[test]
