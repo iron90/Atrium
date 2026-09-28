@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "description": "A local-first visual project board for independent software studios",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iron90/Atrium.git"
+  },
   "packageManager": "npm@11.9.0",
   "engines": {
     "node": ">=24 <26",
