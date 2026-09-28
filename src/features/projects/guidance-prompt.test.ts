@@ -25,6 +25,7 @@ describe("configuration Agent prompt", () => {
     expect(prompt).toContain("绝不把未验证的宿主写入 verification");
     expect(prompt).toContain("绝不为得到退出码 0 而缩窄 check 范围");
     expect(prompt).toContain("验证矩阵");
+    expect(prompt).toContain("每个宿主只需运行一次，把该宿主记录到每个相同绑定名下");
     expect(prompt).toContain("不要更新 guidance-sync");
     expect(prompt).toContain("不要启动、控制或终止 Atrium");
     expect(prompt).toContain("不要修改 Git 历史");
@@ -54,6 +55,9 @@ describe("configuration Agent prompt", () => {
       "Never narrow the check scope just to obtain exit code 0",
     );
     expect(prompt).toContain("verification matrix");
+    expect(prompt).toContain(
+      "execute it once per host and record the verified host under each identical binding",
+    );
     expect(prompt).toContain("do not update guidance-sync");
     expect(prompt).toContain("Do not launch, control, or terminate Atrium");
     expect(prompt).toContain("Do not rewrite Git history");
