@@ -58,10 +58,16 @@ For a browser-only UI preview:
 npm run dev:web
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the architecture and
-[AGENTS.md](AGENTS.md) for implementation guardrails.
+The browser preview renders deterministic demo data; it does not scan real
+repositories.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the architecture,
+[docs/INTERACTION_STANDARDS.md](docs/INTERACTION_STANDARDS.md) for interaction
+standards, and [AGENTS.md](AGENTS.md) for implementation guardrails.
 
 The project-side integration contract is documented in
 [docs/ATRIUM_PROTOCOL.md](docs/ATRIUM_PROTOCOL.md). Atrium manifests are
 stored in `.atrium/manifest.toml`; generated conformance reports are kept in
 `.atrium/reports/`.
+
+`scripts/generate-icon.swift` regenerates `src-tauri/icons/icon.png` on macOS.

@@ -55,7 +55,7 @@ Tauri 使用系统 WebView，并通过消息传递把 Web UI 与 Rust 原生能�
 
 - Rust 可以把文件系统、Git CLI、子进程监督和 SQLite 放在一个明确的 native core；
 - React/TypeScript 很适合实现三套主题、多种布局和复杂信息密度；
-- 可以复用现有 `WebDock` 的 Tauri、Rust、React 经验；
+- 可以复用现有桌面项目的 Tauri、Rust、React 经验；
 - 安装包和空闲资源通常比 Electron 更轻。
 
 需要接受的代价：
@@ -239,7 +239,7 @@ JetBrains 的 Compose Multiplatform 支持 Windows、macOS 和 Linux 桌面，�
 
 在最终选择前，四个第一梯队方案都只做同一个小型 POC，不做完整产品：
 
-1. 扫描 `~/projects` 下的项目；
+1. 扫描本机开发目录（如 `~/projects`）下的项目；
 2. 读取每个仓库的分支、工作区状态和 20 条提交；
 3. 从 `package.json`、`Cargo.toml`、`pubspec.yaml` 和 Makefile 发现命令；
 4. 启动一个短命令和一个长命令，观察输出、取消和退出码；

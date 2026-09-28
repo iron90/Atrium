@@ -132,6 +132,13 @@ Rust native core
   │  ├─ package               package.json scripts 适配
   │  ├─ toolchain             Cargo/Flutter/脚本入口适配
   │  ├─ makefile              Makefile target 适配
+  │  ├─ dotnet                .NET run/build/test 入口适配
+  │  ├─ go                    Go run/build/test 入口适配
+  │  ├─ gradle                Gradle 构建入口适配
+  │  ├─ maven                 Maven 构建入口适配
+  │  ├─ python                Python 测试/构建入口适配（含 uv）
+  │  ├─ elixir                Mix 入口适配
+  │  ├─ ecosystem             生态注册表，按项目文件分发适配
   │  └─ common                argv、标签和平台可执行文件规则
   ├─ manifest_schema         manifest DTO 与 TOML 解析
   ├─ manifest                配置文件读取、Schema 校验和入口编排
@@ -144,7 +151,7 @@ Rust native core
   ├─ protocol                协议能力状态评估
   ├─ guidance                Agent 引导文件和报告生成门面
   │  ├─ configuration        项目配置引导报告
-  │  └─ icon                 图标协议报告
+  │  └─ metadata             guidance.toml 元数据与同步状态
   ├─ conformance              图标协议状态编排和事实读取
   │  └─ icon_assets            图标路径安全、格式校验和兼容发现
   ├─ git                     Git 领域门面
@@ -191,9 +198,12 @@ ProjectSnapshot
   id: stable local path identity
   name: directory or manifest name
   path: canonical repository path
+  modifiedAt: optional last activity time (latest commit, or directory mtime without Git)
   description: optional structured project description
   icon: optional data URL + repository-relative source path
+  iconConformance: declared icon path safety and format status
   protocol: ProtocolStatus
+  guidance: GuidanceStatus (guidance revision with needsUpdate/needsSync)
   repo: GitSnapshot?
   tools: ProjectTools
   links: ProjectLink[]
@@ -324,8 +334,9 @@ process interruption leaves either the previous complete document or the new
 complete document. This is intentionally
 separate from the project repository and can later migrate to SQLite without
 changing the project-side protocol. Opening a log materializes its text file in the
-same application data area with the same atomic replacement policy; a project-scoped
-viewing surface remains a follow-up.
+same application data area with the same atomic replacement policy. The project
+inspector includes a per-project history section showing the 12 most recent runs
+with log access; a standalone cross-project history page remains a follow-up.
 Each stdout/stderr stream is read through a fixed-size byte buffer, keeps at most
 256 KiB for durable capture, and truncates individual lines at 16 KiB. The reader
 continues draining the child pipe after a limit is reached, so noisy commands do
@@ -338,9 +349,9 @@ the stop registry or persisted history is accessed.
 避免对大型缓存或构建目录再次递归扫描；缓存只保留目录级指标，只存在于本次检查，
 不改变下一次扫描的实时性。
 
-当前不提供脱离项目上下文的独立运行记录页面。运行记录仍由执行核心持久化，记录中
-始终包含项目、命令、平台/渠道和 Git 上下文；后续应在项目详情中按项目重新设计查看
-入口，而不是复用全局选中项目状态。
+项目详情检查器提供按项目筛选的运行历史入口，最近 12 次运行与日志文本在项目上下文
+中直接查看；脱离项目上下文的独立运行记录页面不在当前范围。运行记录仍由执行核心
+持久化，记录中始终包含项目、命令、平台/渠道和 Git 上下文。
 
 看板不会出现 `Planning`、`Building`、`Improving` 之类的项目阶段字段。项目
 列表只展示客观的 Git、扫描和命令结果。
@@ -385,12 +396,18 @@ path 会再次去重。
 - Rust：从 `Cargo.toml` 提供 Cargo 入口；
 - Flutter：从 `pubspec.yaml` 提供 Flutter 入口；
 - Make：从 `Makefile` 读取明确 target；
+- .NET：从 `.sln` / `.csproj` 发现 `dotnet run` / `build` / `test`；
+- Go：从 `go.mod` 发现 `go run` / `build` / `test`；
+- Gradle：从 `build.gradle(.kts)` / `settings.gradle(.kts)` 发现 Gradle 入口；
+- Maven：从 `pom.xml` 发现 Maven 入口；
+- Python：从 `pyproject.toml` / `requirements.txt` 发现 pytest 与构建入口（支持 uv）；
+- Elixir：从 `mix.exs` 发现 Mix 入口；
 - 脚本名和 Make target 只接受不含空白/控制字符、不以 `-` 开头且不超过 128 字节的
   标识符；异常键会被忽略，避免污染 UI、source 引用或 argv；
 - 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
-- Schema 1 和 Schema 2 的 manifest 结构都严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，
-  不会被静默忽略。Schema 1 继续兼容读取但不声明构建宿主限制，Schema 2 增加按 Run / Check /
-  Build 区分的宿主系统声明。
+- manifest 结构严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，不会被静默忽略。
+  当前 schema 为 1，已包含按 Run / Check / Build 区分的宿主系统声明（host_requirements）
+  和宿主验证记录（verification）；未来协议演进必须先引入新的 schema 编号再增加字段。
 - package.json、Cargo.toml、pyproject.toml、pubspec.yaml、Makefile 和
   `.atrium/manifest.toml` 等固定项目描述文件统一经过项目根路径边界读取；缺失、不可读和
   符号链接不是同一种状态，项目外部或经由符号链接到达的描述文件不会成为 Atrium 事实。
@@ -435,7 +452,7 @@ icon 规范。
 递归深度超过固定上限时停止向下读取并标记为不完整，避免异常目录树耗尽调用栈。
 
 图标检测优先使用项目 manifest 和 Tauri/Unity 常见位置，再在有限目录深度内
-查找 `icon` / `logo` 文件；仅读取小于 512 KB 的 png、svg、jpeg、webp、ico
+查找 `icon` / `logo` 文件；仅读取小于 8 MiB 的 png、svg、jpeg、webp、ico
 文件，兼容发现最多保留 64 个候选，避免扫描阶段把大型构建产物带入快照。
 
 项目工具和链接只来自结构化 manifest 字段。打开目录、终端、远程仓库或声明链接时
