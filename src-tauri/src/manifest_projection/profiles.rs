@@ -132,7 +132,50 @@ pub(super) fn parse_build_profiles(
         });
     }
 
+    dedupe_verified_equivalents(&mut build_profiles);
+
     build_profiles
+}
+
+// Verification attests "this exact command passed on this host". Two profiles
+// binding the same command describe one fact, so a host verified under one
+// profile must not re-appear as pending verification under another — nagging
+// the user to re-run an identical command produces no new evidence.
+fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile]) {
+    let Some(current_host) = HostOs::current() else {
+        return;
+    };
+    let mut attested: HashSet<(String, CommandKind, HostOs)> = HashSet::new();
+    for profile in build_profiles.iter() {
+        for (action, command_id) in [
+            (CommandKind::Run, profile.run_command_id.clone()),
+            (CommandKind::Check, profile.check_command_id.clone()),
+            (CommandKind::Build, profile.build_command_id.clone()),
+        ] {
+            let Some(command_id) = command_id else {
+                continue;
+            };
+            let Some(hosts) = profile.verification.for_action(&action) else {
+                continue;
+            };
+            for host in hosts {
+                attested.insert((command_id.clone(), action, *host));
+            }
+        }
+    }
+    for profile in build_profiles.iter_mut() {
+        let pending: Vec<CommandKind> = profile.unverified_actions.to_vec();
+        let kept: Vec<CommandKind> = pending
+            .into_iter()
+            .filter(|action| match profile.command_id_for_action(action) {
+                Some(command_id) => {
+                    !attested.contains(&(command_id.to_string(), *action, current_host))
+                }
+                None => true,
+            })
+            .collect();
+        profile.unverified_actions = kept;
+    }
 }
 
 fn parse_host_requirements(

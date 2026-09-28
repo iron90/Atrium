@@ -193,6 +193,12 @@ disabled on a matching host until that host appears in `verification`. Schema 1
 and schema 2 profiles remain readable while their project Agent migrates them
 to schema 3.
 
+Verification evidence follows the command, not the profile: when two profiles
+bind the same command for the same action, a host recorded in one profile's
+`verification` counts as verified for the identical binding everywhere, and
+pending-verification prompts do not ask the Agent to re-run an identical
+command on a host where it has already passed.
+
 `verification` records are declarations made by the project Agent, not
 measurements taken by Atrium. Atrium reads them as structured manifest state and
 gates profile actions on them; it does not certify, re-run, or audit the

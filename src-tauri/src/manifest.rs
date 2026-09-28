@@ -545,6 +545,105 @@ payment = " direct "
     }
 
     #[test]
+    fn identical_check_bindings_share_verification_across_profiles() {
+        let current = HostOs::current().expect("supported test host");
+        let other = match current {
+            HostOs::Macos => HostOs::Windows,
+            HostOs::Windows => HostOs::Macos,
+            HostOs::Linux => HostOs::Macos,
+        };
+        let (current, other) = (current.as_str(), other.as_str());
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-equivalent-check-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            format!(
+                r#"schema = 3
+
+[[platforms]]
+id = "{current}"
+
+[[platforms]]
+id = "{other}"
+
+[[channels]]
+id = "local"
+
+[[build_profiles]]
+id = "a"
+platform = "{current}"
+channel = "local"
+
+[build_profiles.commands]
+check = "package.json#scripts.quality"
+build = "package.json#scripts.build:a"
+
+[build_profiles.host_requirements]
+check = ["macos", "windows", "linux"]
+build = ["{current}"]
+
+[build_profiles.verification]
+check = ["{current}"]
+
+[[build_profiles]]
+id = "b"
+platform = "{other}"
+channel = "local"
+
+[build_profiles.commands]
+check = "package.json#scripts.quality"
+build = "package.json#scripts.build:b"
+
+[build_profiles.host_requirements]
+check = ["macos", "windows", "linux"]
+build = ["{current}"]
+"#
+            ),
+        )
+        .expect("write manifest");
+        let commands = vec![
+            command(
+                "npm:quality",
+                "package.json#scripts.quality",
+                CommandKind::Check,
+            ),
+            command(
+                "npm:build:a",
+                "package.json#scripts.build:a",
+                CommandKind::Build,
+            ),
+            command(
+                "npm:build:b",
+                "package.json#scripts.build:b",
+                CommandKind::Build,
+            ),
+        ];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        let profile_a = &result.build_profiles[0];
+        let profile_b = &result.build_profiles[1];
+        // Profile b binds the same check command that profile a verified on
+        // this host, so it must not re-appear as pending verification.
+        assert!(!profile_b.unverified_actions.contains(&CommandKind::Check));
+        // A different command without verification stays pending.
+        assert!(profile_b.unverified_actions.contains(&CommandKind::Build));
+        // Profile a verified its check; its build was never verified.
+        assert!(!profile_a.unverified_actions.contains(&CommandKind::Check));
+        assert!(profile_a.unverified_actions.contains(&CommandKind::Build));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
     fn invalid_manifest_does_not_leave_partial_declarations() {
         let root =
             std::env::temp_dir().join(format!("atrium-manifest-invalid-{}", std::process::id()));

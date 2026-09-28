@@ -125,7 +125,11 @@ fn resolve_profile(
         ));
     }
 
-    if !profile.action_verified_on_current_host(action) {
+    let verified_equivalently = project.build_profiles.iter().any(|candidate| {
+        candidate.command_id_for_action(action) == Some(command.id.as_str())
+            && candidate.action_verified_on_current_host(action)
+    });
+    if !profile.action_verified_on_current_host(action) && !verified_equivalently {
         let verified_hosts = profile
             .verification
             .for_action(action)
@@ -389,6 +393,32 @@ mod tests {
             error,
             "Build profile macos-local is invalid: run command is missing"
         );
+    }
+
+    #[test]
+    fn accepts_check_verification_recorded_under_an_identical_binding() {
+        let current = HostOs::current().expect("supported host");
+        let mut verified = profile("a", Some("run-dev"));
+        verified.check_command_id = Some("npm:quality".to_string());
+        verified.verification.check = Some(vec![current]);
+        let mut equivalent = profile("b", None);
+        equivalent.check_command_id = Some("npm:quality".to_string());
+        equivalent.verification.run = None;
+        let mut project = configured_project(vec![verified, equivalent]);
+        project.commands = vec![command("npm:quality")];
+
+        // Profile b never recorded its own verification, but its check binds
+        // the exact command profile a verified on this host.
+        let (platform, channel) = resolve_profile(
+            &project,
+            &command("npm:quality"),
+            Some("b"),
+            Some(&CommandKind::Check),
+        )
+        .expect("identical command binding shares verification evidence");
+
+        assert_eq!(platform.expect("platform facet").key, current.as_str());
+        assert_eq!(channel.expect("channel facet").key, "local");
     }
 
     #[test]
