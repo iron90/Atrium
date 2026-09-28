@@ -3,6 +3,9 @@ dist/
 .vite/
 .DS_Store
 
+# Local AI coding-assistant session data
+.zcode/
+
 src-tauri/target/
 src-tauri/gen/
 
