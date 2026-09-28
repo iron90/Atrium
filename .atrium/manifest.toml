@@ -1,4 +1,4 @@
-schema = 3
+schema = 1
 
 [identity]
 icon = "src-tauri/icons/icon.png"

@@ -47,23 +47,22 @@ and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
-Schema 1, schema 2, and schema 3 are strict: unknown fields at any manifest level make the
-manifest invalid instead of being ignored. This prevents a misspelled field or
-a field from a newer protocol version from looking configured while silently
-having no effect. Schema 1 remains readable for compatibility and has no host
-requirements; schema 2 adds per-action execution host declarations; schema 3
-adds per-action verification records. `host_requirements` declares where an
-action may run, while `verification` records hosts where the exact command has
-passed. A host mismatch is deferred verification, not a failure, and must not
-cause a valid command binding to be removed. A future protocol revision must
-introduce a new schema number before adding fields.
+Schema 1 is strict: unknown fields at any manifest level make the manifest
+invalid instead of being ignored. This prevents a misspelled field or a field
+from a newer protocol version from looking configured while silently having no
+effect. Schema 1 supports every section documented here, including
+`host_requirements` and `verification` records: `host_requirements` declares
+where an action may run, while `verification` records hosts where the exact
+command has passed. A host mismatch is deferred verification, not a failure,
+and must not cause a valid command binding to be removed. A future protocol
+revision must introduce a new schema number before adding fields.
 
 ## Project icon
 
 The identity section points Atrium at the icon already used by the project:
 
 ```toml
-schema = 3
+schema = 1
 profile = "tauri-react"
 
 [identity]
@@ -189,9 +188,7 @@ support from the target `platform`. A host mismatch is deferred verification,
 not a failure, and must not cause a valid command binding to be removed. Atrium
 disables the corresponding profile action in the UI and rejects it before
 process execution when the current host is not listed. It also keeps an action
-disabled on a matching host until that host appears in `verification`. Schema 1
-and schema 2 profiles remain readable while their project Agent migrates them
-to schema 3.
+disabled on a matching host until that host appears in `verification`.
 
 Verification evidence follows the command, not the profile: when two profiles
 bind the same command for the same action, a host recorded in one profile's

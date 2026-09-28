@@ -53,42 +53,8 @@ pub fn scan_project_configuration(
     if !manifest_schema::is_supported_schema(document.schema) {
         return invalid_configuration(
             vec![format!(
-                "Unsupported Atrium manifest schema: {}. Expected schema 1 through {}.",
+                "Unsupported Atrium manifest schema: {}. Expected schema {}.",
                 document.schema,
-                manifest_schema::CURRENT_SCHEMA
-            )],
-            Some(document.schema),
-        );
-    }
-
-    if document.schema == manifest_schema::LEGACY_SCHEMA
-        && document.build_profiles.as_ref().is_some_and(|profiles| {
-            profiles
-                .iter()
-                .any(|profile| profile.host_requirements.is_some())
-        })
-    {
-        return invalid_configuration(
-            vec![format!(
-                "Host requirements require Atrium manifest schema {}. Update schema = {} before declaring build host requirements.",
-                manifest_schema::HOST_REQUIREMENTS_SCHEMA,
-                manifest_schema::HOST_REQUIREMENTS_SCHEMA
-            )],
-            Some(document.schema),
-        );
-    }
-
-    if document.schema < manifest_schema::CURRENT_SCHEMA
-        && document.build_profiles.as_ref().is_some_and(|profiles| {
-            profiles
-                .iter()
-                .any(|profile| profile.verification.is_some())
-        })
-    {
-        return invalid_configuration(
-            vec![format!(
-                "Host verification records require Atrium manifest schema {}. Update schema = {} before declaring build verification.",
-                manifest_schema::CURRENT_SCHEMA,
                 manifest_schema::CURRENT_SCHEMA
             )],
             Some(document.schema),
@@ -241,7 +207,7 @@ build = ["dist"]
             ProjectConfigurationStatus::Configured
         );
         assert_eq!(protocol.schema, Some(1));
-        assert!(protocol.needs_update);
+        assert!(!protocol.needs_update);
         assert_eq!(
             protocol
                 .capabilities
@@ -284,55 +250,7 @@ build = ["dist"]
     }
 
     #[test]
-    fn schema_one_host_requirements_requires_schema_two() {
-        let root = std::env::temp_dir().join(format!(
-            "atrium-manifest-schema-one-host-{}",
-            std::process::id()
-        ));
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
-        fs::write(
-            root.join(".atrium/manifest.toml"),
-            r#"schema = 1
-
-[[platforms]]
-id = "macos"
-
-[[channels]]
-id = "local"
-
-[[build_profiles]]
-id = "macos-local"
-platform = "macos"
-channel = "local"
-
-[build_profiles.host_requirements]
-run = ["macos"]
-"#,
-        )
-        .expect("write manifest");
-
-        let result = scan_project_configuration(&root, &[]);
-
-        assert_eq!(
-            result.configuration.status,
-            ProjectConfigurationStatus::Invalid
-        );
-        assert!(
-            result
-                .configuration
-                .issues
-                .iter()
-                .any(|issue| issue.contains("Host requirements require Atrium manifest schema 2.")),
-            "issues: {:?}",
-            result.configuration.issues
-        );
-
-        fs::remove_dir_all(root).expect("remove project");
-    }
-
-    #[test]
-    fn schema_three_keeps_host_limits_and_verification_separate_from_profile_validity() {
+    fn schema_one_keeps_host_limits_and_verification_separate_from_profile_validity() {
         let root = std::env::temp_dir().join(format!(
             "atrium-manifest-host-requirements-{}",
             std::process::id()
@@ -341,7 +259,7 @@ run = ["macos"]
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 3
+            r#"schema = 1
 
 [[platforms]]
 id = "windows"
@@ -388,7 +306,7 @@ check = ["macos"]
             result.configuration.status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(result.manifest_schema, Some(3));
+        assert_eq!(result.manifest_schema, Some(1));
         let protocol = build_protocol_status(
             &result,
             &IconConformance {
@@ -562,7 +480,7 @@ payment = " direct "
         fs::write(
             root.join(".atrium/manifest.toml"),
             format!(
-                r#"schema = 3
+                r#"schema = 1
 
 [[platforms]]
 id = "{current}"

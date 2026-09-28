@@ -52,7 +52,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
 
-Atrium guidance revision: 10
+Atrium guidance revision: 1
 
 ## Run / Check / Build command bindings
 

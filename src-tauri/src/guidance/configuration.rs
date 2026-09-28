@@ -134,7 +134,7 @@ fn render_manifest_template() -> String {
 Replace every `<...>` value with a fact verified in the repository. Remove an optional block when it does not apply; do not leave example values in the manifest. Repeat the array blocks for each real platform, channel, or build profile.
 
 ```toml
-schema = 3
+schema = 1
 
 # Optional adapter hint. Remove this line when no supported adapter applies.
 # profile = "<adapter-name>"
