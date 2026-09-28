@@ -253,7 +253,7 @@ describe("Atrium board", () => {
     render(<App />);
 
     fireEvent.change(screen.getByPlaceholderText("Search projects"), {
-      target: { value: "Easy" },
+      target: { value: "Snap" },
     });
     expect(screen.getAllByText("SnapCutout").length).toBeGreaterThan(0);
     expect(document.querySelector(".project-list")?.textContent).not.toContain(

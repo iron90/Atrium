@@ -12,7 +12,7 @@ describe("project list view state", () => {
     expect(result.current.filterOptions.platforms.length).toBeGreaterThan(0);
     expect(result.current.visibleProjects).toHaveLength(projects.length);
 
-    act(() => result.current.setSearch("Easy"));
+    act(() => result.current.setSearch("Snap"));
 
     expect(
       result.current.visibleProjects.map((project) => project.name),

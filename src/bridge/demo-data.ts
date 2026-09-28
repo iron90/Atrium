@@ -101,7 +101,7 @@ const protocolStatus = (
   >,
 ): ProtocolStatus => ({
   manifestPath: ".atrium/manifest.toml",
-  schema: manifestStatus === "missing" ? null : 3,
+  schema: manifestStatus === "missing" ? null : 1,
   needsUpdate: false,
   manifestStatus,
   capabilities: [
@@ -473,7 +473,7 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
   {
     ...demoProjectDefaults,
     id: `${rootPath}/CalmCadence`,
-    name: "Cognitive Rhythm",
+    name: "Calm Cadence",
     path: `${rootPath}/CalmCadence`,
     description: "A quiet mobile experience for attention and energy rhythms.",
     icon: null,
@@ -590,10 +590,10 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
   },
   {
     ...demoProjectDefaults,
-    id: `${rootPath}/WebsiteServer`,
-    name: "Website Server",
-    path: `${rootPath}/WebsiteServer`,
-    description: "The future personal website and content surface.",
+    id: `${rootPath}/PortfolioSite`,
+    name: "Portfolio Site",
+    path: `${rootPath}/PortfolioSite`,
+    description: "A personal portfolio and content site.",
     icon: null,
     iconConformance: demoIconConformance("missing"),
     protocol: protocolStatus("missing", {}),
