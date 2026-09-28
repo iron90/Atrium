@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "url": "index.html?build=20260916-remove-runs-v12",
+        "url": "index.html",
         "title": "Atrium",
         "width": 1280,
         "height": 820,
