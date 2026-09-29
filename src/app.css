@@ -2444,30 +2444,15 @@ button[aria-busy="true"] {
     box-shadow var(--motion-base) var(--ease-standard);
 }
 .activity-card.is-note {
-  align-items: flex-start;
+  border-style: dashed;
 }
 .activity-note-dot {
   flex: 0 0 6px;
   width: 6px;
   height: 6px;
-  margin-top: 5px;
   border-radius: 50%;
   background: var(--accent);
   opacity: 0.75;
-}
-.activity-note-text {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-soft);
-  font-size: 12px;
-}
-.activity-note-time {
-  display: block;
-  color: var(--text-muted);
-  font-size: 11px;
 }
 .activity-card:has(.activity-pulse.is-running) {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line));

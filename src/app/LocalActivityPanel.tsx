@@ -49,12 +49,8 @@ export function LocalActivityPanel({
           <div className="activity-card is-note" key={lastActivity.id}>
             <span className="activity-note-dot" aria-hidden="true" />
             <div>
-              <span className="activity-note-text">
-                {formatActivityMessage(lastActivity.message, language)}
-              </span>
-              <small className="activity-note-time">
-                {formatRelative(lastActivity.at, language)}
-              </small>
+              <strong>{formatActivityMessage(lastActivity.message, language)}</strong>
+              <span>{formatRelative(lastActivity.at, language)}</span>
             </div>
           </div>
         ) : null}
