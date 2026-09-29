@@ -2,6 +2,7 @@
   "name": "atrium",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "description": "A local-first visual project board for independent software studios",
   "repository": {
     "type": "git",
