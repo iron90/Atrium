@@ -7,10 +7,7 @@ import {
   useState,
 } from "react";
 import { AppSidebar } from "./app/AppSidebar";
-import {
-  formatActivityMessage,
-  type ActivityMessage,
-} from "./app/activity-message";
+import type { ActivityMessage } from "./app/activity-message";
 import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
@@ -47,7 +44,7 @@ import {
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import { useTransientActivityMessage } from "./app/use-transient-activity";
+import type { SidebarActivityNote } from "./app/LocalActivityPanel";
 import type {
   ProfileAction,
   ProjectCommand,
@@ -90,8 +87,9 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
-  const [activityMessage, setActivityMessage] =
-    useState<ActivityMessage | null>(null);
+  const [lastActivity, setLastActivity] =
+    useState<SidebarActivityNote | null>(null);
+  const activityIdRef = useRef(0);
   const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);
   const mainColumnRef = useRef<HTMLElement>(null);
@@ -177,10 +175,15 @@ export default function App() {
     [],
   );
   const handleActivityMessage = useCallback((message: ActivityMessage) => {
-    setActivityMessage(message);
+    // Ambient activity lands in the sidebar log; errors keep their own
+    // persistent banner channel.
+    activityIdRef.current += 1;
+    setLastActivity({
+      id: activityIdRef.current,
+      at: Date.now(),
+      message,
+    });
   }, []);
-  const clearActivityMessage = useCallback(() => setActivityMessage(null), []);
-  useTransientActivityMessage(activityMessage, clearActivityMessage);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
   }, []);
@@ -556,6 +559,7 @@ export default function App() {
                   ? handleStopRun(globalActiveRun.runId)
                   : undefined,
               projectName: globalActiveRunProject?.name,
+              lastActivity,
             }}
           />
 
@@ -576,11 +580,6 @@ export default function App() {
                       {error ? (
                         <div className="error-banner" role="alert">
                           {error}
-                        </div>
-                      ) : null}
-                      {activityMessage ? (
-                        <div className="status-banner" role="status">
-                          {formatActivityMessage(activityMessage, language)}
                         </div>
                       ) : null}
 

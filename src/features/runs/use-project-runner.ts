@@ -195,7 +195,6 @@ export function useProjectRunner({
         }
       } catch (runError) {
         onError(errorMessage(runError));
-        onMessage({ type: "localized", key: "commandStartFailed" });
       }
     },
     [

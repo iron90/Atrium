@@ -130,7 +130,6 @@ export function useWorkspaceScanLifecycle({
       .catch((scanError) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return;
         onErrorRef.current(errorMessage(scanError));
-        onMessageRef.current({ type: "localized", key: "scanFailed" });
       })
       .finally(() => {
         scanRequests.finish(requestId);
@@ -178,7 +177,6 @@ export function useWorkspaceScanLifecycle({
       } catch (refreshError) {
         if (!disposed && scanRequests.isCurrent(requestId)) {
           onError(errorMessage(refreshError));
-          onMessage({ type: "localized", key: "refreshFailed" });
         }
       } finally {
         scanRequests.finish(requestId);
@@ -237,7 +235,6 @@ export function useWorkspaceScanLifecycle({
     } catch (scanError) {
       if (scanRequests.isCurrent(requestId)) {
         onError(errorMessage(scanError));
-        onMessage({ type: "localized", key: "scanFailed" });
       }
     } finally {
       scanRequests.finish(requestId);

@@ -533,17 +533,6 @@ button[aria-busy="true"] {
   font-size: 12px;
   animation: status-enter var(--motion-base) var(--ease-emphasized) both;
 }
-.status-banner {
-  max-width: 1480px;
-  margin: 0 auto 16px;
-  padding: 11px 13px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 8px;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font-size: 12px;
-  animation: status-enter var(--motion-base) var(--ease-emphasized) both;
-}
 
 .content-grid {
   display: grid;
@@ -1070,6 +1059,18 @@ button[aria-busy="true"] {
 }
 .inspector-refresh.is-refreshing .inspector-refresh-glyph {
   animation: status-spinner-spin 0.9s linear infinite;
+}
+.inspector-refresh.is-flashed {
+  border-color: var(--accent);
+  animation: refresh-flash 1.2s var(--ease-standard);
+}
+@keyframes refresh-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 9px transparent;
+  }
 }
 .status-spinner {
   display: inline-block;
@@ -2441,6 +2442,32 @@ button[aria-busy="true"] {
     background-color var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard),
     box-shadow var(--motion-base) var(--ease-standard);
+}
+.activity-card.is-note {
+  align-items: flex-start;
+}
+.activity-note-dot {
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.75;
+}
+.activity-note-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.activity-note-time {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
 }
 .activity-card:has(.activity-pulse.is-running) {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line));

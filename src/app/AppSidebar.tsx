@@ -4,7 +4,7 @@ import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill } from "../shared/format";
 import { APP_VERSION } from "./app-version";
-import { LocalActivityPanel } from "./LocalActivityPanel";
+import { LocalActivityPanel, type SidebarActivityNote } from "./LocalActivityPanel";
 import type { PageId } from "./navigation";
 import { navigationItems } from "./navigation";
 
@@ -19,6 +19,7 @@ export function AppSidebar({
     activeRun?: RunStarted;
     onStop: () => Promise<void> | void;
     projectName?: string;
+    lastActivity?: SidebarActivityNote | null;
   };
 }) {
   const { t } = useI18n();
@@ -119,6 +120,7 @@ export function AppSidebar({
         activeRun={activity.activeRun}
         onStop={activity.onStop}
         projectName={activity.projectName}
+        lastActivity={activity.lastActivity}
       />
     </aside>
   );

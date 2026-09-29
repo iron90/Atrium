@@ -3,20 +3,10 @@ import type { ProjectCommand, RunFinished } from "../bridge";
 export type WorkspaceMessage =
   | { type: "projects"; count: number }
   | { type: "workspaceUpdated"; count: number }
-  | { type: "refreshingWorkspace" }
   | { type: "scanning" }
-  | { type: "projectRefreshed" }
-  | {
-      type: "localized";
-      key: "scanFailed" | "refreshFailed";
-    };
+  | { type: "projectRefreshed" };
 
 export type RunMessage =
-  | { type: "ready" }
-  | {
-      type: "localized";
-      key: "commandStartFailed";
-    }
   | { type: "cancelled" }
   | {
       type: "command";

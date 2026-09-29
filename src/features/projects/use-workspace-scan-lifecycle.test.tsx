@@ -198,10 +198,9 @@ describe("workspace scan lifecycle", () => {
       await vi.advanceTimersByTimeAsync(10_000);
 
       expect(onError).toHaveBeenCalledWith("refresh exploded");
-      expect(onMessage).toHaveBeenCalledWith({
-        type: "localized",
-        key: "refreshFailed",
-      });
+      // Only the successful mount scan announced itself; the failed poll
+      // reports through the error channel alone.
+      expect(onMessage).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

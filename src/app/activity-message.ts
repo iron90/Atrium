@@ -10,8 +10,6 @@ export const formatActivityMessage = (
   language: Language,
 ): string => {
   switch (message.type) {
-    case "ready":
-      return translate(language, "readyMessage");
     case "projects":
       return fill(
         translate(language, "projectsDiscovered"),
@@ -24,12 +22,8 @@ export const formatActivityMessage = (
         "count",
         String(message.count),
       );
-    case "localized":
-      return translate(language, message.key);
     case "projectRefreshed":
       return translate(language, "projectRefreshed");
-    case "refreshingWorkspace":
-      return translate(language, "refreshingWorkspace");
     case "scanning":
       return translate(language, "scanningWorkspace");
     case "cancelled":

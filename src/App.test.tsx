@@ -284,22 +284,20 @@ describe("Atrium board", () => {
     ).toBeInTheDocument();
   });
 
-  it("surfaces activity messages in the status banner", async () => {
+  it("surfaces activity messages in the sidebar activity log", async () => {
     render(<App />);
 
     expect(document.querySelector(".status-banner")).toBeNull();
+    expect(document.querySelector(".activity-card.is-note")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
     fireEvent.click(screen.getByRole("button", { name: "Scan workspace" }));
 
     await waitFor(() => {
-      expect(document.querySelector(".status-banner")).toHaveTextContent(
+      expect(document.querySelector(".activity-card.is-note")).toHaveTextContent(
         /\d+ projects discovered/,
       );
     });
-    expect(document.querySelector(".status-banner")).toHaveAttribute(
-      "role",
-      "status",
-    );
+    expect(document.querySelector(".activity-card.is-note")).toBeInTheDocument();
   });
 });
