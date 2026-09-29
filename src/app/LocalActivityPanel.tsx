@@ -1,6 +1,9 @@
 import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
-import { formatActivityMessage, type ActivityMessage } from "./activity-message";
+import {
+  formatActivityMessage,
+  type ActivityMessage,
+} from "./activity-message";
 import { formatRelative } from "../shared/format";
 
 export interface SidebarActivityNote {
@@ -49,7 +52,9 @@ export function LocalActivityPanel({
           <div className="activity-card is-note" key={lastActivity.id}>
             <span className="activity-note-dot" aria-hidden="true" />
             <div>
-              <strong>{formatActivityMessage(lastActivity.message, language)}</strong>
+              <strong>
+                {formatActivityMessage(lastActivity.message, language)}
+              </strong>
               <span>{formatRelative(lastActivity.at, language)}</span>
             </div>
           </div>

@@ -4,7 +4,10 @@ import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill } from "../shared/format";
 import { APP_VERSION } from "./app-version";
-import { LocalActivityPanel, type SidebarActivityNote } from "./LocalActivityPanel";
+import {
+  LocalActivityPanel,
+  type SidebarActivityNote,
+} from "./LocalActivityPanel";
 import type { PageId } from "./navigation";
 import { navigationItems } from "./navigation";
 

@@ -87,8 +87,9 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
-  const [lastActivity, setLastActivity] =
-    useState<SidebarActivityNote | null>(null);
+  const [lastActivity, setLastActivity] = useState<SidebarActivityNote | null>(
+    null,
+  );
   const activityIdRef = useRef(0);
   const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);

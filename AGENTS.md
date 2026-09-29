@@ -11,7 +11,10 @@ Atrium must not:
 - replace a repository's build, run, test, or release configuration;
 - manage development agents or display agent transcripts;
 - become a deployment, payment, publishing, or website synchronization service in v1;
-- mutate a project's Git history.
+- mutate a project's Git history;
+- check out branches or modify any Git refs — branch inspection is read-only
+  (`log` / `diff` / `rev-list`), and the worktree belongs to the project
+  development Agent.
 
 ## Source of truth
 

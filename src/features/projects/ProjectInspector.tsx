@@ -5,6 +5,7 @@ import type {
   ProjectCommand,
   ProjectSnapshot,
 } from "../../bridge";
+import { useGitBranchOverview } from "../git/use-git-branch-overview";
 import { useI18n } from "../../i18n";
 import { ProjectBuildProfilesSection } from "./ProjectBuildProfilesSection";
 import { ProjectCommandsSection } from "./ProjectCommandsSection";
@@ -96,6 +97,18 @@ export function ProjectInspector({
   const [rawCommandsRevealedFor, setRawCommandsRevealedFor] = useState<
     string | null
   >(null);
+  const [branchViewFor, setBranchViewFor] = useState<{
+    projectId: string;
+    branch: string;
+  } | null>(null);
+
+  // Branch selection is inspector view state, keyed per project so switching
+  // projects returns the view to the checked-out HEAD.
+  const selectedBranch =
+    branchViewFor && branchViewFor.projectId === project?.id
+      ? branchViewFor.branch
+      : null;
+  const branchOverview = useGitBranchOverview(project, selectedBranch);
 
   if (!project) {
     return (
@@ -121,6 +134,15 @@ export function ProjectInspector({
         project={project}
         inspectedProject={inspectedProject}
         isLoading={isLoading}
+        selectedBranch={selectedBranch}
+        onSelectBranch={(branch) =>
+          setBranchViewFor(
+            branch === null ? null : { projectId: project.id, branch },
+          )
+        }
+        branchOverview={branchOverview.overview}
+        branchOverviewLoading={branchOverview.isLoading}
+        branchOverviewError={branchOverview.error}
         onOpenProjectAction={onOpenProjectAction}
       />
       <ProjectProtocolSection
@@ -170,7 +192,14 @@ export function ProjectInspector({
         refreshToken={runHistoryRefreshToken}
         onError={onRunHistoryError}
       />
-      <ProjectCommitsSection project={inspectedProject} isLoading={isLoading} />
+      <ProjectCommitsSection
+        project={inspectedProject}
+        isLoading={isLoading}
+        selectedBranch={selectedBranch}
+        branchOverview={branchOverview.overview}
+        branchOverviewLoading={branchOverview.isLoading}
+        branchOverviewError={branchOverview.error}
+      />
     </aside>
   );
 }

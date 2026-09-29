@@ -294,10 +294,12 @@ describe("Atrium board", () => {
     fireEvent.click(screen.getByRole("button", { name: "Scan workspace" }));
 
     await waitFor(() => {
-      expect(document.querySelector(".activity-card.is-note")).toHaveTextContent(
-        /\d+ projects discovered/,
-      );
+      expect(
+        document.querySelector(".activity-card.is-note"),
+      ).toHaveTextContent(/\d+ projects discovered/);
     });
-    expect(document.querySelector(".activity-card.is-note")).toBeInTheDocument();
+    expect(
+      document.querySelector(".activity-card.is-note"),
+    ).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import type { ProjectSnapshot } from "../../bridge";
+import type { GitBranchOverview, ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
 import type { ProjectAction } from "./project-actions";
@@ -14,11 +14,21 @@ export function ProjectRepositorySection({
   project,
   inspectedProject,
   isLoading,
+  selectedBranch,
+  onSelectBranch,
+  branchOverview,
+  branchOverviewLoading,
+  branchOverviewError,
   onOpenProjectAction,
 }: {
   project: ProjectSnapshot;
   inspectedProject: ProjectSnapshot;
   isLoading: boolean;
+  selectedBranch: string | null;
+  onSelectBranch: (branch: string | null) => void;
+  branchOverview: GitBranchOverview | null;
+  branchOverviewLoading: boolean;
+  branchOverviewError: string | null;
   onOpenProjectAction: (
     action: ProjectAction,
     project: ProjectSnapshot,
@@ -114,21 +124,72 @@ export function ProjectRepositorySection({
               <strong className="repo-fact-label">{t("branch")}</strong>
               <span className="repo-fact-value branch-line">
                 <span aria-hidden="true">⑂</span>
-                {repo?.branch ?? t("unavailable")}
+                {(() => {
+                  const branches =
+                    repo?.references.filter(
+                      (reference) => reference.kind === "branch",
+                    ) ?? [];
+                  const current = repo?.branch ?? null;
+                  if (!repo || branches.length === 0) {
+                    return repo?.branch ?? t("unavailable");
+                  }
+                  // The picker only changes the inspection view; the worktree
+                  // and HEAD stay on the checked-out branch.
+                  const value = selectedBranch ?? current ?? "";
+                  return (
+                    <select
+                      className="form-control branch-picker"
+                      value={value}
+                      aria-label={t("branch")}
+                      onChange={(event) =>
+                        onSelectBranch(
+                          event.target.value === current
+                            ? null
+                            : event.target.value,
+                        )
+                      }
+                    >
+                      {branches.map((reference) => (
+                        <option key={reference.name} value={reference.name}>
+                          {reference.name}
+                          {reference.name === current
+                            ? ` · ${t("currentBranch")}`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
               </span>
             </div>
             {repo ? (
               <div className="repo-fact">
                 <strong className="repo-fact-label">{t("syncStatus")}</strong>
-                <span
-                  className={`repo-fact-value git-sync ${syncStatusClass(repo)}`}
-                  title={syncStatusAriaLabel(repo, language)}
-                >
-                  <span aria-hidden="true">{syncStatusVisual(repo)}</span>
-                  <span className="sr-only">
-                    {syncStatusAriaLabel(repo, language)}
+                {selectedBranch && selectedBranch !== repo.branch ? (
+                  <span
+                    className="repo-fact-value git-sync"
+                    title={t("branchComparedToHead")}
+                  >
+                    {branchOverviewLoading
+                      ? "…"
+                      : branchOverviewError
+                        ? branchOverviewError
+                        : `↑${branchOverview?.aheadOfHead ?? 0} ↓${
+                            branchOverview?.behindHead ?? 0
+                          }`}
+                    <span className="sr-only">{t("branchComparedToHead")}</span>
                   </span>
-                </span>
+                ) : (
+                  <span
+                    className={`repo-fact-value git-sync ${syncStatusClass(repo)}`}
+                    title={syncStatusAriaLabel(repo, language)}
+                  >
+                    <span aria-hidden="true">{syncStatusVisual(repo)}</span>
+                    <span className="sr-only">
+                      {syncStatusAriaLabel(repo, language)}
+                    </span>
+                  </span>
+                )}
               </div>
             ) : null}
             <div className="repo-fact">
