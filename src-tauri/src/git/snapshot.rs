@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::model::{GitCommit, GitReference, GitReferenceKind, GitSnapshot};
+use crate::model::{GitBranchOverview, GitCommit, GitReference, GitReferenceKind, GitSnapshot};
 
 use super::command::run_git;
 use super::commit::parse_commit_records;
@@ -49,17 +49,53 @@ fn branch_from_command_output(output: Option<String>) -> Option<String> {
 }
 
 fn read_commits(project_path: &Path) -> Vec<GitCommit> {
-    let format = "%H%x1f%h%x1f%an%x1f%ct%x1f%s%x1e";
-    let Some(raw) = run_git(
+    read_commits_at(project_path, None)
+}
+
+// The branch overview reads a ref's history without touching the worktree:
+// no checkout, no ref updates — only read-only log/rev-list commands.
+pub fn read_branch_overview(project_path: &Path, branch: &str) -> Option<GitBranchOverview> {
+    let commits = read_commits_at(project_path, Some(branch));
+    let raw = run_git(
         project_path,
         &[
-            "log",
-            "-n",
-            "12",
-            "--date-order",
-            &format!("--format={format}"),
+            "rev-list",
+            "--left-right",
+            "--count",
+            &format!("HEAD...{branch}"),
         ],
-    ) else {
+    )?;
+    let fields: Vec<&str> = raw.split_whitespace().collect();
+    if fields.len() != 2 {
+        return None;
+    }
+    // Left side counts commits only HEAD has (HEAD is ahead), the right side
+    // counts commits only the branch has (the branch is ahead).
+    let behind_head = fields[0].parse().ok()?;
+    let ahead_of_head = fields[1].parse().ok()?;
+    Some(GitBranchOverview {
+        branch: branch.to_string(),
+        commits,
+        ahead_of_head,
+        behind_head,
+    })
+}
+
+fn read_commits_at(project_path: &Path, rev: Option<&str>) -> Vec<GitCommit> {
+    let format = "%H%x1f%h%x1f%an%x1f%ct%x1f%s%x1e";
+    let mut args = vec![
+        "log".to_string(),
+        "-n".to_string(),
+        "12".to_string(),
+        "--date-order".to_string(),
+        format!("--format={format}"),
+    ];
+    if let Some(rev) = rev {
+        args.push(rev.to_string());
+    }
+    args.push("--".to_string());
+    let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    let Some(raw) = run_git(project_path, &arg_refs) else {
         return Vec::new();
     };
     parse_commit_records(&raw)
@@ -136,9 +172,79 @@ fn worktree_status(status: Option<&str>) -> (bool, u32, bool) {
 #[cfg(test)]
 mod tests {
     use super::{
-        branch_from_command_output, count_worktree_changes, read_tracking_counts, worktree_status,
+        branch_from_command_output, count_worktree_changes, read_branch_overview,
+        read_tracking_counts, worktree_status,
     };
+    use std::fs;
     use std::path::Path;
+    use std::process::Command;
+
+    fn git(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(root)
+            .args(args)
+            .status()
+            .expect("run git");
+        assert!(status.success(), "git {args:?} failed");
+    }
+
+    fn fixture_repo(name: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-branch-overview-{name}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create fixture repo");
+        git(&root, &["init", "-q"]);
+        git(&root, &["config", "user.email", "atrium@example.com"]);
+        git(&root, &["config", "user.name", "Atrium Test"]);
+        root
+    }
+
+    #[test]
+    fn reads_a_branch_history_and_position_relative_to_head() {
+        let root = fixture_repo("overview");
+        fs::write(root.join("base.txt"), "base\n").expect("write base file");
+        git(&root, &["add", "-A"]);
+        git(&root, &["commit", "-qm", "base"]);
+        git(&root, &["checkout", "-qb", "feature"]);
+        fs::write(root.join("feature.txt"), "feature\n").expect("write feature file");
+        git(&root, &["add", "-A"]);
+        git(&root, &["commit", "-qm", "feature work"]);
+        git(&root, &["checkout", "-q", "-"]);
+        fs::write(root.join("main-only.txt"), "main\n").expect("write main file");
+        git(&root, &["add", "-A"]);
+        git(&root, &["commit", "-qm", "main work"]);
+
+        let overview = read_branch_overview(&root, "feature").expect("branch overview");
+
+        assert_eq!(overview.branch, "feature");
+        assert_eq!(overview.ahead_of_head, 1, "the feature commit is ahead");
+        assert_eq!(overview.behind_head, 1, "the main commit is behind");
+        assert!(overview
+            .commits
+            .iter()
+            .any(|commit| commit.subject == "feature work"));
+        assert!(!overview
+            .commits
+            .iter()
+            .any(|commit| commit.subject == "main work"));
+
+        fs::remove_dir_all(root).expect("remove fixture repo");
+    }
+
+    #[test]
+    fn rejects_branches_that_do_not_resolve() {
+        let root = fixture_repo("missing");
+        fs::write(root.join("base.txt"), "base\n").expect("write base file");
+        git(&root, &["add", "-A"]);
+        git(&root, &["commit", "-qm", "base"]);
+
+        assert!(read_branch_overview(&root, "no-such-branch").is_none());
+
+        fs::remove_dir_all(root).expect("remove fixture repo");
+    }
 
     #[test]
     fn empty_branch_output_is_detached_head_not_a_failure() {

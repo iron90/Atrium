@@ -4,4 +4,5 @@ mod commit;
 mod snapshot;
 
 pub use change_summary::read_git_change_summary;
-pub use snapshot::read_git_snapshot;
+pub(crate) use change_summary::validate_revision;
+pub use snapshot::{read_branch_overview, read_git_snapshot};

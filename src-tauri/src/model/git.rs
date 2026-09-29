@@ -52,6 +52,18 @@ pub struct GitChangeSummary {
     pub deletions: u64,
 }
 
+// A read-only view of one branch: its recent commits and how it relates to
+// the checked-out HEAD. Never produced by checkout — the worktree and HEAD
+// stay exactly where the project Agent left them.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitBranchOverview {
+    pub branch: String,
+    pub commits: Vec<GitCommit>,
+    pub ahead_of_head: u32,
+    pub behind_head: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GitFileChange {

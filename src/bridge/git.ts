@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { demoSnapshot } from "./fake-bridge";
-import type { GitChangeSummary } from "./types";
+import type { GitBranchOverview, GitChangeSummary } from "./types";
 
 export const nativeGitMethods = {
   readGitChangeSummary: async (
@@ -12,6 +12,15 @@ export const nativeGitMethods = {
       projectPath,
       from,
       to,
+    }),
+
+  readGitBranchOverview: async (
+    projectPath: string,
+    branch: string,
+  ): Promise<GitBranchOverview> =>
+    invoke<GitBranchOverview>("read_git_branch_overview_command", {
+      projectPath,
+      branch,
     }),
 };
 
@@ -38,6 +47,23 @@ export const previewGitMethods = {
       })),
       insertions: commits.length * 12,
       deletions: commits.length * 4,
+    };
+  },
+
+  readGitBranchOverview: async (
+    projectPath: string,
+    branch: string,
+  ): Promise<GitBranchOverview> => {
+    const project = demoSnapshot(
+      projectPath.slice(0, projectPath.lastIndexOf("/")),
+    ).projects.find((candidate) => candidate.path === projectPath);
+    const commits = project?.repo?.recentCommits ?? [];
+    const isCurrentBranch = branch === project?.repo?.branch;
+    return {
+      branch,
+      commits,
+      aheadOfHead: isCurrentBranch ? 0 : 2,
+      behindHead: isCurrentBranch ? 0 : 3,
     };
   },
 };

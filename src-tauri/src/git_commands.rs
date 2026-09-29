@@ -3,8 +3,8 @@ use std::path::Path;
 use tauri::State;
 
 use crate::command_boundary::run_blocking;
-use crate::git::read_git_change_summary;
-use crate::model::GitChangeSummary;
+use crate::git::{read_branch_overview, read_git_change_summary, validate_revision};
+use crate::model::{GitBranchOverview, GitChangeSummary};
 use crate::project_path::canonical_project_root;
 use crate::state::AppState;
 
@@ -31,6 +31,34 @@ fn read_git_change_summary_for_project(
 ) -> Result<GitChangeSummary, String> {
     let root = canonical_project_root(project_path)?;
     read_git_change_summary(&root, from, to)
+}
+
+#[tauri::command]
+pub async fn read_git_branch_overview_command(
+    state: State<'_, AppState>,
+    project_path: String,
+    branch: String,
+) -> Result<GitBranchOverview, String> {
+    state
+        .inner()
+        .ensure_project_in_workspace(Path::new(&project_path))?;
+    let branch = validate_revision(&branch)?;
+    run_blocking("Git branch overview", move || {
+        read_git_branch_overview_for_project(Path::new(&project_path), &branch)
+    })
+    .await
+}
+
+fn read_git_branch_overview_for_project(
+    project_path: &Path,
+    branch: &str,
+) -> Result<GitBranchOverview, String> {
+    let root = canonical_project_root(project_path)?;
+    read_branch_overview(&root, branch).ok_or_else(|| {
+        format!(
+            "Cannot read branch {branch}: the repository or the branch reference is unavailable"
+        )
+    })
 }
 
 #[cfg(test)]

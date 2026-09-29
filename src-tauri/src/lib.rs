@@ -52,6 +52,7 @@ pub fn run() {
             run_commands::open_run_log_command,
             tool_commands::artifact::open_declared_artifact_command,
             git_commands::read_git_change_summary_command,
+            git_commands::read_git_branch_overview_command,
             tool_commands::project::open_project_directory_command,
             tool_commands::project::open_project_terminal_command,
             tool_commands::external::open_project_remote_command,

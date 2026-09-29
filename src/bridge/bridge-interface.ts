@@ -1,5 +1,6 @@
 import type {
   CleanupResult,
+  GitBranchOverview,
   GitChangeSummary,
   ProfileAction,
   ProjectGuidanceReport,
@@ -36,6 +37,10 @@ export interface AtriumBridge {
     from: string,
     to?: string,
   ): Promise<GitChangeSummary>;
+  readGitBranchOverview(
+    projectPath: string,
+    branch: string,
+  ): Promise<GitBranchOverview>;
   openArtifact(
     projectPath: string,
     profileId: string,

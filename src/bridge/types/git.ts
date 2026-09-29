@@ -37,6 +37,15 @@ export interface GitChangeSummary {
   deletions: number;
 }
 
+// A read-only view of one branch relative to the checked-out HEAD; produced
+// without checkout, so the worktree and HEAD stay untouched.
+export interface GitBranchOverview {
+  branch: string;
+  commits: GitCommit[];
+  aheadOfHead: number;
+  behindHead: number;
+}
+
 export interface GitFileChange {
   path: string;
   status: string;

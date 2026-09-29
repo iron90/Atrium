@@ -153,7 +153,7 @@ fn parse_name_status_records(raw: &str) -> HashMap<String, String> {
     statuses
 }
 
-fn validate_revision(value: &str) -> Result<String, String> {
+pub(crate) fn validate_revision(value: &str) -> Result<String, String> {
     let value = value.trim();
     if value.is_empty() || value.starts_with('-') || value.len() > MAX_REVISION_LENGTH {
         return Err("Git revision must be a non-empty safe revision name".to_string());
