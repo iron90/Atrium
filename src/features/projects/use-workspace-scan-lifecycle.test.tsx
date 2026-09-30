@@ -21,7 +21,6 @@ function renderInitialScan(
     },
   );
   const onError = vi.fn();
-  const onMessage = vi.fn();
   const onApplySnapshot = vi.fn();
   const onSnapshotTimestamp = vi.fn();
   const preferences = { workspaces: ["/workspace"] };
@@ -43,7 +42,6 @@ function renderInitialScan(
         excludeNames: nextExcludeNames,
         language: nextLanguage,
         onError,
-        onMessage,
         onApplySnapshot,
         onSnapshotTimestamp,
         scanWorkspacesFn,
@@ -105,7 +103,6 @@ describe("workspace scan lifecycle", () => {
         excludeNames: [],
         language: "en",
         onError: noop,
-        onMessage: noop,
         onApplySnapshot: noop,
         onSnapshotTimestamp: noop,
         scanWorkspacesFn,
@@ -137,7 +134,6 @@ describe("workspace scan lifecycle", () => {
         excludeNames: [],
         language: "en",
         onError: noop,
-        onMessage: noop,
         onApplySnapshot: noop,
         onSnapshotTimestamp: noop,
         scanWorkspacesFn,
@@ -172,8 +168,7 @@ describe("workspace scan lifecycle", () => {
         },
       );
       const onError = vi.fn();
-      const onMessage = vi.fn();
-
+    
       renderHook(() =>
         useWorkspaceScanLifecycle({
           nativeRuntime: true,
@@ -185,8 +180,7 @@ describe("workspace scan lifecycle", () => {
           excludeNames: [],
           language: "en",
           onError,
-          onMessage,
-          onApplySnapshot: noop,
+            onApplySnapshot: noop,
           onSnapshotTimestamp: noop,
           scanWorkspacesFn,
         }),
@@ -198,9 +192,6 @@ describe("workspace scan lifecycle", () => {
       await vi.advanceTimersByTimeAsync(10_000);
 
       expect(onError).toHaveBeenCalledWith("refresh exploded");
-      // Only the successful mount scan announced itself; the failed poll
-      // reports through the error channel alone.
-      expect(onMessage).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }

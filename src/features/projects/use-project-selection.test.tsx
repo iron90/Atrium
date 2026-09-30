@@ -15,7 +15,6 @@ describe("project selection state", () => {
         nativeRuntime: true,
         projects,
         onError: vi.fn(),
-        onMessage: vi.fn(),
         onProjectSelected: vi.fn(),
         onProjectRefreshed: vi.fn(),
         inspectProject,
@@ -48,7 +47,6 @@ describe("project selection state", () => {
         }),
     );
     const onError = vi.fn();
-    const onMessage = vi.fn();
     const onProjectSelected = vi.fn();
     const onProjectRefreshed = vi.fn();
     const { result } = renderHook(() =>
@@ -56,8 +54,7 @@ describe("project selection state", () => {
         nativeRuntime: true,
         projects,
         onError,
-        onMessage,
-        onProjectSelected,
+            onProjectSelected,
         onProjectRefreshed,
         inspectProject,
       }),
@@ -90,7 +87,6 @@ describe("project selection state", () => {
         projects.find((project) => project.path === path) ?? projects[0],
     );
     const onError = vi.fn();
-    const onMessage = vi.fn();
     const onProjectSelected = vi.fn();
     const onProjectRefreshed = vi.fn();
     const { result, rerender } = renderHook(
@@ -99,8 +95,7 @@ describe("project selection state", () => {
           nativeRuntime: true,
           projects: currentProjects,
           onError,
-          onMessage,
-          onProjectSelected,
+                onProjectSelected,
           onProjectRefreshed,
           inspectProject,
         }),
@@ -130,7 +125,6 @@ describe("project selection state", () => {
         projects.find((project) => project.path === path) ?? projects[0],
     );
     const onError = vi.fn();
-    const onMessage = vi.fn();
     const onProjectSelected = vi.fn();
     const onProjectRefreshed = vi.fn();
     const { rerender } = renderHook(
@@ -139,8 +133,7 @@ describe("project selection state", () => {
           nativeRuntime: true,
           projects: currentProjects,
           onError,
-          onMessage,
-          onProjectSelected,
+                onProjectSelected,
           onProjectRefreshed,
           inspectProject,
         }),
@@ -179,7 +172,6 @@ describe("project selection state", () => {
         projects.find((project) => project.path === path) ?? projects[0],
     );
     const onError = vi.fn();
-    const onMessage = vi.fn();
     const onProjectSelected = vi.fn();
     const onProjectRefreshed = vi.fn();
     const { result } = renderHook(() =>
@@ -187,8 +179,7 @@ describe("project selection state", () => {
         nativeRuntime: true,
         projects,
         onError,
-        onMessage,
-        onProjectSelected,
+            onProjectSelected,
         onProjectRefreshed,
         inspectProject,
       }),

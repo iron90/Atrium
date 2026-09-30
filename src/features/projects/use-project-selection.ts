@@ -25,7 +25,6 @@ export function useProjectSelection({
   projects,
   initialProject,
   onError,
-  onMessage,
   onProjectSelected,
   onProjectRefreshed,
   inspectProject = bridge.inspectProject,
@@ -34,7 +33,6 @@ export function useProjectSelection({
   projects: ProjectSnapshot[];
   initialProject?: ProjectSnapshot;
   onError: (message: string | null) => void;
-  onMessage: (message: { type: "projectRefreshed" }) => void;
   onProjectSelected: () => void;
   onProjectRefreshed: (
     project: ProjectSnapshot,
@@ -60,7 +58,6 @@ export function useProjectSelection({
     selectedProjectId,
     initialProject,
     onError,
-    onMessage,
     onProjectRefreshed,
     inspectProject,
   });

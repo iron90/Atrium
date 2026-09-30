@@ -2443,17 +2443,6 @@ button[aria-busy="true"] {
     border-color var(--motion-base) var(--ease-standard),
     box-shadow var(--motion-base) var(--ease-standard);
 }
-.activity-card.is-note {
-  border-style: dashed;
-}
-.activity-note-dot {
-  flex: 0 0 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.75;
-}
 .activity-card:has(.activity-pulse.is-running) {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
   background: color-mix(in srgb, var(--accent) 5%, var(--panel-soft));

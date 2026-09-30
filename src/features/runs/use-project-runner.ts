@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { bridge } from "../../bridge";
 import type { Language } from "../../i18n";
 import { translate } from "../../i18n";
-import type { RunMessage } from "../../shared/activity";
 import { errorMessage } from "../../shared/errors";
 import type {
   ProfileAction,
@@ -18,14 +17,11 @@ import {
   type FinishedRunRecord,
 } from "./use-run-event-stream";
 
-export type { RunMessage } from "../../shared/activity";
-
 export interface UseProjectRunnerOptions {
   nativeRuntime: boolean;
   selectedProject?: ProjectSnapshot;
   language: Language;
   onError: (message: string | null) => void;
-  onMessage: (message: RunMessage) => void;
   onFinished?: (finished: RunFinished) => void;
 }
 
@@ -49,7 +45,6 @@ export function useProjectRunner({
   selectedProject,
   language,
   onError,
-  onMessage,
   onFinished,
 }: UseProjectRunnerOptions): UseProjectRunnerResult {
   const handleRunError = useCallback(
@@ -58,14 +53,9 @@ export function useProjectRunner({
   );
   const handleRunFinished = useCallback(
     (finished: RunFinished) => {
-      onMessage({
-        type: "finished",
-        displayCommand: finished.displayCommand,
-        status: finished.status,
-      });
       onFinished?.(finished);
     },
-    [onFinished, onMessage],
+    [onFinished],
   );
   const {
     activeRuns: activeRunMap,
@@ -182,10 +172,6 @@ export function useProjectRunner({
             replaceOutput(started.runId, [demoLine]);
             recordSyntheticFinished(started, "succeeded", 0, demoLine, "");
             completeRun(started.runId);
-            onMessage({
-              type: "demo",
-              displayCommand: command.displayCommand,
-            });
           }, 700);
           demoTimers.current.set(started.runId, timer);
         }
@@ -198,7 +184,6 @@ export function useProjectRunner({
       language,
       nativeRuntime,
       onError,
-      onMessage,
       recordSyntheticFinished,
       registerRun,
       replaceOutput,
@@ -216,7 +201,6 @@ export function useProjectRunner({
         const lines = outputLinesFor(runId);
         recordSyntheticFinished(run, "cancelled", null, lines.join("\n"), "");
         completeRun(runId);
-        onMessage({ type: "cancelled" });
       } catch (stopError) {
         onError(errorMessage(stopError));
       }
@@ -226,7 +210,6 @@ export function useProjectRunner({
       cancelDemoTimer,
       completeRun,
       onError,
-      onMessage,
       outputLinesFor,
       recordSyntheticFinished,
     ],

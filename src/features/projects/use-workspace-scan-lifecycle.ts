@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceSnapshot } from "../../bridge";
 import { translate, type Language } from "../../i18n";
-import type { WorkspaceMessage } from "../../shared/activity";
 import { errorMessage } from "../../shared/errors";
 import {
   SCAN_TIMEOUT_MESSAGE,
@@ -27,7 +26,6 @@ export interface UseWorkspaceScanLifecycleOptions {
   excludeNames: string[];
   language: Language;
   onError: (message: string | null) => void;
-  onMessage: (message: WorkspaceMessage) => void;
   onApplySnapshot: (snapshot: WorkspaceSnapshot) => void;
   onSnapshotTimestamp: (scannedAt: number) => void;
   scanWorkspacesFn?: typeof scanWorkspaces;
@@ -51,7 +49,6 @@ export function useWorkspaceScanLifecycle({
   excludeNames,
   language,
   onError,
-  onMessage,
   onApplySnapshot,
   onSnapshotTimestamp,
   scanWorkspacesFn = scanWorkspaces,
@@ -66,7 +63,6 @@ export function useWorkspaceScanLifecycle({
   const excludeNamesRef = useRef(excludeNames);
   const preferencesRef = useRef(preferences);
   const onErrorRef = useRef(onError);
-  const onMessageRef = useRef(onMessage);
   const applyScannedSnapshotRef = useRef<(next: WorkspaceSnapshot) => void>(
     () => undefined,
   );
@@ -76,8 +72,7 @@ export function useWorkspaceScanLifecycle({
     excludeNamesRef.current = excludeNames;
     preferencesRef.current = preferences;
     onErrorRef.current = onError;
-    onMessageRef.current = onMessage;
-  }, [language, excludeNames, preferences, onError, onMessage]);
+  }, [language, excludeNames, preferences, onError]);
 
   useEffect(() => {
     workspaceFingerprintRef.current = snapshotFingerprint(snapshot);
@@ -122,10 +117,6 @@ export function useWorkspaceScanLifecycle({
           return;
         }
         applyScannedSnapshotRef.current(nextSnapshot);
-        onMessageRef.current({
-          type: "projects",
-          count: nextSnapshot.projects.length,
-        });
       })
       .catch((scanError) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return;
@@ -167,10 +158,6 @@ export function useWorkspaceScanLifecycle({
         if (changed) {
           applyScannedSnapshot(nextSnapshot);
           onError(null);
-          onMessage({
-            type: "workspaceUpdated",
-            count: nextSnapshot.projects.length,
-          });
         } else {
           onSnapshotTimestamp(nextSnapshot.scannedAt);
         }
@@ -192,7 +179,6 @@ export function useWorkspaceScanLifecycle({
     applyScannedSnapshot,
     nativeRuntime,
     onError,
-    onMessage,
     onSnapshotTimestamp,
     scanWorkspacesFn,
     scanRequests,
@@ -217,7 +203,6 @@ export function useWorkspaceScanLifecycle({
     setRootPath(nextPaths[0] ?? "");
     setWorkspacePaths(nextPaths);
     onError(null);
-    onMessage({ type: "scanning" });
     const requestId = scanRequests.begin();
     try {
       const nextSnapshot = await withTimeout(
@@ -231,7 +216,6 @@ export function useWorkspaceScanLifecycle({
       );
       if (!scanRequests.isCurrent(requestId)) return;
       applyScannedSnapshot(nextSnapshot);
-      onMessage({ type: "projects", count: nextSnapshot.projects.length });
     } catch (scanError) {
       if (scanRequests.isCurrent(requestId)) {
         onError(errorMessage(scanError));
@@ -245,7 +229,6 @@ export function useWorkspaceScanLifecycle({
     excludeNames,
     language,
     onError,
-    onMessage,
     workspacePaths,
     scanWorkspacesFn,
     scanRequests,

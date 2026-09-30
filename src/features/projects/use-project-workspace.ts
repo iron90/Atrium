@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../../bridge";
 import type { Language } from "../../i18n";
-import type { WorkspaceMessage } from "../../shared/activity";
 import { useProjectSelection } from "./use-project-selection";
 import {
   useWorkspaceScanLifecycle,
@@ -19,7 +18,6 @@ export interface UseProjectWorkspaceOptions {
   excludeNames: string[];
   language: Language;
   onError: (message: string | null) => void;
-  onMessage: (message: WorkspaceMessage) => void;
   onProjectSelected: () => void;
   onSnapshotApplied: (snapshot: WorkspaceSnapshot) => void;
 }
@@ -54,7 +52,6 @@ export function useProjectWorkspace({
   excludeNames,
   language,
   onError,
-  onMessage,
   onProjectSelected,
   onSnapshotApplied,
 }: UseProjectWorkspaceOptions): UseProjectWorkspaceResult {
@@ -78,7 +75,6 @@ export function useProjectWorkspace({
     projects: snapshot.projects,
     initialProject: initialSnapshot.projects[0],
     onError,
-    onMessage,
     onProjectSelected,
     onProjectRefreshed: handleProjectRefreshed,
   });
@@ -154,7 +150,6 @@ export function useProjectWorkspace({
     excludeNames,
     language,
     onError,
-    onMessage,
     onApplySnapshot: applyWorkspaceSnapshot,
     onSnapshotTimestamp: handleSnapshotTimestamp,
   });

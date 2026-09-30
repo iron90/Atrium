@@ -27,7 +27,6 @@ export interface UseProjectDetailLifecycleOptions {
   selectedProjectId: string;
   initialProject?: ProjectSnapshot;
   onError: (message: string | null) => void;
-  onMessage: (message: { type: "projectRefreshed" }) => void;
   onProjectRefreshed: (
     project: ProjectSnapshot,
     details: ProjectSnapshot,
@@ -41,7 +40,6 @@ export function useProjectDetailLifecycle({
   selectedProjectId,
   initialProject,
   onError,
-  onMessage,
   onProjectRefreshed,
   inspectProject = bridge.inspectProject,
 }: UseProjectDetailLifecycleOptions): ProjectDetailLifecycleState & {
@@ -136,7 +134,6 @@ export function useProjectDetailLifecycle({
         if (isStillSelected) {
           setInspectorProject(details);
           setIsLoadingDetails(false);
-          onMessage({ type: "projectRefreshed" });
         }
       } catch (refreshError) {
         onError(errorMessage(refreshError));
@@ -147,7 +144,6 @@ export function useProjectDetailLifecycle({
     [
       inspectProject,
       onError,
-      onMessage,
       onProjectRefreshed,
       refreshingProjectId,
     ],

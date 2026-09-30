@@ -38,14 +38,12 @@ describe("project runner", () => {
     runProjectCommandMock.mockResolvedValue(started);
     stopProjectCommandMock.mockResolvedValue(undefined);
     const onError = vi.fn();
-    const onMessage = vi.fn();
     const { result } = renderHook(() =>
       useProjectRunner({
         nativeRuntime: false,
         selectedProject: project,
         language: "en",
         onError,
-        onMessage,
       }),
     );
 
@@ -57,11 +55,6 @@ describe("project runner", () => {
     });
     act(() => vi.advanceTimersByTime(700));
 
-    expect(onMessage).toHaveBeenCalledWith({ type: "cancelled" });
-    expect(onMessage).not.toHaveBeenCalledWith({
-      type: "demo",
-      displayCommand: command.displayCommand,
-    });
   });
 
   it("does not register a run that starts after unmount", async () => {
@@ -77,7 +70,6 @@ describe("project runner", () => {
         selectedProject: project,
         language: "en",
         onError: vi.fn(),
-        onMessage: vi.fn(),
       }),
     );
 
@@ -100,7 +92,6 @@ describe("project runner", () => {
         selectedProject: project,
         language: "en",
         onError: vi.fn(),
-        onMessage: vi.fn(),
       }),
     );
 
@@ -129,8 +120,7 @@ describe("project runner", () => {
           selectedProject,
           language: "en",
           onError: vi.fn(),
-          onMessage: vi.fn(),
-        }),
+          }),
       { initialProps: { selectedProject: project } },
     );
 

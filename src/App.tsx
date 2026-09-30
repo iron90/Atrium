@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import { AppSidebar } from "./app/AppSidebar";
-import type { ActivityMessage } from "./app/activity-message";
 import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
 import { ProjectsPage } from "./app/ProjectsPage";
@@ -44,7 +43,6 @@ import {
   readLocalPreferences,
   type LocalPreferences,
 } from "./app/preferences";
-import type { SidebarActivityNote } from "./app/LocalActivityPanel";
 import type {
   ProfileAction,
   ProjectCommand,
@@ -87,10 +85,6 @@ export default function App() {
       : demoSnapshot(initialRootPath),
   );
   const [error, setError] = useState<string | null>(null);
-  const [lastActivity, setLastActivity] = useState<SidebarActivityNote | null>(
-    null,
-  );
-  const activityIdRef = useRef(0);
   const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);
   const mainColumnRef = useRef<HTMLElement>(null);
@@ -175,16 +169,6 @@ export default function App() {
     (message: string | null) => setError(message),
     [],
   );
-  const handleActivityMessage = useCallback((message: ActivityMessage) => {
-    // Ambient activity lands in the sidebar log; errors keep their own
-    // persistent banner channel.
-    activityIdRef.current += 1;
-    setLastActivity({
-      id: activityIdRef.current,
-      at: Date.now(),
-      message,
-    });
-  }, []);
   const resetProjectInspection = useCallback(() => {
     inspectorResetRef.current();
   }, []);
@@ -211,7 +195,6 @@ export default function App() {
     excludeNames,
     language,
     onError: handleWorkspaceError,
-    onMessage: handleActivityMessage,
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
   });
@@ -272,7 +255,6 @@ export default function App() {
     selectedProject,
     language,
     onError: handleWorkspaceError,
-    onMessage: handleActivityMessage,
     onFinished: handleRunFinished,
   });
 
@@ -560,7 +542,6 @@ export default function App() {
                   ? handleStopRun(globalActiveRun.runId)
                   : undefined,
               projectName: globalActiveRunProject?.name,
-              lastActivity,
             }}
           />
 
