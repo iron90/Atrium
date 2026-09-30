@@ -20,17 +20,6 @@ describe("activity message formatting", () => {
   it("formats run lifecycle messages with translated action labels", () => {
     expect(
       formatActivityMessage(
-        {
-          type: "command",
-          commandKind: "build",
-          label: "native build",
-          displayCommand: "npm run build",
-        },
-        "en",
-      ),
-    ).toBe("Build · npm run build");
-    expect(
-      formatActivityMessage(
         { type: "demo", displayCommand: "npm run dev" },
         "en",
       ),

@@ -28,17 +28,6 @@ export const formatActivityMessage = (
       return translate(language, "scanningWorkspace");
     case "cancelled":
       return translate(language, "runCancellationRequested");
-    case "command": {
-      const label =
-        message.commandKind === "run"
-          ? translate(language, "run")
-          : message.commandKind === "check"
-            ? translate(language, "check")
-            : message.commandKind === "build"
-              ? translate(language, "build")
-              : message.label;
-      return `${label} · ${message.displayCommand}`;
-    }
     case "demo":
       return `${message.displayCommand} · ${translate(language, "succeeded")}`;
     case "finished":

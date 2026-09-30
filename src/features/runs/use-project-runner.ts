@@ -164,12 +164,8 @@ export function useProjectRunner({
       const targetProject = projectOverride ?? selectedProject;
       if (!targetProject) return;
       onError(null);
-      onMessage({
-        type: "command",
-        commandKind: command.kind,
-        label: command.label,
-        displayCommand: command.displayCommand,
-      });
+      // The sidebar status card already announces the started command; the
+      // activity log only records outcomes.
       try {
         const started = await bridge.runProjectCommand(
           targetProject.path,

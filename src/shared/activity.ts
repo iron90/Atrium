@@ -1,4 +1,4 @@
-import type { ProjectCommand, RunFinished } from "../bridge";
+import type { RunFinished } from "../bridge";
 
 export type WorkspaceMessage =
   | { type: "projects"; count: number }
@@ -8,12 +8,6 @@ export type WorkspaceMessage =
 
 export type RunMessage =
   | { type: "cancelled" }
-  | {
-      type: "command";
-      commandKind: ProjectCommand["kind"];
-      label: string;
-      displayCommand: string;
-    }
   | { type: "demo"; displayCommand: string }
   | {
       type: "finished";
