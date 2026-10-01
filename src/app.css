@@ -522,17 +522,6 @@ button[aria-busy="true"] {
 .activity-card button:hover {
   background: var(--accent-strong);
 }
-.error-banner {
-  max-width: 1480px;
-  margin: 0 auto 16px;
-  padding: 11px 13px;
-  border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
-  border-radius: 8px;
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 9%, transparent);
-  font-size: 12px;
-  animation: status-enter var(--motion-base) var(--ease-emphasized) both;
-}
 
 .content-grid {
   display: grid;
@@ -2442,6 +2431,24 @@ button[aria-busy="true"] {
     background-color var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard),
     box-shadow var(--motion-base) var(--ease-standard);
+}
+.activity-card.is-error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: color-mix(in srgb, var(--danger) 7%, var(--panel-soft));
+}
+.activity-pulse.is-error {
+  background: var(--danger);
+  animation: none;
+}
+.activity-error-message {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--danger);
+  font:
+    9px "DM Mono",
+    monospace;
 }
 .activity-card:has(.activity-pulse.is-running) {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line));

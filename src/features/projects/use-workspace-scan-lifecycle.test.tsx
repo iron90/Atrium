@@ -168,7 +168,7 @@ describe("workspace scan lifecycle", () => {
         },
       );
       const onError = vi.fn();
-    
+
       renderHook(() =>
         useWorkspaceScanLifecycle({
           nativeRuntime: true,
@@ -180,7 +180,7 @@ describe("workspace scan lifecycle", () => {
           excludeNames: [],
           language: "en",
           onError,
-            onApplySnapshot: noop,
+          onApplySnapshot: noop,
           onSnapshotTimestamp: noop,
           scanWorkspacesFn,
         }),
@@ -189,8 +189,14 @@ describe("workspace scan lifecycle", () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
 
+      // A single transient background failure stays silent (it may self-heal
+      // on the next retry); only the mount scan's success-clear reached
+      // onError so far.
       await vi.advanceTimersByTimeAsync(10_000);
+      expect(onError).not.toHaveBeenCalledWith("refresh exploded");
 
+      // Two consecutive background failures surface the error.
+      await vi.advanceTimersByTimeAsync(10_000);
       expect(onError).toHaveBeenCalledWith("refresh exploded");
     } finally {
       vi.useRealTimers();

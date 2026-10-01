@@ -283,10 +283,11 @@ describe("Atrium board", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not render a status banner or sidebar activity log", () => {
+  it("does not render a status banner or main-column error banner", () => {
     render(<App />);
 
     expect(document.querySelector(".status-banner")).toBeNull();
     expect(document.querySelector(".activity-card.is-note")).toBeNull();
+    expect(document.querySelector(".error-banner")).toBeNull();
   });
 });

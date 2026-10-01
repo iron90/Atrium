@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { bridge } from "../../bridge";
 import type { GitBranchOverview, ProjectSnapshot } from "../../bridge";
 import { errorMessage } from "../../shared/errors";
@@ -16,42 +16,50 @@ export function useGitBranchOverview(
   project: ProjectSnapshot | undefined,
   branch: string | null,
 ): GitBranchOverviewState {
-  const [overview, setOverview] = useState<GitBranchOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const requestRef = useRef(0);
-
   const headBranch = project?.repo?.branch ?? null;
   const effectiveBranch =
     project && branch && branch !== headBranch ? branch : null;
+  const projectPath = project?.path ?? null;
+  const cacheKey =
+    projectPath && effectiveBranch ? `${projectPath}|${effectiveBranch}` : null;
+
+  const [result, setResult] = useState<{
+    key: string;
+    overview: GitBranchOverview | null;
+    error: string;
+  } | null>(null);
 
   useEffect(() => {
-    if (!project || !effectiveBranch) {
-      requestRef.current += 1;
-      setOverview(null);
-      setIsLoading(false);
-      setError(null);
-      return undefined;
-    }
-    const requestId = requestRef.current + 1;
-    requestRef.current = requestId;
-    setIsLoading(true);
-    setError(null);
+    if (!cacheKey || !projectPath || !effectiveBranch) return undefined;
+    let cancelled = false;
     bridge
-      .readGitBranchOverview(project.path, effectiveBranch)
-      .then((result) => {
-        if (requestRef.current !== requestId) return;
-        setOverview(result);
-        setIsLoading(false);
+      .readGitBranchOverview(projectPath, effectiveBranch)
+      .then((overview) => {
+        if (!cancelled) setResult({ key: cacheKey, overview, error: "" });
       })
       .catch((overviewError) => {
-        if (requestRef.current !== requestId) return;
-        setOverview(null);
-        setError(errorMessage(overviewError));
-        setIsLoading(false);
+        if (!cancelled) {
+          setResult({
+            key: cacheKey,
+            overview: null,
+            error: errorMessage(overviewError),
+          });
+        }
       });
-    return undefined;
-  }, [project, effectiveBranch]);
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, projectPath, effectiveBranch]);
 
-  return { overview, isLoading, error };
+  if (!cacheKey) {
+    return { overview: null, isLoading: false, error: null };
+  }
+  if (!result || result.key !== cacheKey) {
+    // In flight: a requested key without a settled result loads.
+    return { overview: null, isLoading: true, error: null };
+  }
+  if (result.error) {
+    return { overview: null, isLoading: false, error: result.error };
+  }
+  return { overview: result.overview, isLoading: false, error: null };
 }

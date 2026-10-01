@@ -58,6 +58,9 @@ export function useWorkspaceScanLifecycle({
   const [isScanning, setIsScanning] = useState(false);
   const workspaceFingerprintRef = useRef(snapshotFingerprint(initialSnapshot));
   const [scanRequests] = useState(() => new LatestRequestGate());
+  // Background scans retry every 10s; a transient failure that self-heals on
+  // the next attempt is noise, so only consecutive failures surface.
+  const backgroundScanFailures = useRef(0);
   const languageRef = useRef(language);
 
   const excludeNamesRef = useRef(excludeNames);
@@ -117,10 +120,15 @@ export function useWorkspaceScanLifecycle({
           return;
         }
         applyScannedSnapshotRef.current(nextSnapshot);
+        backgroundScanFailures.current = 0;
+        onErrorRef.current(null);
       })
       .catch((scanError) => {
         if (disposed || !scanRequests.isCurrent(requestId)) return;
-        onErrorRef.current(errorMessage(scanError));
+        backgroundScanFailures.current += 1;
+        if (backgroundScanFailures.current >= 2) {
+          onErrorRef.current(errorMessage(scanError));
+        }
       })
       .finally(() => {
         scanRequests.finish(requestId);
@@ -153,6 +161,8 @@ export function useWorkspaceScanLifecycle({
           SCAN_TIMEOUT_MESSAGE,
         );
         if (disposed || !scanRequests.isCurrent(requestId)) return;
+        backgroundScanFailures.current = 0;
+        onError(null);
         const changed =
           workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
         if (changed) {
@@ -163,7 +173,10 @@ export function useWorkspaceScanLifecycle({
         }
       } catch (refreshError) {
         if (!disposed && scanRequests.isCurrent(requestId)) {
-          onError(errorMessage(refreshError));
+          backgroundScanFailures.current += 1;
+          if (backgroundScanFailures.current >= 2) {
+            onError(errorMessage(refreshError));
+          }
         }
       } finally {
         scanRequests.finish(requestId);
@@ -216,6 +229,8 @@ export function useWorkspaceScanLifecycle({
       );
       if (!scanRequests.isCurrent(requestId)) return;
       applyScannedSnapshot(nextSnapshot);
+      backgroundScanFailures.current = 0;
+      onError(null);
     } catch (scanError) {
       if (scanRequests.isCurrent(requestId)) {
         onError(errorMessage(scanError));

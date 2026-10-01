@@ -34,6 +34,7 @@ import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import { errorMessage } from "./shared/errors";
+import type { RuntimeStatus } from "./app/LocalActivityPanel";
 import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
@@ -360,6 +361,20 @@ export default function App() {
         (project) => project.id === globalActiveRun.projectId,
       )
     : undefined;
+  // Priority: running > scanning > error > ready. A background scan failure
+  // only reaches `error` after repeated failures, so transient stalls that
+  // self-heal on retry never surface.
+  const runtimeStatus: RuntimeStatus = globalActiveRun
+    ? {
+        kind: "running",
+        command: globalActiveRun.displayCommand,
+        projectName: globalActiveRunProject?.name,
+      }
+    : isScanning
+      ? { kind: "scanning" }
+      : error
+        ? { kind: "error", message: error }
+        : { kind: "ready" };
 
   const handleToggleFavorite = useCallback(
     (id: string) =>
@@ -535,14 +550,12 @@ export default function App() {
           <AppSidebar
             activePage={activePage}
             onPageChange={setActivePage}
-            activity={{
-              activeRun: globalActiveRun,
-              onStop: () =>
-                globalActiveRun
-                  ? handleStopRun(globalActiveRun.runId)
-                  : undefined,
-              projectName: globalActiveRunProject?.name,
-            }}
+            status={runtimeStatus}
+            onStop={() =>
+              globalActiveRun
+                ? handleStopRun(globalActiveRun.runId)
+                : undefined
+            }
           />
 
           <div className="main-column-shell">
@@ -558,12 +571,6 @@ export default function App() {
                           <p>{heading.body}</p>
                         </div>
                       </header>
-
-                      {error ? (
-                        <div className="error-banner" role="alert">
-                          {error}
-                        </div>
-                      ) : null}
 
                       {page === "settings" ? (
                         <SettingsPanel

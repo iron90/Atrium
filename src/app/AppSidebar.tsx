@@ -1,25 +1,22 @@
 import atriumIcon from "../../src-tauri/icons/icon.png";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { RunStarted } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill } from "../shared/format";
 import { APP_VERSION } from "./app-version";
-import { LocalActivityPanel } from "./LocalActivityPanel";
+import { LocalActivityPanel, type RuntimeStatus } from "./LocalActivityPanel";
 import type { PageId } from "./navigation";
 import { navigationItems } from "./navigation";
 
 export function AppSidebar({
   activePage,
   onPageChange,
-  activity,
+  status,
+  onStop,
 }: {
   activePage: PageId;
   onPageChange: (page: PageId) => void;
-  activity: {
-    activeRun?: RunStarted;
-    onStop: () => Promise<void> | void;
-    projectName?: string;
-  };
+  status: RuntimeStatus;
+  onStop: () => Promise<void> | void;
 }) {
   const { t } = useI18n();
   const navRef = useRef<HTMLElement>(null);
@@ -115,11 +112,7 @@ export function AppSidebar({
         ))}
       </nav>
 
-      <LocalActivityPanel
-        activeRun={activity.activeRun}
-        onStop={activity.onStop}
-        projectName={activity.projectName}
-      />
+      <LocalActivityPanel status={status} onStop={onStop} />
     </aside>
   );
 }
