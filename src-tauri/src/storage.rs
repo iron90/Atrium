@@ -159,4 +159,41 @@ mod tests {
         fs::remove_dir_all(root).expect("remove project fixture");
         fs::remove_dir_all(outside).expect("remove outside fixture");
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn entries_measured_independently_of_the_whole_project_hardlink_accounting() {
+        use std::fs::hard_link;
+        use std::os::unix::fs::symlink;
+
+        // The project root is reached through a symlink, so the whole-project
+        // walk and the canonical cleanable target use different path prefixes.
+        // Bookkeeping shared between the two walks would count the entry's
+        // hardlinked file as already seen and report it as zero bytes.
+        let real = fixture_root("entry-metrics-real");
+        let link = fixture_root("entry-metrics-link");
+        let _ = fs::remove_dir_all(&real);
+        let _ = fs::remove_dir_all(&link);
+        fs::create_dir_all(real.join("build-out")).expect("create build fixture");
+        fs::write(real.join("build-out/blob"), b"0123456789").expect("write build fixture");
+        hard_link(real.join("build-out/blob"), real.join("blob-twin")).expect("hard link fixture");
+        symlink(&real, &link).expect("create root symlink");
+
+        let cleanup = CleanupDeclaration {
+            cache: Vec::new(),
+            build: vec!["build-out".to_string()],
+        };
+        let storage = inspect_project_storage(&link, &cleanup);
+
+        assert_eq!(storage.entries.len(), 1);
+        let entry = &storage.entries[0];
+        assert!(entry.is_complete);
+        assert_eq!(entry.bytes, 10);
+        assert_eq!(entry.file_count, 1);
+        // The project total still counts the shared inode exactly once.
+        assert_eq!(storage.total_bytes, 10);
+
+        fs::remove_dir_all(real).expect("remove project fixture");
+        fs::remove_dir_all(link).expect("remove link fixture");
+    }
 }

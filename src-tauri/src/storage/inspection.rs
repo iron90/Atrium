@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::filesystem_metrics::PathMetricsCache;
+use crate::filesystem_metrics::measure_path;
 use crate::manifest_projection::path_targets_protected_component;
 use crate::model::{CleanupDeclaration, ProjectStorage, StorageEntry, StorageEntryKind};
 use crate::project_path::resolve_existing_path_inside_project;
@@ -16,9 +16,13 @@ pub fn inspect_project_storage(
     project_path: &Path,
     cleanup: &CleanupDeclaration,
 ) -> ProjectStorage {
-    let mut metrics = PathMetricsCache::default();
-    let total = metrics.measure(project_path);
-    let entries = discover_cleanable_entries(project_path, cleanup, &mut metrics);
+    // Canonicalize first: a project reached through a symlink must be
+    // measured at its real location instead of being skipped as a symlink.
+    let root = project_path
+        .canonicalize()
+        .unwrap_or_else(|_| project_path.to_path_buf());
+    let total = measure_path(&root);
+    let entries = discover_cleanable_entries(&root, cleanup);
     let cleanable_bytes = entries.iter().map(|entry| entry.bytes).sum();
 
     ProjectStorage {
@@ -32,7 +36,6 @@ pub fn inspect_project_storage(
 pub(super) fn discover_cleanable_entries(
     project_path: &Path,
     cleanup: &CleanupDeclaration,
-    metrics: &mut PathMetricsCache,
 ) -> Vec<StorageEntry> {
     let mut entries = Vec::new();
     let mut seen_targets = HashSet::<PathBuf>::new();
@@ -57,7 +60,11 @@ pub(super) fn discover_cleanable_entries(
             continue;
         }
 
-        let count = metrics.measure(&canonical_target);
+        // Each entry is measured with its own inode bookkeeping, like a
+        // standalone `du` of that directory. Sharing the whole-project walk's
+        // hardlink accounting would report the entry's hardlinked files as
+        // already counted whenever this walk misses the directory cache.
+        let count = measure_path(&canonical_target);
         entries.push(StorageEntry {
             relative_path: relative_path.clone(),
             kind,

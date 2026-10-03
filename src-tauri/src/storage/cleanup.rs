@@ -2,7 +2,6 @@ use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use crate::filesystem_metrics::PathMetricsCache;
 use crate::model::{
     CleanupDeclaration, CleanupProgress, CleanupProgressPhase, CleanupResult, StorageCleanupFailure,
 };
@@ -27,8 +26,7 @@ where
         return Err("Project path is not a directory".to_string());
     }
 
-    let mut metrics = PathMetricsCache::default();
-    let candidates = discover_cleanable_entries(&root, cleanup, &mut metrics)
+    let candidates = discover_cleanable_entries(&root, cleanup)
         .into_iter()
         .filter(|entry| {
             selected_paths
