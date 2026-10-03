@@ -107,18 +107,21 @@ fn read_references(project_path: &Path) -> Vec<GitReference> {
         (GitReferenceKind::Branch, "refs/heads"),
         (GitReferenceKind::Tag, "refs/tags"),
     ] {
+        // for-each-ref does not expand log's %xNN hex escapes (git 2.52
+        // prints them literally), so the fields are separated with a literal
+        // tab — git forbids whitespace in refnames, so the split is unambiguous.
         let Some(raw) = run_git(
             project_path,
             &[
                 "for-each-ref",
-                "--format=%(refname:short)%x1f%(objectname:short)%x1e",
+                "--format=%(refname:short)\t%(objectname:short)",
                 namespace,
             ],
         ) else {
             continue;
         };
-        references.extend(raw.split('\u{1e}').filter_map(|record| {
-            let fields: Vec<&str> = record.trim().split('\u{1f}').collect();
+        references.extend(raw.lines().filter_map(|record| {
+            let fields: Vec<&str> = record.split('\t').collect();
             if fields.len() != 2 || fields[0].is_empty() {
                 return None;
             }
@@ -173,7 +176,7 @@ fn worktree_status(status: Option<&str>) -> (bool, u32, bool) {
 mod tests {
     use super::{
         branch_from_command_output, count_worktree_changes, read_branch_overview,
-        read_tracking_counts, worktree_status,
+        read_git_snapshot, read_tracking_counts, worktree_status, GitReferenceKind,
     };
     use std::fs;
     use std::path::Path;
@@ -285,5 +288,34 @@ mod tests {
     fn does_not_treat_unavailable_worktree_status_as_clean() {
         assert_eq!(worktree_status(None), (false, 0, false));
         assert_eq!(worktree_status(Some("")), (true, 0, true));
+    }
+
+    // Regression guard: for-each-ref does not expand log's %xNN hex escapes,
+    // so the reference fields must be separated without them.
+    #[test]
+    fn reads_branch_and_tag_references_through_real_git() {
+        let root = fixture_repo("references");
+        fs::write(root.join("base.txt"), "base\n").expect("write base file");
+        git(&root, &["add", "-A"]);
+        git(&root, &["commit", "-qm", "base"]);
+        git(&root, &["branch", "feature/one"]);
+        git(&root, &["tag", "v0.1.0"]);
+
+        let snapshot = read_git_snapshot(&root).expect("git snapshot");
+
+        let current = snapshot.branch.clone().expect("current branch");
+        let mut branch_names: Vec<&str> = snapshot
+            .references
+            .iter()
+            .filter(|reference| reference.kind == GitReferenceKind::Branch)
+            .map(|reference| reference.name.as_str())
+            .collect();
+        branch_names.sort_unstable();
+        assert_eq!(branch_names, ["feature/one", current.as_str()]);
+        assert!(snapshot.references.iter().any(|reference| {
+            reference.kind == GitReferenceKind::Tag && reference.name == "v0.1.0"
+        }));
+
+        fs::remove_dir_all(root).expect("remove fixture repo");
     }
 }

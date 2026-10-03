@@ -23,7 +23,7 @@ pub struct GitReference {
     pub sha: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum GitReferenceKind {
     Branch,
