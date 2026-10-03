@@ -69,6 +69,10 @@ export function BuildProfileCard({
           )
         : t("profileHostUnsupported");
   const profileVerificationMessage = t("profileHostVerificationPending");
+  const blockerForAction = (action: ProfileAction) =>
+    profile.blockedActions.find((blocked) => blocked.action === action);
+  const blockerMessage = (reason: string) =>
+    fill(t("profileVerificationBlocked"), "reason", reason);
 
   return (
     <div className="profile-card">
@@ -102,6 +106,7 @@ export function BuildProfileCard({
           const hostMismatch = profile.hostMismatchActions.includes(action);
           const hostVerificationPending =
             profile.unverifiedActions.includes(action);
+          const blocker = blockerForAction(action);
           const hostMismatchMessage =
             action === "run"
               ? t("profileRunHostUnsupported")
@@ -126,11 +131,13 @@ export function BuildProfileCard({
               ? t("profileUnavailable")
               : hostMismatch
                 ? hostMismatchMessage
-                : hostVerificationPending
-                  ? profileVerificationMessage
-                  : runBlockedUntilBuild
-                    ? t("buildRequiredToRun")
-                    : command.displayCommand;
+                : blocker
+                  ? blockerMessage(blocker.reason)
+                  : hostVerificationPending
+                    ? profileVerificationMessage
+                    : runBlockedUntilBuild
+                      ? t("buildRequiredToRun")
+                      : command.displayCommand;
           // Disabled buttons expose their reason through the card-level
           // visible issue text (below), linked via aria-describedby.
           const issueHintId = `profile-issue-${profile.id.replace(/\s+/g, "-")}`;
@@ -143,7 +150,10 @@ export function BuildProfileCard({
               disabled={actionDisabled}
               title={actionTitle}
               aria-describedby={
-                hostMismatch || hostVerificationPending || profile.issues.length
+                hostMismatch ||
+                blocker ||
+                hostVerificationPending ||
+                profile.issues.length
                   ? issueHintId
                   : undefined
               }
@@ -225,6 +235,13 @@ export function BuildProfileCard({
           id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
         >
           {profileHostMessage}
+        </span>
+      ) : profile.blockedActions.length ? (
+        <span
+          className="profile-issue"
+          id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
+        >
+          {blockerMessage(profile.blockedActions[0].reason)}
         </span>
       ) : profile.unverifiedActions.length ? (
         <span

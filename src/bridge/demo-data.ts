@@ -52,6 +52,8 @@ const buildProfile = (
   },
   hostMismatchActions: [],
   unverifiedActions: [],
+  verificationBlockers: [],
+  blockedActions: [],
   source: ".atrium/manifest.toml#build_profiles",
   region: null,
   payment: null,

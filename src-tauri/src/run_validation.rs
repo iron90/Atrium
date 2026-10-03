@@ -238,6 +238,8 @@ mod tests {
             },
             host_mismatch_actions: vec![],
             unverified_actions: vec![],
+            verification_blockers: vec![],
+            blocked_actions: vec![],
             source: ".atrium/manifest.toml".to_string(),
             region: None,
             payment: None,

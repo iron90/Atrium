@@ -71,11 +71,32 @@ pub struct BuildProfile {
     pub verification: BuildHostRequirements,
     pub host_mismatch_actions: Vec<CommandKind>,
     pub unverified_actions: Vec<CommandKind>,
+    pub verification_blockers: Vec<VerificationBlocker>,
+    pub blocked_actions: Vec<BlockedAction>,
     pub source: String,
     pub region: Option<String>,
     pub payment: Option<String>,
     pub artifacts: Vec<String>,
     pub issues: Vec<String>,
+}
+
+// Agent-attested in the manifest: verification for this action on this host
+// cannot complete, with the environmental reason the Agent observed.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct VerificationBlocker {
+    pub action: CommandKind,
+    pub host: HostOs,
+    pub reason: String,
+}
+
+// Current-host view of the declared blockers; identical bindings inherit the
+// blocker from the profile that declared it, mirroring verification evidence.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockedAction {
+    pub action: CommandKind,
+    pub reason: String,
 }
 
 impl BuildProfile {

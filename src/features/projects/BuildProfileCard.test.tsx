@@ -35,6 +35,8 @@ const profile: BuildProfile = {
   },
   hostMismatchActions: [],
   unverifiedActions: [],
+  verificationBlockers: [],
+  blockedActions: [],
   source: ".atrium/manifest.toml#build_profiles.macos-direct",
   region: null,
   payment: null,
@@ -187,5 +189,32 @@ describe("build profile card", () => {
         "This action has not been verified on the current host.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("explains a declared verification blocker instead of the generic pending note", () => {
+    const reason = "Missing Apple Developer signing identity.";
+    renderCard([availableArtifact], {
+      ...profile,
+      verification: {
+        ...profile.verification,
+        build: [],
+      },
+      unverifiedActions: ["build"],
+      verificationBlockers: [
+        { action: "build", host: "macos", reason },
+      ],
+      blockedActions: [{ action: "build", reason }],
+    });
+
+    const buildButton = screen.getByRole("button", { name: "Build" });
+    expect(buildButton).toBeDisabled();
+    const blockedMessage = `Verification is blocked; the development Agent recorded: ${reason}`;
+    expect(buildButton).toHaveAttribute("title", blockedMessage);
+    expect(screen.getByText(blockedMessage)).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "This action has not been verified on the current host.",
+      ),
+    ).not.toBeInTheDocument();
   });
 });

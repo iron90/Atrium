@@ -127,6 +127,8 @@ export const en = {
     "This action is unavailable here; it requires one of these host OSes: {hosts}.",
   profileHostVerificationPending:
     "This action has not been verified on the current host.",
+  profileVerificationBlocked:
+    "Verification is blocked; the development Agent recorded: {reason}",
   buildRequiredToRun: "Build the project before running it.",
   repositoryEntrypoints: "Repository entrypoints",
   source: "source: {value}",
@@ -390,6 +392,7 @@ export const zh: Record<keyof typeof en, string> = {
   profileHostUnsupportedWithHosts:
     "当前宿主无法执行此操作；它需要以下宿主系统之一：{hosts}。",
   profileHostVerificationPending: "此操作尚未在当前宿主系统验证通过。",
+  profileVerificationBlocked: "验证被阻塞，开发 Agent 记录：{reason}",
   buildRequiredToRun: "请先构建项目，再运行。",
   repositoryEntrypoints: "仓库入口",
   source: "来源：{value}",

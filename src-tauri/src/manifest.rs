@@ -132,7 +132,7 @@ mod tests {
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 1
+            r#"schema = 2
 
 [[platforms]]
 id = "macos"
@@ -182,7 +182,7 @@ build = ["dist"]
             result.build_profiles[0].run_command_id.as_deref(),
             Some("npm:dev")
         );
-        assert_eq!(result.manifest_schema, Some(1));
+        assert_eq!(result.manifest_schema, Some(2));
         assert_eq!(result.cleanup.cache, vec![".cache"]);
         assert_eq!(result.cleanup.build, vec!["dist"]);
         assert_eq!(
@@ -206,7 +206,7 @@ build = ["dist"]
             protocol.manifest_status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(protocol.schema, Some(1));
+        assert_eq!(protocol.schema, Some(2));
         assert!(!protocol.needs_update);
         assert_eq!(
             protocol
@@ -250,7 +250,7 @@ build = ["dist"]
     }
 
     #[test]
-    fn schema_one_keeps_host_limits_and_verification_separate_from_profile_validity() {
+    fn current_schema_keeps_host_limits_and_verification_separate_from_profile_validity() {
         let root = std::env::temp_dir().join(format!(
             "atrium-manifest-host-requirements-{}",
             std::process::id()
@@ -259,7 +259,7 @@ build = ["dist"]
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 1
+            r#"schema = 2
 
 [[platforms]]
 id = "windows"
@@ -306,7 +306,7 @@ check = ["macos"]
             result.configuration.status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(result.manifest_schema, Some(1));
+        assert_eq!(result.manifest_schema, Some(2));
         let protocol = build_protocol_status(
             &result,
             &IconConformance {
@@ -653,5 +653,348 @@ build = ["{current}"]
 
         fs::remove_dir_all(root).expect("remove project directory");
         fs::remove_dir_all(outside).expect("remove outside directory");
+    }
+
+    #[test]
+    fn verification_blocker_reaches_the_profile_and_stays_pending() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-manifest-blocker-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        let current = HostOs::current()
+            .expect("test host should be supported")
+            .as_str();
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            format!(
+                r#"schema = 1
+
+[[platforms]]
+id = "{current}"
+
+[[channels]]
+id = "store"
+
+[[build_profiles]]
+id = "app-store"
+platform = "{current}"
+channel = "store"
+
+[build_profiles.commands]
+build = "package.json#scripts.build:store"
+
+[build_profiles.host_requirements]
+build = ["{current}"]
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "Missing Apple Developer signing identity."
+"#
+            ),
+        )
+        .expect("write manifest");
+        let commands = vec![command(
+            "npm:build:store",
+            "package.json#scripts.build:store",
+            CommandKind::Build,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        let profile = &result.build_profiles[0];
+        assert!(profile.issues.is_empty());
+        assert_eq!(profile.verification_blockers.len(), 1);
+        assert_eq!(
+            profile.verification_blockers[0].reason,
+            "Missing Apple Developer signing identity."
+        );
+        assert_eq!(profile.blocked_actions.len(), 1);
+        assert_eq!(profile.blocked_actions[0].action, CommandKind::Build);
+        assert_eq!(
+            profile.blocked_actions[0].reason,
+            "Missing Apple Developer signing identity."
+        );
+        // A blocked action is still unverified: it stays disabled.
+        assert!(profile.unverified_actions.contains(&CommandKind::Build));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn verification_blocker_is_inherited_by_identical_bindings() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-blocker-inherit-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        let current = HostOs::current()
+            .expect("test host should be supported")
+            .as_str();
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            format!(
+                r#"schema = 1
+
+[[platforms]]
+id = "{current}"
+
+[[channels]]
+id = "a"
+
+[[channels]]
+id = "b"
+
+[[build_profiles]]
+id = "a"
+platform = "{current}"
+channel = "a"
+
+[build_profiles.commands]
+build = "package.json#scripts.build"
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "Signing key unavailable."
+
+[[build_profiles]]
+id = "b"
+platform = "{current}"
+channel = "b"
+
+[build_profiles.commands]
+build = "package.json#scripts.build"
+"#
+            ),
+        )
+        .expect("write manifest");
+        let commands = vec![command(
+            "npm:build",
+            "package.json#scripts.build",
+            CommandKind::Build,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        let profile_b = &result.build_profiles[1];
+        assert!(profile_b.verification_blockers.is_empty());
+        assert_eq!(profile_b.blocked_actions.len(), 1);
+        assert_eq!(
+            profile_b.blocked_actions[0].reason,
+            "Signing key unavailable."
+        );
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn verification_blocker_conflicting_with_verification_is_rejected() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-blocker-conflict-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        let current = HostOs::current()
+            .expect("test host should be supported")
+            .as_str();
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            format!(
+                r#"schema = 1
+
+[[platforms]]
+id = "{current}"
+
+[[channels]]
+id = "store"
+
+[[build_profiles]]
+id = "app-store"
+platform = "{current}"
+channel = "store"
+
+[build_profiles.commands]
+build = "package.json#scripts.build:store"
+
+[build_profiles.verification]
+build = ["{current}"]
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "Conflicts with the verification record."
+"#
+            ),
+        )
+        .expect("write manifest");
+        let commands = vec![command(
+            "npm:build:store",
+            "package.json#scripts.build:store",
+            CommandKind::Build,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        let profile = &result.build_profiles[0];
+        assert!(profile.verification_blockers.is_empty());
+        assert!(profile.blocked_actions.is_empty());
+        assert!(profile
+            .issues
+            .iter()
+            .any(|issue| issue.contains("conflicting records")));
+        // The verification record wins: the action is verified, not blocked.
+        assert!(!profile.unverified_actions.contains(&CommandKind::Build));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn malformed_verification_blockers_are_reported_as_issues() {
+        let root = std::env::temp_dir().join(format!(
+            "atrium-manifest-blocker-invalid-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        let current = HostOs::current()
+            .expect("test host should be supported")
+            .as_str();
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            format!(
+                r#"schema = 1
+
+[[platforms]]
+id = "{current}"
+
+[[channels]]
+id = "store"
+
+[[build_profiles]]
+id = "app-store"
+platform = "{current}"
+channel = "store"
+
+[build_profiles.commands]
+build = "package.json#scripts.build:store"
+
+[build_profiles.host_requirements]
+build = ["{current}"]
+
+[[build_profiles.verification_blockers]]
+action = "deploy"
+host = "{current}"
+reason = "wrong action"
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "linux"
+reason = "host not in host_requirements"
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "  "
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "Missing Apple Developer signing identity."
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "duplicate"
+
+[[build_profiles.verification_blockers]]
+action = "build"
+host = "{current}"
+reason = "conflicts with verification"
+"#
+            ),
+        )
+        .expect("write manifest");
+        let commands = vec![command(
+            "npm:build:store",
+            "package.json#scripts.build:store",
+            CommandKind::Build,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        let profile = &result.build_profiles[0];
+        assert_eq!(profile.verification_blockers.len(), 1);
+        assert_eq!(
+            profile.verification_blockers[0].reason,
+            "Missing Apple Developer signing identity."
+        );
+        assert_eq!(profile.blocked_actions.len(), 1);
+        let joined = profile.issues.join(" ");
+        assert!(joined.contains("unsupported action deploy"));
+        assert!(joined.contains("not declared in host_requirements"));
+        assert!(joined.contains("non-empty reason"));
+        assert!(joined.contains("duplicate verification blocker"));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn legacy_schema_still_parses_but_needs_an_update() {
+        let root =
+            std::env::temp_dir().join(format!("atrium-manifest-legacy-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(
+            root.join(".atrium/manifest.toml"),
+            r#"schema = 1
+
+[[platforms]]
+id = "macos"
+
+[[channels]]
+id = "direct"
+
+[[build_profiles]]
+id = "macos-direct"
+platform = "macos"
+channel = "direct"
+
+[build_profiles.commands]
+build = "package.json#scripts.build"
+"#,
+        )
+        .expect("write manifest");
+        let commands = vec![command(
+            "npm:build",
+            "package.json#scripts.build",
+            CommandKind::Build,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(result.manifest_schema, Some(1));
+        let protocol = build_protocol_status(
+            &result,
+            &IconConformance {
+                status: IconConformanceStatus::Compliant,
+                manifest_path: ".atrium/manifest.toml".to_string(),
+                declared_icon: Some("icon.png".to_string()),
+                resolved_icon: Some("icon.png".to_string()),
+            },
+        );
+        assert!(protocol.needs_update);
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
     }
 }

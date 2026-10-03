@@ -48,6 +48,17 @@ export interface BuildHostRequirements {
   build: HostOs[] | null;
 }
 
+export interface ProfileVerificationBlocker {
+  action: ProfileAction;
+  host: HostOs;
+  reason: string;
+}
+
+export interface ProfileBlockedAction {
+  action: ProfileAction;
+  reason: string;
+}
+
 export interface BuildProfile {
   id: string;
   label: string;
@@ -60,6 +71,8 @@ export interface BuildProfile {
   verification: BuildHostRequirements;
   hostMismatchActions: ProfileAction[];
   unverifiedActions: ProfileAction[];
+  verificationBlockers: ProfileVerificationBlocker[];
+  blockedActions: ProfileBlockedAction[];
   source: string;
   region: string | null;
   payment: string | null;
