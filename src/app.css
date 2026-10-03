@@ -1239,8 +1239,12 @@ button[aria-busy="true"] {
   white-space: nowrap;
 }
 /* The shared form-control height (32px) would make this row one and a half
-   times its siblings; the picker stays a compact inline control instead. */
+   times its siblings; the picker stays a compact inline control instead,
+   sized to its content and hugging the row's right edge like the other
+   fact values. */
 .repo-fact .branch-picker {
+  width: auto;
+  max-width: 100%;
   height: auto;
   padding: 3px 6px;
   border-radius: 5px;

@@ -130,7 +130,9 @@ export function ProjectRepositorySection({
                       (reference) => reference.kind === "branch",
                     ) ?? [];
                   const current = repo?.branch ?? null;
-                  if (!repo || branches.length === 0) {
+                  // With no second branch there is nothing to inspect, so the
+                  // row stays plain text instead of offering a hollow picker.
+                  if (!repo || branches.length <= 1) {
                     return repo?.branch ?? t("unavailable");
                   }
                   // The picker only changes the inspection view; the worktree
