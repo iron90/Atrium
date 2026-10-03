@@ -1298,6 +1298,9 @@ button[aria-busy="true"] {
   accent-color: var(--accent);
 }
 .storage-entry > div {
+  /* Stretch across the middle so every row's text starts at the same left
+     edge; space-between would otherwise center short entries. */
+  flex: 1 1 auto;
   display: grid;
   min-width: 0;
   gap: 3px;
@@ -1322,12 +1325,6 @@ button[aria-busy="true"] {
   font:
     8px "DM Mono",
     monospace;
-}
-.storage-cache {
-  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
-}
-.storage-build {
-  border-color: color-mix(in srgb, var(--warning) 24%, var(--line));
 }
 .cleanup-button {
   width: 100%;

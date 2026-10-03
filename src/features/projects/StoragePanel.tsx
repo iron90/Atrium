@@ -91,10 +91,7 @@ export function StoragePanel({
         <>
           <div className="storage-entry-list">
             {storage.entries.map((entry) => (
-              <label
-                className={`storage-entry storage-${entry.kind}`}
-                key={entry.relativePath}
-              >
+              <label className="storage-entry" key={entry.relativePath}>
                 <input
                   type="checkbox"
                   checked={cleanupSelection.includes(entry.relativePath)}
