@@ -109,4 +109,28 @@ describe("ProjectRunHistorySection", () => {
       ).toBeInTheDocument(),
     );
   });
+
+  it("collapses the history list by default and expands on demand", async () => {
+    listRunHistoryMock.mockResolvedValue([record()]);
+
+    render(<ProjectRunHistorySection project={project} />);
+    await waitFor(() =>
+      expect(screen.getByText("Persistent run history")).toBeInTheDocument(),
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: /Persistent run history/,
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(document.querySelector(".run-history-disclosure")).not.toHaveClass(
+      "is-open",
+    );
+
+    fireEvent.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(document.querySelector(".run-history-disclosure")).toHaveClass(
+      "is-open",
+    );
+  });
 });

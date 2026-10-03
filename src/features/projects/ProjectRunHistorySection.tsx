@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot, RunFinished } from "../../bridge";
 import { useI18n } from "../../i18n";
+import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 import { errorMessage } from "../../shared/errors";
 import { fill, formatRelative } from "../../shared/format";
 import { renderRunLogText } from "../runs/run-log-text";
-import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
+import { DetailLoading } from "./InspectorPrimitives";
 
 const MAX_VISIBLE_RUNS = 12;
 
@@ -108,19 +109,22 @@ export function ProjectRunHistorySection({
   };
 
   return (
-    <InspectorSection
-      title={t("runHistory")}
-      trailing={
-        isLoading
-          ? undefined
-          : fill(t("loaded"), "count", String(entries.length))
-      }
-    >
-      {isLoading ? (
-        <DetailLoading />
-      ) : error ? (
-        <p className="empty-copy">{error}</p>
-      ) : entries.length ? (
+    <section className="inspector-section">
+      <AnimatedDisclosure
+        className="section-disclosure run-history-disclosure"
+        key={project.id}
+        label={t("runHistory")}
+        meta={
+          isLoading
+            ? undefined
+            : fill(t("loaded"), "count", String(entries.length))
+        }
+      >
+        {isLoading ? (
+          <DetailLoading />
+        ) : error ? (
+          <p className="empty-copy">{error}</p>
+        ) : entries.length ? (
         <ul className="run-history-list">
           {entries.map((record) => (
             <li className="run-history-row" key={record.runId}>
@@ -164,6 +168,7 @@ export function ProjectRunHistorySection({
       ) : (
         <p className="empty-copy">{t("noRunHistory")}</p>
       )}
-    </InspectorSection>
+      </AnimatedDisclosure>
+    </section>
   );
 }

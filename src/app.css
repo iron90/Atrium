@@ -1688,6 +1688,28 @@ button[aria-busy="true"] {
   padding: 0 10px 10px;
   transform: translateY(0);
 }
+/* Card children need breathing room under the trigger row; the shared
+   content style only pads the sides and bottom. */
+.storage-entries.is-expanded .animated-disclosure-content,
+.section-disclosure.is-expanded .animated-disclosure-content {
+  padding-top: 10px;
+}
+.section-disclosure {
+  margin-top: 0;
+}
+.section-disclosure .animated-disclosure-trigger {
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-family: inherit;
+}
+.section-disclosure .animated-disclosure-meta {
+  font:
+    9px "DM Mono",
+    monospace;
+}
 .animated-disclosure.is-expanded .protocol-capability,
 .animated-disclosure.is-expanded .other-command-item {
   animation: disclosure-item-enter var(--motion-base) var(--ease-emphasized)
