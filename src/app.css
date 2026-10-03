@@ -1588,8 +1588,7 @@ button[aria-busy="true"] {
   background: var(--panel-soft);
   transition:
     background-color var(--motion-base) var(--ease-emphasized),
-    border-color var(--motion-base) var(--ease-emphasized),
-    box-shadow var(--motion-slow) var(--ease-emphasized);
+    border-color var(--motion-base) var(--ease-standard);
 }
 .animated-disclosure.is-expanded {
   border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
@@ -1678,20 +1677,15 @@ button[aria-busy="true"] {
 .animated-disclosure-content {
   min-height: 0;
   overflow: hidden;
-  padding: 0 10px;
-  transform: translateY(-10px);
-  transition:
-    padding var(--motion-slow) var(--ease-emphasized),
-    transform var(--motion-slow) var(--ease-emphasized);
-}
-.animated-disclosure.is-expanded .animated-disclosure-content {
+  /* Padding stays constant: animating it would double the per-frame layout
+     work on top of the grid-rows transition, and a collapsed shell hides it
+     anyway. */
   padding: 0 10px 10px;
-  transform: translateY(0);
 }
 /* Card children need breathing room under the trigger row; the shared
    content style only pads the sides and bottom. */
-.storage-entries.is-expanded .animated-disclosure-content,
-.section-disclosure.is-expanded .animated-disclosure-content {
+.storage-entries .animated-disclosure-content,
+.section-disclosure .animated-disclosure-content {
   padding-top: 10px;
 }
 .section-disclosure {

@@ -55,15 +55,11 @@ export function AnimatedDisclosure({
       frameId.current = null;
     }
 
+    // Both classes flip in the same commit so the height and opacity
+    // transitions start on the same frame; deferring one of them a frame
+    // reads as a stutter at the start of the motion.
     setIsOpen(nextOpen);
-    if (nextOpen) {
-      frameId.current = scheduleAnimationFrame(() => {
-        setIsExpanded(true);
-        frameId.current = null;
-      });
-    } else {
-      setIsExpanded(false);
-    }
+    setIsExpanded(nextOpen);
   };
 
   const trigger = (
