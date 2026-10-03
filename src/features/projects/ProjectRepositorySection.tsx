@@ -136,30 +136,36 @@ export function ProjectRepositorySection({
                     return repo?.branch ?? t("unavailable");
                   }
                   // The picker only changes the inspection view; the worktree
-                  // and HEAD stay on the checked-out branch.
+                  // and HEAD stay on the checked-out branch. It is styled as
+                  // plain row text — the chevron marks it as a control.
                   const value = selectedBranch ?? current ?? "";
                   return (
-                    <select
-                      className="form-control branch-picker"
-                      value={value}
-                      aria-label={t("branch")}
-                      onChange={(event) =>
-                        onSelectBranch(
-                          event.target.value === current
-                            ? null
-                            : event.target.value,
-                        )
-                      }
-                    >
-                      {branches.map((reference) => (
-                        <option key={reference.name} value={reference.name}>
-                          {reference.name}
-                          {reference.name === current
-                            ? ` · ${t("currentBranch")}`
-                            : ""}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        className="branch-picker"
+                        value={value}
+                        aria-label={t("branch")}
+                        onChange={(event) =>
+                          onSelectBranch(
+                            event.target.value === current
+                              ? null
+                              : event.target.value,
+                          )
+                        }
+                      >
+                        {branches.map((reference) => (
+                          <option key={reference.name} value={reference.name}>
+                            {reference.name}
+                            {reference.name === current
+                              ? ` · ${t("currentBranch")}`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="branch-picker-chevron" aria-hidden="true">
+                        ⌄
+                      </span>
+                    </>
                   );
                 })()}
               </span>

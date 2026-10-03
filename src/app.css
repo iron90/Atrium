@@ -1238,22 +1238,41 @@ button[aria-busy="true"] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The shared form-control height (32px) would make this row one and a half
-   times its siblings; the picker stays a compact inline control instead,
-   sized to its content and hugging the row's right edge like the other
-   fact values. */
+/* The picker is styled as plain row text (no box, same typography as the
+   sibling fact values) with text hugging the right edge; the chevron marks
+   it as a control. The full-width invisible select also makes the whole
+   value area the click target. */
 .repo-fact .branch-picker {
-  width: auto;
-  max-width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
   height: auto;
-  padding: 3px 6px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--panel) 60%, transparent);
-  color: var(--text);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
   font:
-    10px "DM Mono",
+    11px "DM Mono",
     monospace;
-  line-height: 1.2;
+  line-height: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+.repo-fact .branch-picker:hover {
+  color: var(--text);
+}
+.repo-fact .branch-picker:focus-visible {
+  color: var(--accent-strong);
+}
+.branch-picker-chevron {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: 9px;
+}
+.repo-fact .branch-picker:hover + .branch-picker-chevron,
+.repo-fact .branch-picker:focus-visible + .branch-picker-chevron {
+  color: var(--accent);
 }
 .storage-panel {
   display: grid;
