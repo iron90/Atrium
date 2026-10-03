@@ -2,6 +2,7 @@ import type { ProjectCommand, ProjectSnapshot } from "../../bridge";
 import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
+import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 import { fill } from "../../shared/format";
 
 export interface ProjectCommandsSectionProps {
@@ -62,20 +63,30 @@ export function ProjectCommandsSection({
               </button>
             </div>
           ) : (
-            <div className="command-list">
-              {project.commands.map((command) => (
-                <button
-                  className="command-item"
-                  type="button"
-                  key={command.id}
-                  onClick={() => onRun(command)}
-                  disabled={Boolean(activeRun)}
-                  title={command.displayCommand}
-                >
-                  {command.displayCommand}
-                </button>
-              ))}
-            </div>
+            <AnimatedDisclosure
+              className="commands-disclosure"
+              key={project.id}
+              label={fill(
+                t("repositoryCommands"),
+                "count",
+                String(project.commands.length),
+              )}
+            >
+              <div className="command-list">
+                {project.commands.map((command) => (
+                  <button
+                    className="command-item"
+                    type="button"
+                    key={command.id}
+                    onClick={() => onRun(command)}
+                    disabled={Boolean(activeRun)}
+                    title={command.displayCommand}
+                  >
+                    {command.displayCommand}
+                  </button>
+                ))}
+              </div>
+            </AnimatedDisclosure>
           )}
         </>
       )}

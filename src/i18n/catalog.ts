@@ -145,6 +145,7 @@ export const en = {
   gitHistoryUnavailable: "Git history is not available for this project.",
   selectProject: "Select a project to inspect its facts.",
   descriptionMissing: "No description found in repository.",
+  repositoryCommands: "{count} repository commands",
   noKnownEntrypoint: "No discovered repository command was found.",
   platformMatrixDescription:
     "Only explicit project declarations are shown here. Empty cells mean no target was declared.",
@@ -411,6 +412,7 @@ export const zh: Record<keyof typeof en, string> = {
   gitHistoryUnavailable: "该项目没有可用的 Git 历史。",
   selectProject: "选择一个项目查看其事实。",
   descriptionMissing: "仓库中没有找到描述。",
+  repositoryCommands: "{count} 条仓库命令",
   noKnownEntrypoint: "没有发现仓库命令。",
   platformMatrixDescription:
     "这里只展示项目的明确声明。空白单元格表示没有声明目标平台。",

@@ -1688,6 +1688,7 @@ button[aria-busy="true"] {
 /* Card children need breathing room under the trigger row; the shared
    content style only pads the sides and bottom. */
 .storage-entries .animated-disclosure-content,
+.commands-disclosure .animated-disclosure-content,
 .section-disclosure .animated-disclosure-content {
   padding-top: 10px;
 }
