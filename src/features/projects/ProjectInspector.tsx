@@ -155,6 +155,10 @@ export function ProjectInspector({
         isWritingGuidance={isWritingGuidance}
         onGenerateGuidance={onGenerateGuidance}
       />
+      <ProjectContextSection
+        project={inspectedProject}
+        protocolReady={protocolReady}
+      />
       <ProjectStorageSection
         project={project}
         inspectedProject={inspectedProject}
@@ -168,10 +172,6 @@ export function ProjectInspector({
         onCleanArtifacts={onCleanArtifacts}
         onCancelCleanup={onCancelCleanup}
         onConfirmCleanup={onConfirmCleanup}
-      />
-      <ProjectContextSection
-        project={inspectedProject}
-        protocolReady={protocolReady}
       />
       <ProjectBuildProfilesSection
         project={inspectedProject}
