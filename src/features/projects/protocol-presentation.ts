@@ -1,14 +1,18 @@
 import type { ProjectSnapshot } from "../../bridge";
 import type { TranslationKey } from "../../i18n";
 
-export type ProtocolCardStatus = "configured" | "needs-update" | "missing";
+export type ProtocolCardStatus =
+  | "configured"
+  | "needs-sync"
+  | "needs-update"
+  | "missing";
 
 export interface ProtocolViewModel {
   isReady: boolean;
   cardStatus: ProtocolCardStatus;
   needsUpdate: boolean;
-  hasPendingHostVerification: boolean;
-  shouldShowGuidance: boolean;
+  needsSync: boolean;
+  needsGuidance: boolean;
 }
 
 export const protocolViewModel = (
@@ -27,31 +31,28 @@ export const protocolViewModel = (
     project.protocol.capabilities.every(
       (capability) => capability.status === "configured",
     );
-  const hasConfigurationGap =
-    project.configuration.status !== "configured" ||
-    project.buildProfiles.length === 0;
-  const guidanceNeedsUpdate = project.guidance.needsUpdate;
-  const hasPendingHostVerification = project.buildProfiles.some(
-    (profile) => profile.unverifiedActions.length > 0,
-  );
   const needsUpdate =
     project.protocol.needsUpdate ||
-    (protocolIsConnected && guidanceNeedsUpdate);
+    (protocolIsConnected && project.guidance.needsUpdate);
+  // The development Agent acknowledges synchronized guidance through
+  // guidance-sync.toml. A missing acknowledgement means the integration is
+  // unfinished even when the generated guidance itself is current; command
+  // verification states never belong on this card.
+  const needsSync =
+    protocolIsConnected && !needsUpdate && project.guidance.needsSync;
   const cardStatus: ProtocolCardStatus = needsUpdate
     ? "needs-update"
-    : !protocolIsConnected
-      ? "missing"
-      : "configured";
+    : needsSync
+      ? "needs-sync"
+      : !protocolIsConnected
+        ? "missing"
+        : "configured";
   return {
     isReady,
     cardStatus,
     needsUpdate,
-    hasPendingHostVerification,
-    shouldShowGuidance:
-      !protocolIsConnected ||
-      hasConfigurationGap ||
-      needsUpdate ||
-      hasPendingHostVerification,
+    needsSync,
+    needsGuidance: cardStatus !== "configured",
   };
 };
 
@@ -112,6 +113,8 @@ export const protocolStatusLabel = (
   switch (status) {
     case "configured":
       return t("protocolStatusConfigured");
+    case "needs-sync":
+      return t("protocolStatusNeedsSync");
     case "needs-update":
       return t("protocolStatusNeedsUpdate");
     case "missing":

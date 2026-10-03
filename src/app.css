@@ -1576,7 +1576,8 @@ button[aria-busy="true"] {
 .protocol-status-configured strong {
   color: var(--good);
 }
-.protocol-status-needs-update strong {
+.protocol-status-needs-update strong,
+.protocol-status-needs-sync strong {
   color: var(--warning);
 }
 .protocol-status-missing strong {

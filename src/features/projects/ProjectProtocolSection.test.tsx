@@ -128,7 +128,7 @@ describe("project protocol section", () => {
     expect(screen.getByText("Agent guidance")).toBeInTheDocument();
   });
 
-  it("hides a stale prompt after a refreshed project is synchronized", () => {
+  it("keeps an explicitly requested prompt available after the protocol synchronizes", () => {
     const synchronizedProject = {
       ...baseProject,
       guidance: { revision: 1, needsUpdate: false, needsSync: false },
@@ -143,14 +143,18 @@ describe("project protocol section", () => {
 
     renderSection(synchronizedProject, true);
 
+    expect(screen.getByText("Protocol integrated")).toBeInTheDocument();
     expect(
-      screen.queryByRole("textbox", {
+      screen.getByRole("button", { name: "Refresh integration" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", {
         name: "Prompt for the project development Agent",
       }),
-    ).not.toBeInTheDocument();
+    ).toHaveValue("Generated agent prompt");
   });
 
-  it("does not treat a missing guidance acknowledgement as a version update", () => {
+  it("reports an unacknowledged integration without calling it a version update", () => {
     const unacknowledgedGuidanceProject = {
       ...baseProject,
       guidance: { revision: 1, needsUpdate: false, needsSync: true },
@@ -166,7 +170,34 @@ describe("project protocol section", () => {
     renderSection(unacknowledgedGuidanceProject);
 
     expect(
+      screen.getByText("Awaiting Agent acknowledgement"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finish Agent integration" }),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("button", { name: "Update Agent guidance" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers a neutral refresh action once the protocol is integrated", () => {
+    const synchronizedProject = {
+      ...baseProject,
+      guidance: { revision: 1, needsUpdate: false, needsSync: false },
+      protocol: {
+        ...baseProject.protocol,
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status: "configured" as const,
+        })),
+      },
+    };
+
+    renderSection(synchronizedProject);
+
+    expect(screen.getByText("Protocol integrated")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Refresh integration" }),
+    ).toBeInTheDocument();
   });
 });

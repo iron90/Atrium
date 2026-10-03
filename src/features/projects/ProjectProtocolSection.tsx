@@ -34,16 +34,8 @@ export function ProjectProtocolSection({
   const { t } = useI18n();
   const protocol = inspectedProject.protocol;
   const protocolView = protocolViewModel(inspectedProject);
-  const shouldShowGuidanceAction =
-    protocolView.shouldShowGuidance || protocolView.needsUpdate;
   const shouldShowAgentGuidance =
-    protocolView.shouldShowGuidance ||
-    (isAgentPromptForGuidanceUpdate && protocolView.needsUpdate);
-  const isUpdatingGuidance = protocolView.needsUpdate && protocolView.isReady;
-  const isPreparingHostVerification =
-    protocolView.hasPendingHostVerification &&
-    protocolView.isReady &&
-    !protocolView.needsUpdate;
+    protocolView.needsGuidance || isAgentPromptForGuidanceUpdate;
   const protocolDetailsSummary = fill(
     t("protocolDetailsSummary"),
     "count",
@@ -61,22 +53,22 @@ export function ProjectProtocolSection({
             <span>{protocol.manifestPath}</span>
           </div>
         </div>
-        {shouldShowGuidanceAction ? (
-          <button
-            className="protocol-action"
-            type="button"
-            onClick={() => onGenerateGuidance(project)}
-            disabled={isWritingGuidance}
-          >
-            {isWritingGuidance
-              ? t("generatingGuidance")
-              : isUpdatingGuidance
-                ? t("updateAgentGuidance")
-                : isPreparingHostVerification
-                  ? t("prepareHostVerification")
-                  : t("generateGuidance")}
-          </button>
-        ) : null}
+        <button
+          className="protocol-action"
+          type="button"
+          onClick={() => onGenerateGuidance(project)}
+          disabled={isWritingGuidance}
+        >
+          {isWritingGuidance
+            ? t("generatingGuidance")
+            : protocolView.cardStatus === "needs-update"
+              ? t("updateAgentGuidance")
+              : protocolView.cardStatus === "needs-sync"
+                ? t("finishAgentIntegration")
+                : protocolView.cardStatus === "missing"
+                  ? t("generateGuidance")
+                  : t("refreshIntegration")}
+        </button>
       </div>
       <AnimatedDisclosure
         className="protocol-details"

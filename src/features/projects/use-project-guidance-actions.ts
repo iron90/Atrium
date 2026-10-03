@@ -4,7 +4,6 @@ import type { ProjectSnapshot } from "../../bridge";
 import { createConfigurationAgentPrompt } from "./guidance-prompt";
 import type { Language } from "../../i18n";
 import { errorMessage } from "../../shared/errors";
-import { protocolViewModel } from "./protocol-presentation";
 
 export interface ProjectGuidanceActions {
   agentPrompt: string | null;
@@ -46,12 +45,7 @@ export function useProjectGuidanceActions({
         setAgentPrompt(
           createConfigurationAgentPrompt(project, report.paths, language),
         );
-        const protocolView = protocolViewModel(project);
-        setIsAgentPromptForGuidanceUpdate(
-          (protocolView.needsUpdate ||
-            protocolView.hasPendingHostVerification) &&
-            protocolView.isReady,
-        );
+        setIsAgentPromptForGuidanceUpdate(true);
         setIsAgentPromptCopied(false);
       } catch (error) {
         onError(errorMessage(error));
