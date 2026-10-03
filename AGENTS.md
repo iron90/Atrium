@@ -54,8 +54,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
-
-Atrium guidance revision: 1
+Atrium guidance revision: 2
 
 ## Run / Check / Build command bindings
 
@@ -73,15 +72,19 @@ These rules are framework-neutral. A framework command such as `tauri dev` is on
 
 For every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:
 
-| Action  | Required proof                                                                                                                                                                                                                  |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run`   | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough.                                                                                                                  |
-| `check` | The complete command finishes with exit code `0`.                                                                                                                                                                               |
+| Action | Required proof |
+| --- | --- |
+| `run` | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |
+| `check` | The complete command finishes with exit code `0`. |
 | `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |
 
 Add a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
-Supported host values are `macos`, `windows`, and `linux`. The three actions may use different lists. Atrium disables and rejects a profile action whose declared host list does not include the current host, before starting the process. It also disables an action on a matching host until that host appears in `verification`.
+Every bound action on a candidate host has one of three verification states: verified (the host is recorded in `[build_profiles.verification]`), blocked (a `[[build_profiles.<profile-id>.verification_blockers]]` entry declares why verification cannot complete on that host), or pending (no record yet). When the current host matches but verification cannot complete — a missing signing identity, credential, SDK, or toolchain — declare the blocker with the exact reason instead of leaving the action silently pending.
+
+Verification evidence follows the command: when several profiles bind the same command for the same action, execute it once per host and record the verified host under each identical binding; never re-run an identical command on a host where it has already passed solely because another profile binds it too. A declared blocker follows the same rule: it is attested once per command and host, and identical bindings inherit it.
+
+Supported host values are `macos`, `windows`, and `linux`. The three actions may use different lists. Atrium disables and rejects a profile action whose declared host list does not include the current host, before starting the process. It also disables an action on a matching host until that host appears in `verification`, and it shows the declared blocker reason while the action stays disabled.
 
 ## Run target rules
 
@@ -89,13 +92,15 @@ Audit every existing profile's run binding, even when its host requirement or ve
 
 Verify the running application's platform, channel configuration, and readiness, and record this evidence in the verification matrix and `[build_profiles.verification]`. `host_requirements` declares where the target may run; `verification` records where it actually passed. Only list a host in verification after running on that host. Atrium requires matching host and target systems for Run on macos, windows, and linux desktop profiles. Cross-system desktop Run is not supported, including through compatibility layers or remote launchers. Other targets use their declared host requirements. Being able to build Windows artifacts on macOS does not prove that Windows Run works there. Check and Build retain independent host requirements.
 
-If no matching project-owned run entry exists, omit Run and explain why. If an entry exists but its target host does not match the current host, preserve the binding and record the verification as deferred. If the target host matches but the command or environment cannot be verified, report the blocker and do not acknowledge synchronization. Do not replace a target-specific entry with a generic local dev command just to pass verification.
+If no matching project-owned run entry exists, omit Run and explain why. If an entry exists but its target host does not match the current host, preserve the binding and record the verification as deferred. If the target host matches but the command or environment cannot be verified, declare the blocker in the manifest with the exact reason and report it. Do not replace a target-specific entry with a generic local dev command just to pass verification.
 
 ## Validation blockers and completion
 
-Before testing, inspect whether a command depends on fixed ports, background services, credentials, SDKs, or other environment state. Atrium or another external process must not be terminated or reconfigured. If a port is occupied, do not treat the collision itself as proof that the project command fails. Use an alternate port only when the project already supports it through an environment variable, command-line option, or test configuration, and record the actual port in the verification matrix. Do not temporarily edit or commit project configuration just to avoid a collision. A host mismatch is deferred verification and is not an environment blocker; a matching-host failure or unavailable dependency is a blocker. Do not disguise a blocker as unsupported or delete the command binding just to complete synchronization.
+Before testing, inspect whether a command depends on fixed ports, background services, credentials, SDKs, or other environment state. Atrium or another external process must not be terminated or reconfigured. If a port is occupied, do not treat the collision itself as proof that the project command fails. Use an alternate port only when the project already supports it through an environment variable, command-line option, or test configuration, and record the actual port in the verification matrix. Do not temporarily edit or commit project configuration just to avoid a collision. A host mismatch is deferred verification and is not an environment blocker; a matching-host failure or unavailable dependency is a blocker.
 
-Choose the project's real quality gate before running `check`. Do not replace a failed full check with a narrower passing command merely to obtain exit code `0`; a narrower command is valid only when the project already defines it as the explicit scope for that profile, and that scope is reported. Port, dependency, credential, and toolchain failures remain blockers.
+Declare every blocker instead of leaving it silent: add a `[[build_profiles.<profile-id>.verification_blockers]]` entry with the bound `action`, the affected `host` (which must be declared in that action's `host_requirements`), and a `reason` naming the exact missing dependency — a signing identity, credential, SDK, or toolchain. A declared blocker keeps the command binding and its host requirement intact; Atrium shows the reason until the environment is fixed and verification passes. Never write an unverified host into `verification` to close a blocker, never disguise a blocker as unsupported, and never delete the command binding just to complete synchronization.
+
+Choose the project's real quality gate before running `check`. Do not replace a failed full check with a narrower passing command merely to obtain exit code `0`; a narrower command is valid only when the project already defines it as the explicit scope for that profile, and that scope is reported. Port, dependency, credential, and toolchain failures are blockers to declare.
 
 ## Cleanup declarations
 
@@ -103,7 +108,7 @@ Cleanup declarations are project-owned. Declare the exact cache and build direct
 
 ## Guidance sync acknowledgement
 
-`.atrium/guidance-sync.toml` acknowledges synchronized guidance. It is a completion acknowledgement, not a partial-progress marker and not a claim that every host was tested on the current machine. Update it when every action applicable to the current host is verified successfully and nonmatching hosts are explicitly deferred or already recorded in `verification`. If a matching-host blocker remains, leave an existing acknowledgement untouched (or do not create one), report the integration as incomplete, and never confirm synchronization by deleting commands, narrowing the check scope, or inventing host support. After applying the manifest changes and updating this managed block, update `.atrium/guidance-sync.toml` with the current `guidance_revision` and `protocol_schema` values from `.atrium/guidance.toml`. Only write this acknowledgement after the synchronization is complete.
+`.atrium/guidance-sync.toml` acknowledges that the project's declarations are synchronized with this guidance revision. It is a declaration-completeness acknowledgement, not a partial-progress marker and not a claim that every host was tested on the current machine: verification evidence lives in the manifest, and an environment problem is recorded as a declared verification blocker, never as a reason to skip the acknowledgement. Before writing it, account for every action bound in the manifest on the current host — each one is either verified in `[build_profiles.verification]` or carries a declared blocker in `[[build_profiles.verification_blockers]]` with the observed reason. Other declared hosts need no accounting; they wait for their own host. After applying the manifest changes and updating this managed block, update `.atrium/guidance-sync.toml` with the current `guidance_revision` and `protocol_schema` values from `.atrium/guidance.toml`. Never confirm synchronization by deleting commands, narrowing the check scope, or inventing host support; declare the real blocker instead. Only write this acknowledgement after the declarations are complete.
 
 ## Keeping the protocol current
 

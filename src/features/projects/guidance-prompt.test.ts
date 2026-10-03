@@ -28,7 +28,8 @@ describe("configuration Agent prompt", () => {
     expect(prompt).toContain(
       "每个宿主只需运行一次，把该宿主记录到每个相同绑定名下",
     );
-    expect(prompt).toContain("不要更新 guidance-sync");
+    expect(prompt).toContain("verification_blockers");
+    expect(prompt).toContain("已声明的阻塞不阻止确认接入");
     expect(prompt).toContain("不要启动、控制或终止 Atrium");
     expect(prompt).toContain("不要修改 Git 历史");
   });
@@ -60,7 +61,10 @@ describe("configuration Agent prompt", () => {
     expect(prompt).toContain(
       "execute it once per host and record the verified host under each identical binding",
     );
-    expect(prompt).toContain("do not update guidance-sync");
+    expect(prompt).toContain("verification_blockers");
+    expect(prompt).toContain(
+      "A declared blocker does not block the acknowledgement",
+    );
     expect(prompt).toContain("Do not launch, control, or terminate Atrium");
     expect(prompt).toContain("Do not rewrite Git history");
   });
