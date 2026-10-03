@@ -2,9 +2,7 @@ import type { ProjectCommand, ProjectSnapshot } from "../../bridge";
 import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
-import { commandLabel } from "./presentation";
 import { fill } from "../../shared/format";
-import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 
 export interface ProjectCommandsSectionProps {
   project: ProjectSnapshot;
@@ -21,14 +19,8 @@ export function ProjectCommandsSection({
   rawCommandsRevealed,
   onRevealRawCommands,
 }: ProjectCommandsSectionProps) {
-  const { language, t } = useI18n();
+  const { t } = useI18n();
   const { activeRun } = useRunStream();
-  const primaryCommands = project.commands.filter(
-    (command) => command.kind !== "other",
-  );
-  const otherCommands = project.commands.filter(
-    (command) => command.kind === "other",
-  );
 
   return (
     <InspectorSection
@@ -70,61 +62,20 @@ export function ProjectCommandsSection({
               </button>
             </div>
           ) : (
-            <>
-              <div className="entrypoint-list">
-                {primaryCommands.length ? (
-                  primaryCommands.map((command) => (
-                    <button
-                      className={`entrypoint-button command-${command.kind}`}
-                      type="button"
-                      key={command.id}
-                      onClick={() => onRun(command)}
-                      disabled={Boolean(activeRun)}
-                      title={command.displayCommand}
-                    >
-                      <span className="entrypoint-icon" aria-hidden="true">
-                        {command.kind === "run"
-                          ? "▷"
-                          : command.kind === "check"
-                            ? "✓"
-                            : "↗"}
-                      </span>
-                      <span>
-                        <strong>{commandLabel(command, language)}</strong>
-                        <small>{command.displayCommand}</small>
-                      </span>
-                      <span className="entrypoint-arrow" aria-hidden="true">
-                        →
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="empty-copy">{t("noKnownEntrypoint")}</p>
-                )}
-              </div>
-              {otherCommands.length ? (
-                <AnimatedDisclosure
-                  className="other-commands"
-                  label={fill(
-                    t("otherCommands"),
-                    "count",
-                    String(otherCommands.length),
-                  )}
+            <div className="command-list">
+              {project.commands.map((command) => (
+                <button
+                  className="command-item"
+                  type="button"
+                  key={command.id}
+                  onClick={() => onRun(command)}
+                  disabled={Boolean(activeRun)}
+                  title={command.displayCommand}
                 >
-                  {otherCommands.map((command) => (
-                    <button
-                      className="other-command-item"
-                      type="button"
-                      key={command.id}
-                      onClick={() => onRun(command)}
-                      disabled={Boolean(activeRun)}
-                    >
-                      {command.displayCommand}
-                    </button>
-                  ))}
-                </AnimatedDisclosure>
-              ) : null}
-            </>
+                  {command.displayCommand}
+                </button>
+              ))}
+            </div>
           )}
         </>
       )}

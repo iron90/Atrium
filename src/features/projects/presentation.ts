@@ -5,7 +5,7 @@ export {
   syncStatusAriaLabel,
   syncStatusClass,
 } from "./git-presentation";
-export { commandLabel, commandForProfile } from "./command-presentation";
+export { commandForProfile } from "./command-presentation";
 export {
   hasTrustedContext,
   capabilityLabel,
