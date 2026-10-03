@@ -1238,6 +1238,19 @@ button[aria-busy="true"] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The shared form-control height (32px) would make this row one and a half
+   times its siblings; the picker stays a compact inline control instead. */
+.repo-fact .branch-picker {
+  height: auto;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+  color: var(--text);
+  font:
+    10px "DM Mono",
+    monospace;
+  line-height: 1.2;
+}
 .storage-panel {
   display: grid;
   gap: 9px;
