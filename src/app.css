@@ -1659,7 +1659,10 @@ button[aria-busy="true"] {
 }
 .animated-disclosure-shell {
   display: grid;
-  grid-template-rows: 0fr;
+  /* An explicit minmax(0, …) is required: a bare 0fr resolves to
+     minmax(auto, 0fr), whose auto minimum inherits the content's padding
+     contribution, so the collapsed shell keeps occupying ~10px of layout. */
+  grid-template-rows: minmax(0, 0fr);
   min-height: 0;
   overflow: hidden;
   border-top: 1px solid transparent;
@@ -1670,7 +1673,7 @@ button[aria-busy="true"] {
     opacity var(--motion-base) var(--ease-emphasized);
 }
 .animated-disclosure.is-expanded .animated-disclosure-shell {
-  grid-template-rows: 1fr;
+  grid-template-rows: minmax(0, 1fr);
   border-color: var(--line);
   opacity: 1;
 }
