@@ -1596,6 +1596,20 @@ button[aria-busy="true"] {
   background: color-mix(in srgb, var(--accent) 3%, var(--panel-soft));
   box-shadow: 0 14px 30px color-mix(in srgb, var(--bg) 26%, transparent);
 }
+.animated-disclosure-header {
+  display: flex;
+  align-items: center;
+}
+.animated-disclosure-header .animated-disclosure-trigger {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+.animated-disclosure-checkbox {
+  flex: 0 0 auto;
+  margin-left: 10px;
+  accent-color: var(--accent);
+}
 .animated-disclosure-trigger {
   display: flex;
   align-items: center;

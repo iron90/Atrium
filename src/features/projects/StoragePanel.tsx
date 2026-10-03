@@ -6,6 +6,7 @@ import type {
 import { useEffect, useRef } from "react";
 import { useI18n } from "../../i18n";
 import { fill, formatBytes } from "../../shared/format";
+import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
 import { storageKindLabel } from "./presentation";
 
 export interface CleanupFeedback {
@@ -42,6 +43,17 @@ export function StoragePanel({
 }: StoragePanelProps) {
   const { t } = useI18n();
   const confirmationRef = useRef<HTMLDivElement | null>(null);
+  const selectedCount = storage.entries.filter((entry) =>
+    cleanupSelection.includes(entry.relativePath),
+  ).length;
+  const allSelected =
+    storage.entries.length > 0 && selectedCount === storage.entries.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+  const toggleSelectAll = () => {
+    onCleanupSelectionChange(
+      allSelected ? [] : storage.entries.map((entry) => entry.relativePath),
+    );
+  };
 
   // A modal dialog that never receives focus (and lets Tab wander into the
   // page behind it) is worse than none for keyboard and screen reader users.
@@ -89,32 +101,59 @@ export function StoragePanel({
 
       {storage.entries.length ? (
         <>
-          <div className="storage-entry-list">
-            {storage.entries.map((entry) => (
-              <label className="storage-entry" key={entry.relativePath}>
-                <input
-                  type="checkbox"
-                  checked={cleanupSelection.includes(entry.relativePath)}
-                  onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...cleanupSelection, entry.relativePath]
-                      : cleanupSelection.filter(
-                          (path) => path !== entry.relativePath,
-                        );
-                    onCleanupSelectionChange(next);
-                  }}
-                />
-                <div>
-                  <strong>{entry.relativePath}</strong>
-                  <span>
-                    {storageKindLabel(entry, t)} ·{" "}
-                    {fill(t("storageFiles"), "count", String(entry.fileCount))}
-                  </span>
-                </div>
-                <em>{formatBytes(entry.bytes)}</em>
-              </label>
-            ))}
-          </div>
+          <AnimatedDisclosure
+            className="storage-entries"
+            key={project.id}
+            leading={
+              <input
+                className="animated-disclosure-checkbox"
+                type="checkbox"
+                checked={allSelected}
+                ref={(element) => {
+                  if (element) element.indeterminate = someSelected;
+                }}
+                onChange={toggleSelectAll}
+                aria-label={t("selectAllEntries")}
+              />
+            }
+            label={t("cleanableEntries")}
+            meta={`${fill(
+              t("storageEntryCount"),
+              "count",
+              String(storage.entries.length),
+            )} · ${formatBytes(storage.cleanableBytes)}`}
+          >
+            <div className="storage-entry-list">
+              {storage.entries.map((entry) => (
+                <label className="storage-entry" key={entry.relativePath}>
+                  <input
+                    type="checkbox"
+                    checked={cleanupSelection.includes(entry.relativePath)}
+                    onChange={(event) => {
+                      const next = event.target.checked
+                        ? [...cleanupSelection, entry.relativePath]
+                        : cleanupSelection.filter(
+                            (path) => path !== entry.relativePath,
+                          );
+                      onCleanupSelectionChange(next);
+                    }}
+                  />
+                  <div>
+                    <strong>{entry.relativePath}</strong>
+                    <span>
+                      {storageKindLabel(entry, t)} ·{" "}
+                      {fill(
+                        t("storageFiles"),
+                        "count",
+                        String(entry.fileCount),
+                      )}
+                    </span>
+                  </div>
+                  <em>{formatBytes(entry.bytes)}</em>
+                </label>
+              ))}
+            </div>
+          </AnimatedDisclosure>
           <button
             className="cleanup-button"
             type="button"

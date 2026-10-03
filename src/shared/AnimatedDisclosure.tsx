@@ -10,12 +10,16 @@ export function AnimatedDisclosure({
   children,
   className = "",
   defaultOpen = false,
+  leading,
 }: {
   label: ReactNode;
   meta?: ReactNode;
   children: ReactNode;
   className?: string;
   defaultOpen?: boolean;
+  // An extra control (e.g. a select-all checkbox) shown beside the trigger
+  // without becoming part of the pressable disclosure target.
+  leading?: ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isExpanded, setIsExpanded] = useState(defaultOpen);
@@ -62,26 +66,37 @@ export function AnimatedDisclosure({
     }
   };
 
+  const trigger = (
+    <button
+      className="animated-disclosure-trigger"
+      type="button"
+      aria-controls={contentId}
+      aria-expanded={isOpen}
+      aria-labelledby={labelId}
+      onClick={toggle}
+    >
+      <span className="animated-disclosure-chevron" aria-hidden="true">
+        ▸
+      </span>
+      <span className="animated-disclosure-label" id={labelId}>
+        {label}
+      </span>
+      {meta ? <span className="animated-disclosure-meta">{meta}</span> : null}
+    </button>
+  );
+
   return (
     <div
       className={`animated-disclosure ${className} ${isOpen ? "is-open" : ""} ${isExpanded ? "is-expanded" : ""}`}
     >
-      <button
-        className="animated-disclosure-trigger"
-        type="button"
-        aria-controls={contentId}
-        aria-expanded={isOpen}
-        aria-labelledby={labelId}
-        onClick={toggle}
-      >
-        <span className="animated-disclosure-chevron" aria-hidden="true">
-          ▸
-        </span>
-        <span className="animated-disclosure-label" id={labelId}>
-          {label}
-        </span>
-        {meta ? <span className="animated-disclosure-meta">{meta}</span> : null}
-      </button>
+      {leading ? (
+        <div className="animated-disclosure-header">
+          {leading}
+          {trigger}
+        </div>
+      ) : (
+        trigger
+      )}
       <div
         className="animated-disclosure-shell"
         id={contentId}
