@@ -54,7 +54,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
-Atrium guidance revision: 2
+Atrium guidance revision: 3
 
 ## Run / Check / Build command bindings
 
@@ -104,7 +104,9 @@ Choose the project's real quality gate before running `check`. Do not replace a 
 
 ## Cleanup declarations
 
-Cleanup declarations are project-owned. Declare the exact cache and build directories that the project Agent has verified are safe to regenerate, including dependency or vendor subdirectories when appropriate; a nested dependency cache such as `node_modules/.vite` may be declared after that project-specific verification. Atrium only enforces that cleanup paths are relative, stay inside the project at execution time, do not traverse symbolic links outside it, and do not target `.git` or `.atrium`; it does not maintain a universal denylist of project directories. Duplicate or nested declarations are rejected only so storage metrics and cleanup targets remain deterministic.
+Cleanup declarations are project-owned, and they are expected to be complete. Declare every project-relative directory that grows across builds or tool runs and can be fully regenerated afterwards by the project's own commands: build output directories, package-manager and tool caches, and generated bundles. The everyday incremental build output is usually the largest consumer, so declare the build toolchain's whole default output directory including profile or target subdirectories — for example a Rust `target` directory with its `debug`, `release`, and target-triple children — not only the directories referenced by build profiles. Verify before declaring that the project's own commands regenerate the content and that no manual, credential, or user state lives inside. Dependency or vendor subdirectories are valid once that project-specific verification has been made; a nested dependency cache such as `node_modules/.vite` may be declared after it. Do not leave a regenerable directory undeclared just because no build profile references it.
+
+Atrium only enforces that cleanup paths are relative, stay inside the project at execution time, do not traverse symbolic links outside it, and do not target `.git` or `.atrium`; it does not maintain a universal denylist of project directories. Duplicate or nested declarations are rejected only so storage metrics and cleanup targets remain deterministic.
 
 ## Guidance sync acknowledgement
 
