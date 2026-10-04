@@ -149,7 +149,9 @@ export function ProjectRepositorySection({
             <div className="repo-fact branch-fact" ref={branchRowRef}>
               <strong className="repo-fact-label">{t("branch")}</strong>
               <span className="repo-fact-value branch-line">
-                <span aria-hidden="true">⑂</span>
+                <span aria-hidden="true" className="branch-line-glyph">
+                  ⑂
+                </span>
                 {(() => {
                   const branches =
                     repo?.references.filter(
@@ -166,22 +168,17 @@ export function ProjectRepositorySection({
                   // custom-built: the native select popup cannot be styled.
                   const viewing = selectedBranch ?? current ?? "";
                   return (
-                    <>
-                      <button
-                        type="button"
-                        className="branch-picker-trigger"
-                        aria-haspopup="listbox"
-                        aria-expanded={branchMenuOpen}
-                        aria-label={t("branch")}
-                        onClick={() => setBranchMenuOpen((open) => !open)}
-                      >
-                        {viewing}
-                      </button>
-                      <span
-                        className="branch-picker-chevron"
-                        aria-hidden="true"
-                      />
-                    </>
+                    <button
+                      type="button"
+                      className="branch-picker-trigger"
+                      aria-haspopup="listbox"
+                      aria-expanded={branchMenuOpen}
+                      aria-label={t("branch")}
+                      onClick={() => setBranchMenuOpen((open) => !open)}
+                    >
+                      <span className="branch-picker-name">{viewing}</span>
+                      <span className="branch-picker-caret" aria-hidden="true" />
+                    </button>
                   );
                 })()}
               </span>
