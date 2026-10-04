@@ -1,6 +1,10 @@
 import type { Language } from "../i18n";
 import type { ProjectMeta } from "../features/projects/project-list-model";
 import {
+  isInspectorSectionId,
+  type InspectorSectionId,
+} from "../features/projects/inspector-section-visibility";
+import {
   isLayoutId,
   isThemeId,
   type LayoutId,
@@ -22,6 +26,7 @@ export interface LocalPreferences {
   workspaces?: string[];
   excludeNames?: string[];
   projectMeta?: Record<string, ProjectMeta>;
+  hiddenInspectorSections?: InspectorSectionId[];
 }
 
 const isLanguage = (value: unknown): value is Language =>
@@ -89,6 +94,9 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
       workspaces: readStringList(preferences.workspaces),
       excludeNames: readStringList(preferences.excludeNames),
       projectMeta: readProjectMeta(preferences.projectMeta),
+      hiddenInspectorSections: readStringList(
+        preferences.hiddenInspectorSections,
+      )?.filter(isInspectorSectionId),
     };
   } catch {
     return {};

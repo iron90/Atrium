@@ -1,8 +1,23 @@
 import { memo } from "react";
 import { bridge, isTauriRuntime } from "../../bridge";
 import { useI18n } from "../../i18n";
-import type { Language } from "../../i18n";
+import type { Language, TranslationKey } from "../../i18n";
 import type { LayoutId, ThemeId } from "./model";
+import {
+  INSPECTOR_SECTION_IDS,
+  type InspectorSectionId,
+} from "../projects/inspector-section-visibility";
+
+// The switch rows reuse the detail-card section headings so the settings
+// labels always match what the card actually shows.
+const INSPECTOR_SECTION_LABEL_KEYS: Record<InspectorSectionId, TranslationKey> =
+  {
+    storage: "storage",
+    buildProfiles: "buildProfiles",
+    rawRepositoryCommands: "rawRepositoryCommands",
+    runHistory: "runHistory",
+    recentCommits: "recentCommits",
+  };
 
 function resolveWorkspaceDirectory(): Promise<string | null> {
   if (!isTauriRuntime()) return Promise.resolve(null);
@@ -22,6 +37,8 @@ export const SettingsPanel = memo(function SettingsPanel({
   setExcludeNames,
   onScan,
   isScanning,
+  hiddenInspectorSections,
+  onToggleInspectorSection,
 }: {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
@@ -35,6 +52,8 @@ export const SettingsPanel = memo(function SettingsPanel({
   setExcludeNames: (names: string[]) => void;
   onScan: () => void;
   isScanning: boolean;
+  hiddenInspectorSections: InspectorSectionId[];
+  onToggleInspectorSection: (sectionId: InspectorSectionId) => void;
 }) {
   const { t } = useI18n();
 
@@ -81,6 +100,30 @@ export const SettingsPanel = memo(function SettingsPanel({
               <option value="zh">{t("languageChinese")}</option>
             </select>
           </label>
+        </section>
+
+        <section className="settings-card">
+          <h3>{t("inspectorCard")}</h3>
+          <p>{t("inspectorCardDescription")}</p>
+          <div className="settings-switch-list">
+            {INSPECTOR_SECTION_IDS.map((sectionId) => (
+              <label className="settings-switch" key={sectionId}>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="sr-only"
+                  checked={!hiddenInspectorSections.includes(sectionId)}
+                  onChange={() => onToggleInspectorSection(sectionId)}
+                />
+                <span className="settings-switch-track" aria-hidden="true">
+                  <span className="settings-switch-thumb" />
+                </span>
+                <span className="settings-switch-label">
+                  {t(INSPECTOR_SECTION_LABEL_KEYS[sectionId])}
+                </span>
+              </label>
+            ))}
+          </div>
         </section>
 
         <section className="settings-card settings-card-workspace">

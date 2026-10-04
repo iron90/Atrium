@@ -21,6 +21,7 @@ import type { ProjectAction } from "./project-actions";
 import type { FinishedRunRecord } from "../runs/use-run-event-stream";
 import type { CleanupFeedback } from "./StoragePanel";
 import { protocolViewModel } from "./protocol-presentation";
+import type { InspectorSectionId } from "./inspector-section-visibility";
 
 export interface ProjectInspectorProps {
   project?: ProjectSnapshot;
@@ -62,6 +63,7 @@ export interface ProjectInspectorProps {
     project: ProjectSnapshot,
     linkId?: string,
   ) => void;
+  hiddenInspectorSections?: InspectorSectionId[];
 }
 
 export function ProjectInspector({
@@ -92,6 +94,7 @@ export function ProjectInspector({
   onConfirmCleanup,
   onOpenArtifact,
   onOpenProjectAction,
+  hiddenInspectorSections,
 }: ProjectInspectorProps) {
   const { t } = useI18n();
   const [rawCommandsRevealedFor, setRawCommandsRevealedFor] = useState<
@@ -122,6 +125,8 @@ export function ProjectInspector({
   const inspectedProject = details ?? project;
   const rawCommandsRevealed = rawCommandsRevealedFor === project.id;
   const protocolReady = protocolViewModel(inspectedProject).isReady;
+  const isSectionVisible = (sectionId: InspectorSectionId) =>
+    !hiddenInspectorSections?.includes(sectionId);
 
   return (
     <aside className="inspector">
@@ -159,47 +164,57 @@ export function ProjectInspector({
         project={inspectedProject}
         protocolReady={protocolReady}
       />
-      <ProjectStorageSection
-        project={project}
-        inspectedProject={inspectedProject}
-        isLoading={isLoading}
-        cleanupFeedback={cleanupFeedback}
-        cleanupSelection={cleanupSelection}
-        cleanupConfirmation={cleanupConfirmation}
-        cleanupProgress={cleanupProgress}
-        onCleanupSelectionChange={onCleanupSelectionChange}
-        isCleaningArtifacts={isCleaningArtifacts}
-        onCleanArtifacts={onCleanArtifacts}
-        onCancelCleanup={onCancelCleanup}
-        onConfirmCleanup={onConfirmCleanup}
-      />
-      <ProjectBuildProfilesSection
-        project={inspectedProject}
-        protocolReady={protocolReady}
-        onRun={onRun}
-        onOpenArtifact={onOpenArtifact}
-      />
-      <ProjectCommandsSection
-        project={inspectedProject}
-        isLoading={isLoading}
-        onRun={onRun}
-        rawCommandsRevealed={rawCommandsRevealed}
-        onRevealRawCommands={() => setRawCommandsRevealedFor(project.id)}
-      />
+      {isSectionVisible("storage") ? (
+        <ProjectStorageSection
+          project={project}
+          inspectedProject={inspectedProject}
+          isLoading={isLoading}
+          cleanupFeedback={cleanupFeedback}
+          cleanupSelection={cleanupSelection}
+          cleanupConfirmation={cleanupConfirmation}
+          cleanupProgress={cleanupProgress}
+          onCleanupSelectionChange={onCleanupSelectionChange}
+          isCleaningArtifacts={isCleaningArtifacts}
+          onCleanArtifacts={onCleanArtifacts}
+          onCancelCleanup={onCancelCleanup}
+          onConfirmCleanup={onConfirmCleanup}
+        />
+      ) : null}
+      {isSectionVisible("buildProfiles") ? (
+        <ProjectBuildProfilesSection
+          project={inspectedProject}
+          protocolReady={protocolReady}
+          onRun={onRun}
+          onOpenArtifact={onOpenArtifact}
+        />
+      ) : null}
+      {isSectionVisible("rawRepositoryCommands") ? (
+        <ProjectCommandsSection
+          project={inspectedProject}
+          isLoading={isLoading}
+          onRun={onRun}
+          rawCommandsRevealed={rawCommandsRevealed}
+          onRevealRawCommands={() => setRawCommandsRevealedFor(project.id)}
+        />
+      ) : null}
       <ProjectRunSection lastFinishedRun={lastFinishedRun} onStop={onStop} />
-      <ProjectRunHistorySection
-        project={project}
-        refreshToken={runHistoryRefreshToken}
-        onError={onRunHistoryError}
-      />
-      <ProjectCommitsSection
-        project={inspectedProject}
-        isLoading={isLoading}
-        selectedBranch={selectedBranch}
-        branchOverview={branchOverview.overview}
-        branchOverviewLoading={branchOverview.isLoading}
-        branchOverviewError={branchOverview.error}
-      />
+      {isSectionVisible("runHistory") ? (
+        <ProjectRunHistorySection
+          project={project}
+          refreshToken={runHistoryRefreshToken}
+          onError={onRunHistoryError}
+        />
+      ) : null}
+      {isSectionVisible("recentCommits") ? (
+        <ProjectCommitsSection
+          project={inspectedProject}
+          isLoading={isLoading}
+          selectedBranch={selectedBranch}
+          branchOverview={branchOverview.overview}
+          branchOverviewLoading={branchOverview.isLoading}
+          branchOverviewError={branchOverview.error}
+        />
+      ) : null}
     </aside>
   );
 }

@@ -182,6 +182,9 @@ export const en = {
   themeDescription: "Color tokens for the board and inspector.",
   layoutDescription: "The default arrangement used when opening Projects.",
   languageDescription: "Language for Atrium navigation and interface labels.",
+  inspectorCard: "Project detail card",
+  inspectorCardDescription:
+    "Choose which sections appear in the project detail card.",
   workspace: "Workspace",
   workspaceDescription:
     "The local folder Atrium scans. Repository files remain the source of truth.",
@@ -448,6 +451,8 @@ export const zh: Record<keyof typeof en, string> = {
   themeDescription: "看板和检查器使用的颜色令牌。",
   layoutDescription: "打开项目页时使用的默认排列方式。",
   languageDescription: "Atrium 导航和界面标签使用的语言。",
+  inspectorCard: "项目详情卡片",
+  inspectorCardDescription: "选择项目详情卡片中显示的内容区块。",
   workspace: "工作区",
   workspaceDescription: "Atrium 扫描的本地目录，仓库文件仍然是真实来源。",
   workspacePath: "工作区路径",

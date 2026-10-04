@@ -42,6 +42,34 @@ describe("local preferences", () => {
     });
   });
 
+  it("keeps only known inspector sections in the hidden list", () => {
+    const preferences = parseLocalPreferences(
+      JSON.stringify({
+        hiddenInspectorSections: [
+          "storage",
+          "recentCommits",
+          "not-a-section",
+          42,
+        ],
+      }),
+    );
+
+    expect(preferences.hiddenInspectorSections).toEqual([
+      "storage",
+      "recentCommits",
+    ]);
+    expect(
+      parseLocalPreferences(
+        JSON.stringify({ hiddenInspectorSections: "storage" }),
+      ).hiddenInspectorSections,
+    ).toBeUndefined();
+
+    persistLocalPreferences({ hiddenInspectorSections: ["runHistory"] });
+    expect(readLocalPreferences().hiddenInspectorSections).toEqual([
+      "runHistory",
+    ]);
+  });
+
   it("round-trips preferences through the browser storage boundary", () => {
     persistLocalPreferences({
       theme: "mist-silver",

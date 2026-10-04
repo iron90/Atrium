@@ -3,6 +3,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import App from "./App";
@@ -165,6 +166,30 @@ describe("Atrium board", () => {
     expect(
       screen.getByRole("heading", { name: "外观", level: 3 }),
     ).toBeInTheDocument();
+  });
+
+  it("hides the detail-card sections switched off in settings", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Recent commits" }));
+    fireEvent.click(screen.getByRole("button", { name: "Projects" }));
+
+    const sampleForgeRow = screen
+      .getAllByText("SampleForge")[0]
+      .closest(".project-row");
+    fireEvent.click(sampleForgeRow!.querySelector(".git-cell")!);
+
+    // Pages stay cached in the DOM during transitions, so scope the section
+    // assertions to the inspector itself.
+    const inspector = within(
+      document.querySelector(".inspector") as HTMLElement,
+    );
+    expect(
+      screen.getByRole("heading", { name: "SampleForge", level: 2 }),
+    ).toBeInTheDocument();
+    expect(inspector.queryByText("Recent commits")).toBeNull();
+    expect(inspector.getByText("Storage")).toBeInTheDocument();
   });
 
   it("does not repeat the global heading inside secondary pages", () => {

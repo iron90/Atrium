@@ -15,6 +15,7 @@ import { DEMO_WORKSPACE_ROOT, demoSnapshot } from "./bridge/fake-bridge";
 import { GitHistoryView } from "./features/git/GitHistoryView";
 import type { ProjectInspectorProps } from "./features/projects/ProjectInspector";
 import type { ProjectListProps } from "./features/projects/ProjectList";
+import type { InspectorSectionId } from "./features/projects/inspector-section-visibility";
 import {
   openProjectAction,
   type ProjectAction,
@@ -78,6 +79,9 @@ export default function App() {
   const [excludeNames, setExcludeNames] = useState<string[]>(
     preferences.excludeNames ?? [],
   );
+  const [hiddenInspectorSections, setHiddenInspectorSections] = useState<
+    InspectorSectionId[]
+  >(preferences.hiddenInspectorSections ?? []);
   const { projectMeta, ensureProjectMeta, updateProjectMeta } =
     useProjectMetaState(preferences.projectMeta ?? {});
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
@@ -268,9 +272,11 @@ export default function App() {
       workspaces: workspacePaths,
       excludeNames,
       projectMeta,
+      hiddenInspectorSections,
     });
   }, [
     excludeNames,
+    hiddenInspectorSections,
     language,
     layout,
     projectMeta,
@@ -278,6 +284,17 @@ export default function App() {
     theme,
     workspacePaths,
   ]);
+
+  const handleToggleInspectorSection = useCallback(
+    (sectionId: InspectorSectionId) => {
+      setHiddenInspectorSections((current) =>
+        current.includes(sectionId)
+          ? current.filter((hidden) => hidden !== sectionId)
+          : [...current, sectionId],
+      );
+    },
+    [],
+  );
 
   const t = (key: TranslationKey): string => translate(language, key);
   const i18nValue = useMemo(
@@ -511,6 +528,7 @@ export default function App() {
       onConfirmCleanup: handleInspectorConfirmCleanup,
       onOpenArtifact: handleOpenArtifact,
       onOpenProjectAction: handleInspectorProjectAction,
+      hiddenInspectorSections,
     }),
     [
       agentPrompt,
@@ -529,6 +547,7 @@ export default function App() {
       handleInspectorStop,
       handleOpenArtifact,
       handleWorkspaceError,
+      hiddenInspectorSections,
       inspectorProject,
       isAgentPromptCopied,
       isAgentPromptForGuidanceUpdate,
@@ -552,9 +571,7 @@ export default function App() {
             onPageChange={setActivePage}
             status={runtimeStatus}
             onStop={() =>
-              globalActiveRun
-                ? handleStopRun(globalActiveRun.runId)
-                : undefined
+              globalActiveRun ? handleStopRun(globalActiveRun.runId) : undefined
             }
           />
 
@@ -586,6 +603,10 @@ export default function App() {
                           setExcludeNames={setExcludeNames}
                           onScan={handleScanWorkspace}
                           isScanning={isScanning}
+                          hiddenInspectorSections={hiddenInspectorSections}
+                          onToggleInspectorSection={
+                            handleToggleInspectorSection
+                          }
                         />
                       ) : page === "git" ? (
                         <GitHistoryView
