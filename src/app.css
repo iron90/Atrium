@@ -1242,37 +1242,45 @@ button[aria-busy="true"] {
    sibling fact values) with text hugging the right edge; the chevron marks
    it as a control. The full-width invisible select also makes the whole
    value area the click target. */
-.repo-fact .branch-picker {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: 1 1 auto;
-  min-width: 0;
-  height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
+/* WebKit renders a select's own value left-aligned no matter how the select
+   is styled, so the native select stays invisible and works purely as the
+   interaction layer over our right-aligned branch name. */
+.branch-picker-shell {
+  position: relative;
+}
+.branch-line .branch-picker-value {
   color: var(--muted);
-  font:
-    11px "DM Mono",
-    monospace;
-  line-height: inherit;
-  text-align: right;
-  cursor: pointer;
 }
-.repo-fact .branch-picker:hover {
-  color: var(--text);
-}
-.repo-fact .branch-picker:focus-visible {
-  color: var(--accent-strong);
-}
-.branch-picker-chevron {
+.branch-line .branch-picker-chevron {
   flex: 0 0 auto;
+  margin-right: 0;
   color: var(--faint);
   font-size: 9px;
 }
-.repo-fact .branch-picker:hover + .branch-picker-chevron,
-.repo-fact .branch-picker:focus-visible + .branch-picker-chevron {
+.repo-fact .branch-picker {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+}
+.branch-picker-shell:hover .branch-picker-value,
+.branch-picker-shell:focus-within .branch-picker-value {
+  color: var(--text);
+}
+.branch-picker-shell:hover .branch-picker-chevron,
+.branch-picker-shell:focus-within .branch-picker-chevron {
   color: var(--accent);
+}
+.branch-picker-shell:focus-within .branch-picker-value {
+  color: var(--accent-strong);
 }
 .storage-panel {
   display: grid;

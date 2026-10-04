@@ -122,7 +122,7 @@ export function ProjectRepositorySection({
           <div className="repo-facts">
             <div className="repo-fact">
               <strong className="repo-fact-label">{t("branch")}</strong>
-              <span className="repo-fact-value branch-line">
+              <span className="repo-fact-value branch-line branch-picker-shell">
                 <span aria-hidden="true">⑂</span>
                 {(() => {
                   const branches =
@@ -136,11 +136,24 @@ export function ProjectRepositorySection({
                     return repo?.branch ?? t("unavailable");
                   }
                   // The picker only changes the inspection view; the worktree
-                  // and HEAD stay on the checked-out branch. It is styled as
-                  // plain row text — the chevron marks it as a control.
+                  // and HEAD stay on the checked-out branch. WebKit renders a
+                  // select's own value left-aligned no matter how it is
+                  // styled, so the select stays invisible and works purely as
+                  // the interaction layer over our right-aligned branch name.
                   const value = selectedBranch ?? current ?? "";
                   return (
                     <>
+                      <span className="branch-picker-value">
+                        {value === current && current
+                          ? `${value} · ${t("currentBranch")}`
+                          : value}
+                      </span>
+                      <span
+                        className="branch-picker-chevron"
+                        aria-hidden="true"
+                      >
+                        ⌄
+                      </span>
                       <select
                         className="branch-picker"
                         value={value}
@@ -162,9 +175,6 @@ export function ProjectRepositorySection({
                           </option>
                         ))}
                       </select>
-                      <span className="branch-picker-chevron" aria-hidden="true">
-                        ⌄
-                      </span>
                     </>
                   );
                 })()}
