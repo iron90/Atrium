@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { GitBranchOverview, ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
@@ -36,8 +37,33 @@ export function ProjectRepositorySection({
   ) => void;
 }) {
   const { language, t } = useI18n();
+  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+  const branchRowRef = useRef<HTMLDivElement | null>(null);
   const repo = inspectedProject.repo;
   const links = inspectedProject.links;
+
+  useEffect(() => {
+    setBranchMenuOpen(false);
+  }, [project.id]);
+
+  // Clicking outside the row, or Escape, closes the branch menu.
+  useEffect(() => {
+    if (!branchMenuOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!branchRowRef.current?.contains(event.target as Node)) {
+        setBranchMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setBranchMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [branchMenuOpen]);
 
   return (
     <InspectorSection title={t("repository")}>
@@ -120,9 +146,9 @@ export function ProjectRepositorySection({
       ) : (
         <>
           <div className="repo-facts">
-            <div className="repo-fact">
+            <div className="repo-fact branch-fact" ref={branchRowRef}>
               <strong className="repo-fact-label">{t("branch")}</strong>
-              <span className="repo-fact-value branch-line branch-picker-shell">
+              <span className="repo-fact-value branch-line">
                 <span aria-hidden="true">⑂</span>
                 {(() => {
                   const branches =
@@ -136,49 +162,80 @@ export function ProjectRepositorySection({
                     return repo?.branch ?? t("unavailable");
                   }
                   // The picker only changes the inspection view; the worktree
-                  // and HEAD stay on the checked-out branch. WebKit renders a
-                  // select's own value left-aligned no matter how it is
-                  // styled, so the select stays invisible and works purely as
-                  // the interaction layer over our right-aligned branch name.
-                  const value = selectedBranch ?? current ?? "";
+                  // and HEAD stay on the checked-out branch. The menu is
+                  // custom-built: the native select popup cannot be styled.
+                  const viewing = selectedBranch ?? current ?? "";
                   return (
                     <>
-                      <span className="branch-picker-value">
-                        {value === current && current
-                          ? `${value} · ${t("currentBranch")}`
-                          : value}
-                      </span>
+                      <button
+                        type="button"
+                        className="branch-picker-trigger"
+                        aria-haspopup="listbox"
+                        aria-expanded={branchMenuOpen}
+                        aria-label={t("branch")}
+                        onClick={() => setBranchMenuOpen((open) => !open)}
+                      >
+                        {viewing}
+                      </button>
                       <span
                         className="branch-picker-chevron"
                         aria-hidden="true"
-                      >
-                        ⌄
-                      </span>
-                      <select
-                        className="branch-picker"
-                        value={value}
-                        aria-label={t("branch")}
-                        onChange={(event) =>
-                          onSelectBranch(
-                            event.target.value === current
-                              ? null
-                              : event.target.value,
-                          )
-                        }
-                      >
-                        {branches.map((reference) => (
-                          <option key={reference.name} value={reference.name}>
-                            {reference.name}
-                            {reference.name === current
-                              ? ` · ${t("currentBranch")}`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </>
                   );
                 })()}
               </span>
+              {branchMenuOpen && repo
+                ? (() => {
+                    const branches = repo.references.filter(
+                      (reference) => reference.kind === "branch",
+                    );
+                    const current = repo.branch;
+                    return (
+                      <div
+                        className="branch-menu"
+                        role="listbox"
+                        aria-label={t("branch")}
+                      >
+                        {branches.map((reference) => {
+                          const isCurrent = reference.name === current;
+                          const isSelected =
+                            (selectedBranch ?? current) === reference.name;
+                          return (
+                            <button
+                              type="button"
+                              key={reference.name}
+                              role="option"
+                              aria-selected={isSelected}
+                              className={`branch-menu-item${
+                                isSelected ? " is-selected" : ""
+                              }`}
+                              onClick={() => {
+                                onSelectBranch(
+                                  isCurrent ? null : reference.name,
+                                );
+                                setBranchMenuOpen(false);
+                              }}
+                            >
+                              <span
+                                className={`branch-menu-dot${
+                                  isCurrent ? " is-current" : ""
+                                }`}
+                                aria-hidden="true"
+                              />
+                              {reference.name}
+                              {isCurrent ? (
+                                <span className="sr-only">
+                                  {t("currentBranch")}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                : null}
             </div>
             {repo ? (
               <div className="repo-fact">
