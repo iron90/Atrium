@@ -38,13 +38,17 @@ export function ProjectRepositorySection({
 }) {
   const { language, t } = useI18n();
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+  const [branchMenuProjectId, setBranchMenuProjectId] = useState(project.id);
   const branchRowRef = useRef<HTMLDivElement | null>(null);
   const repo = inspectedProject.repo;
   const links = inspectedProject.links;
 
-  useEffect(() => {
+  // A keyboard-driven project switch bypasses the outside-click handler, so
+  // the menu reset is tied to the project identity during render.
+  if (branchMenuProjectId !== project.id) {
+    setBranchMenuProjectId(project.id);
     setBranchMenuOpen(false);
-  }, [project.id]);
+  }
 
   // Clicking outside the row, or Escape, closes the branch menu.
   useEffect(() => {
