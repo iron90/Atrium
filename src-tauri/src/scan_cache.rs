@@ -110,6 +110,14 @@ impl ScanCache {
 mod tests {
     use super::{ScanCache, ScanSignature};
     use std::fs;
+    use std::thread;
+    use std::time::Duration;
+
+    // Windows assigns file timestamps at ~15.6 ms granularity; a rewrite
+    // within the same tick leaves the mtime signature unchanged.
+    fn bump_past_timestamp_granularity() {
+        thread::sleep(Duration::from_millis(100));
+    }
 
     fn fixture_root(name: &str) -> std::path::PathBuf {
         let root =
@@ -147,6 +155,7 @@ mod tests {
             .cached_or_scan(&root)
             .expect("initial scan populates the cache");
 
+        bump_past_timestamp_granularity();
         fs::write(
             root.join("package.json"),
             r#"{"name":"renamed-fixture-project"}"#,
@@ -168,6 +177,7 @@ mod tests {
         let before = ScanSignature::capture(&root);
 
         // Appending content moves the mtime of the watched fact source.
+        bump_past_timestamp_granularity();
         let mut marker = fs::read_to_string(root.join("package.json")).expect("read marker");
         marker.push('\n');
         fs::write(root.join("package.json"), marker).expect("bump marker mtime");
