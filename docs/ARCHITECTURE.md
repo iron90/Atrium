@@ -1,195 +1,210 @@
-# Atrium 技术架构
+# Atrium Technical Architecture
 
-## 1. 定位与一期边界
+## 1. Positioning and Phase-One Boundary
 
-Atrium 是一个本地优先的跨项目可视化项目看板。它负责发现项目、展示项目
-事实、调用项目已有入口并记录本地观察结果；它不替项目规定开发流程。
+Atrium is a local-first visual project board spanning multiple projects. It discovers
+projects, presents project facts, invokes entry points the projects already own, and
+records local observation results; it does not prescribe a development process for
+projects.
 
-一期目标：
+Phase-one goals:
 
-- 扫描用户选择的工作区目录，发现其中的项目仓库；
-- 根据 `.atrium/manifest.toml` 的确定性声明获取平台、渠道和构建配置；
-- 从项目现有配置中发现 `Run`、`Check`、`Build` 入口；
-- 使用安全的参数数组调用这些入口；
-- 读取 Git 分支、工作区状态、远程地址和近期提交；
-- 检索仓库中已有的项目图标，并在列表和详情中复用；
-- 提供可切换的中英文界面，以及可进入的 Settings 页面；
-- 以多主题、多布局看板展示上述事实。
+- Scan the workspace directories the user selected and discover the project repositories
+  inside them;
+- Obtain platforms, channels, and build profiles from the deterministic declarations in
+  `.atrium/manifest.toml`;
+- Discover `Run`, `Check`, and `Build` entry points from the project's existing
+  configuration;
+- Invoke these entry points with safe argument arrays;
+- Read Git branch, worktree status, remote URL, and recent commits;
+- Find existing project icons in the repository and reuse them in the list and detail
+  views;
+- Provide a switchable English/Chinese UI and a reachable Settings page;
+- Present the facts above on a board with multiple themes and layouts.
 
-一期不做：
+Phase-one non-goals:
 
-- Website Server 推送和远程网站同步；
-- 支付、订阅和商店账号连接；
-- Git 提交、Tag、Push 或其他历史改写；
-- 通用项目 `Stage`、项目生命周期管理；
-- 通过 Atrium 复制模板或创建项目脚手架；
-- 开发 Agent 编排、聊天或任务管理。
+- Website Server push and remote website synchronization;
+- Payments, subscriptions, and store account connections;
+- Git commit, tag, push, or any other history rewriting;
+- A universal project `Stage` or project lifecycle management;
+- Copying templates or creating project scaffolds through Atrium;
+- Development Agent orchestration, chat, or task management.
 
-## 2. 已确定的技术分层
+## 2. Settled Technology Layers
 
-| 层                  | 技术                                          | 责任                                                 |
-| ------------------- | --------------------------------------------- | ---------------------------------------------------- |
-| Desktop shell       | Tauri 2                                       | 窗口、打包、跨平台入口、IPC                          |
-| Native/service core | Rust + Tokio                                  | 文件扫描、Git、命令发现、进程执行、OS 差异           |
-| UI                  | React + TypeScript + Vite                     | 看板、详情、主题、布局和交互                         |
-| Contract            | Serde DTO + TypeScript mirror                 | 保持前后端边界窄且可测试                             |
-| Persistence         | localStorage + app-data JSON / SQLite（规划） | 偏好和第一版运行记录；后续承载多工作区与大规模历史   |
-| Project protocol    | `.atrium/manifest.toml`（可选）               | 让项目主动声明平台、渠道和命令绑定，不影响无配置项目 |
+| Layer               | Technology                                      | Responsibility                                                                                                           |
+| ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Desktop shell       | Tauri 2                                         | Window management, packaging, cross-platform entry, IPC                                                                  |
+| Native/service core | Rust + Tokio                                    | File scanning, Git, command discovery, process execution, OS differences                                                 |
+| UI                  | React + TypeScript + Vite                       | Board, detail, themes, layouts, and interaction                                                                          |
+| Contract            | Serde DTO + TypeScript mirror                   | Keep the frontend/backend boundary narrow and testable                                                                   |
+| Persistence         | localStorage + app-data JSON / SQLite (planned) | Preferences and first-version run history; later hosts multi-workspace and large-scale history                           |
+| Project protocol    | `.atrium/manifest.toml` (optional)              | Lets projects proactively declare platform, channel, and command bindings; projects without configuration are unaffected |
 
-Tauri 2 + React/TypeScript + Rust 已作为 Atrium 的实现方案确定。候选方案比较
-和取舍依据保留在 [TECHNOLOGY_OPTIONS.md](TECHNOLOGY_OPTIONS.md) 中，便于未来
-开源后解释架构决策，但不再作为一期实现的待决项。
+Tauri 2 + React/TypeScript + Rust is settled as Atrium's implementation stack. The
+comparison of candidate options and the rationale for the trade-offs are kept in
+[TECHNOLOGY_OPTIONS.md](TECHNOLOGY_OPTIONS.md) so the architecture decisions can be
+explained once the project is open-sourced in the future; they are no longer open items
+for phase-one implementation.
 
-## 3. 分层结构
+## 3. Layered Structure
 
 ```text
 React UI
-  ├─ App.tsx                页面编排、跨特性状态协调和 Tauri 生命周期
-  ├─ app                   应用层持久化、消息格式化、外壳和页面组合
-  │  ├─ AppSidebar          应用导航
-  │  ├─ LocalActivityPanel  左侧栏全局运行状态摘要
-  │  ├─ PageTransition       页签保活、空闲预加载和退出视图冻结
-  │  └─ ProjectsPage        项目页布局组合
-  ├─ features/projects      项目列表、详情、工作区扫描和项目交互
-  │  ├─ project-list-model    列表筛选、排序和项目显示元数据
-  │  ├─ workspace-snapshot    工作区快照指纹、合并和空快照
-  │  ├─ ProjectInspector       详情页区块组合根
-  │  │  ├─ ProjectRepositorySection    仓库事实
-  │  │  ├─ ProjectToolsSection         项目工具与链接
-  │  │  ├─ ProjectStorageSection       存储与清理
-  │  │  ├─ ProjectContextSection       平台与渠道上下文
-  │  │  ├─ ProjectBuildProfilesSection 构建配置与操作
-  │  │  ├─ ProjectRunSection            活动运行输出
-  │  │  └─ ProjectCommitsSection        近期提交
-  │  ├─ use-project-workspace 工作区与项目选择组合根
-  │  ├─ use-project-selection 选中项目状态与选择操作
-  │  ├─ use-project-detail-lifecycle 详情异步读取、刷新和过期请求保护
-  │  ├─ use-project-guidance-actions 协议引导与 Agent 提示词
-  │  ├─ use-project-cleanup-actions 产物清理选择与执行
-  │  ├─ git-presentation          Git 状态展示纯函数
-  │  ├─ protocol-presentation     协议能力展示与决策纯函数
-  │  ├─ command-presentation      命令与配置映射纯函数
-  │  ├─ storage-presentation      存储与产物标签纯函数
-  │  ├─ scan-request-gate         最新扫描请求优先的并发闸门
-  │  ├─ ProjectListRow             列表行事件边界
-  │  ├─ ProjectListRowCells        项目、Git、上下文和操作单元
-  │  └─ use-workspace-scan-lifecycle 工作区扫描生命周期与刷新调度
-  ├─ features/git           Git 历史页和提交列表
-  │  ├─ GitHistoryView       Git 页面组合
-  │  ├─ GitChangePanel       版本范围查询和变更摘要
-  │  ├─ use-git-change-summary 查询状态与异步加载
-  │  ├─ git-change-model      revision 候选与默认值纯函数
-  │  └─ GitCommitTimeline    跨项目提交时间线
-  ├─ features/runs          项目命令执行状态与事件订阅
-  │  ├─ use-project-runner   命令触发、预览运行和活动运行选择
-  │  ├─ use-run-event-stream 运行事件订阅和运行集合
-  │  └─ run-output-buffer    按运行 ID 隔离且有界的输出缓冲纯函数
-  ├─ features/settings      主题、布局、工作区偏好
-  ├─ shared                 格式化和跨特性活动消息契约等无领域依赖代码
-  │  ├─ format              时间、相对时间、字节和模板文本格式化
-  │  ├─ activity            工作区/运行活动消息的共享契约
-  │  └─ errors              统一的未知错误转用户可见文本规则
-  └─ bridge                 类型化 Tauri invoke/event 与预览适配
-       ├─ types.ts          兼容导出门面
-       │  ├─ types/common   Facet、命令和配置状态基础类型
-       │  ├─ types/project  项目与工作区 DTO
-       │  ├─ types/protocol 协议与图标 DTO
-       │  ├─ types/storage  存储、产物与清理 DTO
-       │  ├─ types/git      Git DTO
-       │  └─ types/run      运行事件与结果 DTO
-       ├─ fake-bridge       预览适配兼容门面
-       ├─ demo-data         确定性预览项目快照
-       └─ demo-run          预览运行结果
+  ├─ App.tsx                Page orchestration, cross-feature state coordination, and the Tauri lifecycle
+  ├─ app                    App-level persistence, message formatting, shell, and page composition
+  │  ├─ AppSidebar          App navigation
+  │  ├─ LocalActivityPanel  Global run status summary in the left sidebar
+  │  ├─ PageTransition      Tab keep-alive, idle preloading, and exit-view freezing
+  │  └─ ProjectsPage        Projects page layout composition
+  ├─ features/projects      Project list, detail, workspace scanning, and project interactions
+  │  ├─ project-list-model  List filtering, sorting, and project display metadata
+  │  ├─ workspace-snapshot  Workspace snapshot fingerprints, merging, and empty snapshots
+  │  ├─ ProjectInspector    Detail page section composition root
+  │  │  ├─ ProjectRepositorySection      Repository facts
+  │  │  ├─ ProjectToolsSection           Project tools and links
+  │  │  ├─ ProjectStorageSection         Storage and cleanup
+  │  │  ├─ ProjectContextSection         Platform and channel context
+  │  │  ├─ ProjectBuildProfilesSection   Build profiles and actions
+  │  │  ├─ ProjectRunSection             Active run output
+  │  │  └─ ProjectCommitsSection         Recent commits
+  │  ├─ use-project-workspace        Workspace and project selection composition root
+  │  ├─ use-project-selection        Selected project state and selection actions
+  │  ├─ use-project-detail-lifecycle Async detail reads, refreshes, and stale-request protection
+  │  ├─ use-project-guidance-actions Protocol guidance and Agent prompts
+  │  ├─ use-project-cleanup-actions  Artifact cleanup selection and execution
+  │  ├─ git-presentation             Pure functions for Git status presentation
+  │  ├─ protocol-presentation        Pure functions for protocol capability presentation and decisions
+  │  ├─ command-presentation         Pure functions for command and profile mapping
+  │  ├─ storage-presentation         Pure functions for storage and artifact labels
+  │  ├─ scan-request-gate            Concurrency gate that prioritizes the latest scan request
+  │  ├─ ProjectListRow               List row event boundary
+  │  ├─ ProjectListRowCells          Project, Git, context, and action cells
+  │  └─ use-workspace-scan-lifecycle Workspace scan lifecycle and refresh scheduling
+  ├─ features/git           Git history page and commit list
+  │  ├─ GitHistoryView      Git page composition
+  │  ├─ GitChangePanel      Revision range queries and change summaries
+  │  ├─ use-git-change-summary  Query state and async loading
+  │  ├─ git-change-model    Pure functions for revision candidates and defaults
+  │  └─ GitCommitTimeline   Cross-project commit timeline
+  ├─ features/runs          Project command execution state and event subscriptions
+  │  ├─ use-project-runner  Command triggering, preview runs, and active run selection
+  │  ├─ use-run-event-stream  Run event subscription and the run collection
+  │  └─ run-output-buffer   Pure functions for output buffering, isolated per run ID and bounded
+  ├─ features/settings      Theme, layout, and workspace preferences
+  ├─ shared                 Domain-independent code such as formatting and cross-feature activity message contracts
+  │  ├─ format              Time, relative time, byte, and template text formatting
+  │  ├─ activity            Shared contracts for workspace/run activity messages
+  │  └─ errors              Unified rules for turning unknown errors into user-visible text
+  └─ bridge                 Typed Tauri invoke/event and preview adapters
+       ├─ types.ts          Compatibility export facade
+       │  ├─ types/common   Base types for facets, commands, and configuration state
+       │  ├─ types/project  Project and workspace DTOs
+       │  ├─ types/protocol Protocol and icon DTOs
+       │  ├─ types/storage  Storage, artifact, and cleanup DTOs
+       │  ├─ types/git      Git DTOs
+       │  └─ types/run      Run event and result DTOs
+       ├─ fake-bridge       Preview adapter compatibility facade
+       ├─ demo-data         Deterministic preview project snapshots
+       └─ demo-run          Preview run results
        │
        ▼
 Tauri command boundary
        │
        ▼
 Rust native core
-  ├─ command_boundary        阻塞 I/O 的统一异步边界与错误前缀
-  ├─ workspace_commands      工作区、项目扫描和协议报告的 Tauri 适配器
-  ├─ run_commands             运行控制和运行记录的 Tauri 适配器
-  ├─ git_commands             Git 变更查询的 Tauri 适配器
-  ├─ tool_commands            项目工具命令适配门面
-  │  ├─ artifact               声明产物打开
-  │  ├─ project                项目目录和终端打开
-  │  └─ external               远程仓库和 manifest 链接打开
-  ├─ model                   前后端共享的序列化领域 DTO 门面
-  │  ├─ project               项目与工作区契约
-  │  ├─ protocol              协议状态与报告契约
-  │  ├─ storage               存储与清理契约
-  │  ├─ git                   Git 快照与变更契约
-  │  └─ run                   运行事件与结果契约
-  ├─ scanner                 对外暴露扫描器边界
-  ├─ os_open                 跨平台路径与 URL 打开适配
-  ├─ project_metadata        项目名称和描述读取
-  ├─ project_path            项目根路径、实路径包含和符号链接边界校验
-  ├─ workspace_scan          工作区遍历和项目候选发现
-  ├─ workspace_policy        确定性的排除目录与项目标记规则
-  ├─ filesystem_metrics      文件/目录指标与符号链接安全策略
-  ├─ project_scan            单项目快照组装和项目元数据读取
-  ├─ command_discovery       确定性原生命令发现门面
-  │  ├─ package               package.json scripts 适配
-  │  ├─ toolchain             Cargo/Flutter/脚本入口适配
-  │  ├─ makefile              Makefile target 适配
-  │  ├─ dotnet                .NET run/build/test 入口适配
-  │  ├─ go                    Go run/build/test 入口适配
-  │  ├─ gradle                Gradle 构建入口适配
-  │  ├─ maven                 Maven 构建入口适配
-  │  ├─ python                Python 测试/构建入口适配（含 uv）
-  │  ├─ elixir                Mix 入口适配
-  │  ├─ ecosystem             生态注册表，按项目文件分发适配
-  │  └─ common                argv、标签和平台可执行文件规则
-  ├─ manifest_schema         manifest DTO 与 TOML 解析
-  ├─ manifest                配置文件读取、Schema 校验和入口编排
-  ├─ manifest_projection    声明投影门面
-  │  ├─ facets               平台/渠道声明
-  │  ├─ profiles             构建配置与命令绑定
-  │  ├─ cleanup               清理目录声明
-  │  ├─ links                 工具和项目链接声明
-  │  └─ path_policy           manifest 相对路径和受保护路径规则
-  ├─ protocol                协议能力状态评估
-  ├─ guidance                Agent 引导文件和报告生成门面
-  │  ├─ configuration        项目配置引导报告
-  │  └─ metadata             guidance.toml 元数据与同步状态
-  ├─ conformance              图标协议状态编排和事实读取
-  │  └─ icon_assets            图标路径安全、格式校验和兼容发现
-  ├─ git                     Git 领域门面
-  │  ├─ snapshot             分支、工作区、上游和引用快照
-  │  ├─ change_summary       版本范围、提交和文件变更统计
-  │  ├─ commit               统一提交记录解析
-  │  └─ command              Git CLI 执行边界
-  ├─ artifacts               构建产物领域门面
-  │  ├─ inspection            声明产物检查、计数和路径安全校验
-  │  └─ opening               已声明产物的跨平台打开适配
-  ├─ storage                 存储领域门面
-  │  ├─ inspection            项目大小和 manifest 清理候选统计
-  │  └─ cleanup               用户确认后的清理执行和结果
-  ├─ runner                   运行编排、配置校验和运行上下文
-  ├─ run_supervisor           子进程生命周期和取消监督
-  │  ├─ output                stdout/stderr 读取、事件转发和输出汇总
-  │  └─ outcome               进程结果到运行状态的纯策略判定
-  ├─ state                    并发运行控制和应用状态
-  └─ history                  应用数据目录中的运行记录和日志
+  ├─ command_boundary       Unified async boundary for blocking I/O and error prefixes
+  ├─ workspace_commands     Tauri adapters for workspaces, project scans, and protocol reports
+  ├─ run_commands           Tauri adapters for run control and run history
+  ├─ git_commands           Tauri adapters for Git change queries
+  ├─ tool_commands          Adapter facade for project tool commands
+  │  ├─ artifact            Opening declared artifacts
+  │  ├─ project             Opening project directories and terminals
+  │  └─ external            Opening remote repositories and manifest links
+  ├─ model                  Facade of serialized domain DTOs shared between frontend and backend
+  │  ├─ project             Project and workspace contracts
+  │  ├─ protocol            Protocol status and report contracts
+  │  ├─ storage             Storage and cleanup contracts
+  │  ├─ git                 Git snapshot and change contracts
+  │  └─ run                 Run event and result contracts
+  ├─ scanner                Public scanner boundary
+  ├─ os_open                Cross-platform path and URL opening adapter
+  ├─ project_metadata       Project name and description reads
+  ├─ project_path           Project root paths, real-path containment, and symlink boundary validation
+  ├─ workspace_scan         Workspace traversal and project candidate discovery
+  ├─ workspace_policy       Deterministic excluded-directory and project marker rules
+  ├─ filesystem_metrics     File/directory metrics and symlink-safe policies
+  ├─ project_scan           Single-project snapshot assembly and project metadata reads
+  ├─ command_discovery      Deterministic native command discovery facade
+  │  ├─ package             package.json scripts adapter
+  │  ├─ toolchain           Cargo/Flutter/script entry adapters
+  │  ├─ makefile            Makefile target adapter
+  │  ├─ dotnet              .NET run/build/test entry adapters
+  │  ├─ go                  Go run/build/test entry adapters
+  │  ├─ gradle              Gradle build entry adapters
+  │  ├─ maven               Maven build entry adapters
+  │  ├─ python              Python test/build entry adapters (including uv)
+  │  ├─ elixir              Mix entry adapters
+  │  ├─ ecosystem           Ecosystem registry that dispatches adapters by project file
+  │  └─ common              argv, label, and platform-specific executable rules
+  ├─ manifest_schema        Manifest DTOs and TOML parsing
+  ├─ manifest               Manifest file reading, schema validation, and entry orchestration
+  ├─ manifest_projection    Declaration projection facade
+  │  ├─ facets              Platform/channel declarations
+  │  ├─ profiles            Build profiles and command bindings
+  │  ├─ cleanup             Cleanup directory declarations
+  │  ├─ links               Tool and project link declarations
+  │  └─ path_policy         Manifest-relative path and protected path rules
+  ├─ protocol               Protocol capability status evaluation
+  ├─ guidance               Agent guidance file and report generation facade
+  │  ├─ configuration       Project configuration guidance report
+  │  └─ metadata            guidance.toml metadata and sync status
+  ├─ conformance            Icon protocol status orchestration and fact reading
+  │  └─ icon_assets         Icon path safety, format validation, and compatibility discovery
+  ├─ git                    Git domain facade
+  │  ├─ snapshot            Branch, worktree, upstream, and ref snapshots
+  │  ├─ change_summary      Revision ranges, commits, and file change statistics
+  │  ├─ commit              Unified commit record parsing
+  │  └─ command             Git CLI execution boundary
+  ├─ artifacts              Build artifact domain facade
+  │  ├─ inspection          Declared artifact inspection, counting, and path safety validation
+  │  └─ opening             Cross-platform opening for declared artifacts
+  ├─ storage                Storage domain facade
+  │  ├─ inspection          Project size and manifest cleanup candidate statistics
+  │  └─ cleanup             Cleanup execution and results after user confirmation
+  ├─ runner                 Run orchestration, profile validation, and run context
+  ├─ run_supervisor         Child process lifecycle and cancellation supervision
+  │  ├─ output              stdout/stderr reads, event forwarding, and output summaries
+  │  └─ outcome             Pure policy mapping from process results to run status
+  ├─ state                  Concurrent run control and application state
+  └─ history                Run history and logs in the application data directory
 ```
 
-UI 不直接读取文件系统，也不直接拼接 shell 命令。Rust 端不保存项目业务
-阶段，不对项目内容做重写。
+The UI does not read the filesystem directly and does not concatenate shell commands.
+The Rust side does not store project business stages and does not rewrite project
+content.
 
-前端依赖方向是 `App → feature → bridge/shared`；项目特性之间通过类型化 props
-和回调协作，不通过共享的页面级可变状态互相调用。Rust 的 `commands` 只负责
-Tauri 输入校验、阻塞任务调度和错误边界，具体领域规则留在对应模块中。当前
-仍有少量跨特性编排保留在 `App.tsx`，它是组合根，不承载扫描、执行或详情视图的
-实现细节。
+The frontend dependency direction is `App → feature → bridge/shared`; project features
+collaborate through typed props and callbacks, not by calling each other through shared
+page-level mutable state. Rust `commands` only handle Tauri input validation, blocking
+task scheduling, and error boundaries; concrete domain rules stay in their own modules.
+A small amount of cross-feature orchestration still lives in `App.tsx`; it is the
+composition root and does not carry the implementation details of scanning, execution,
+or detail views.
 
-页签采用 Model/View 生命周期分离。工作区快照、项目详情和运行事件等 Model 在应用
-层持续更新，不因页签切换而停止；`PageTransition` 为每个页签维护一个长期存活的
-View host。页签进入后台后仍可在隐藏状态下接收最新数据，页签开始退出时则冻结当前
-View snapshot，避免异步详情、列表变化或其他 Model 更新在动画中触发布局变化。退出
-动画完成后不在最后一帧执行 React cleanup；旧 View 保持脱离布局的透明层，直到下一次
-导航时复用。再次进入页签时使用最新 Model 快照恢复视图，而不是重新挂载整棵页面树。
+Tabs separate the Model and View lifecycles. Models such as workspace snapshots,
+project details, and run events keep updating at the app layer and do not stop when
+tabs switch; `PageTransition` maintains a long-lived View host for each tab. A tab in
+the background keeps receiving fresh data while hidden; when a tab starts exiting, its
+current View snapshot is frozen, so async detail loads, list changes, or other Model
+updates cannot trigger layout changes during the animation. After the exit animation
+completes, React cleanup is not run on the final frame; the old View remains as a
+transparent layer outside the layout until the next navigation reuses it. Re-entering
+a tab restores the view from the latest Model snapshot instead of remounting the whole
+page tree.
 
-## 4. 核心领域模型
+## 4. Core Domain Model
 
 ### ProjectSnapshot
 
@@ -218,7 +233,7 @@ ProjectSnapshot
   scannedAt: timestamp
 ```
 
-`ProtocolStatus` 是项目事实的可信度边界：
+`ProtocolStatus` is the trust boundary for project facts:
 
 ```text
 ProtocolStatus
@@ -229,17 +244,22 @@ ProtocolStatus
                  configured | partial | missing | invalid | legacy
 ```
 
-平台、渠道和正式构建配置只有在对应能力通过确定性校验后才会进入可执行视图。
-清理目录是可选能力；未声明时仍可展示项目大小，但不会产生清理目标。
+Platforms, channels, and formal build profiles appear in the actionable view only
+after the corresponding capability passes deterministic validation. Cleanup
+directories are an optional capability; when they are not declared, project size can
+still be shown, but no cleanup targets are produced.
 
-项目展示名称也只来自确定性的结构化入口，优先级固定为
-`package.json:name`、`Cargo.toml:[package].name`、`pubspec.yaml` 根级 `name`、
-`pyproject.toml:[project].name` 或 Poetry 的 `[tool.poetry].name`；未找到有效字段时
-才回退到仓库目录名。不会在任意文本、注释、嵌套配置或 Markdown 中搜索 `name`。
+The project display name likewise comes only from deterministic structured entry
+points, with a fixed priority: `package.json:name`, `Cargo.toml:[package].name`, the
+root-level `name` in `pubspec.yaml`, `pyproject.toml:[project].name`, or Poetry's
+`[tool.poetry].name`; only when none of these fields is valid does it fall back to the
+repository directory name. `name` is never searched for in arbitrary text, comments,
+nested configuration, or Markdown.
 
 ### Facet
 
-平台和渠道都使用同一类事实模型，并且只接受 manifest 中的确定性声明：
+Platforms and channels share one fact model and accept only deterministic declarations
+from the manifest:
 
 ```text
 Facet
@@ -249,8 +269,8 @@ Facet
   evidence: repository-relative paths or manifest keys
 ```
 
-不存在 manifest 时，列表为空并标记为 `missing`；Atrium 不从 README、Markdown、
-CI 文本或目录名称猜测平台和渠道。
+When no manifest exists, the lists are empty and marked `missing`; Atrium never
+guesses platforms and channels from READMEs, Markdown, CI text, or directory names.
 
 ### BuildProfile
 
@@ -272,21 +292,27 @@ BuildProfile
   issues: string[]
 ```
 
-BuildProfile 是“平台 + 渠道 + 项目命令绑定”的组合。对于正式的目标操作，
-用户先选择配置，Atrium 再调用该配置绑定的仓库命令。
+A BuildProfile is the combination of "platform + channel + project command bindings".
+For a formal target action, the user first selects a profile, and Atrium then invokes
+the repository command bound to that profile.
 
-`hostRequirements` 是按操作区分的宿主兼容性下限（允许执行的环境），不是验证
-结论；`verification` 是按操作区分的“已验证成功宿主”上限证据。项目 Agent 只有
-在对应宿主上完整执行同一条命令，并满足最终退出码、目标启动或实际构建产物等
-成功后置条件后，才能把该宿主写入 `verification`。目标平台、目标三元组、
-runner 名称、工具存在或中间步骤成功都不能作为证明。宿主不匹配属于“延后验证”，
-不是失败，不能导致删除命令绑定或宿主要求。Atrium 只把 `verification` 作为
-manifest 中的结构化声明读取并据此门控执行，不认证、不复测；其准确性由项目
-Agent 负责。
+`hostRequirements` is the per-action lower bound of host compatibility (the
+environments where execution is allowed), not a verification conclusion; `verification`
+is the per-action upper-bound evidence of "hosts where the action has been verified to
+succeed". A project Agent may write a host into `verification` only after fully
+executing the same command on that host and meeting the success postconditions such as
+the final exit code, target startup, or actual build artifacts. The target platform,
+target triple, runner name, tool availability, or a successful intermediate step is
+not proof. A host mismatch is "deferred verification", not a failure, and it must not
+lead to removing a command binding or a host requirement. Atrium reads `verification`
+only as a structured declaration in the manifest and gates execution on it; it neither
+certifies nor re-tests, and the project Agent is responsible for its accuracy.
 
-项目文件中自动发现的 `ProjectCommand` 则属于独立的仓库命令入口。它们不会
-因为是否被 Profile 引用而被合并或过滤；用户确认显示后，可以直接执行其中
-任意类型的命令。即使命令实际相同，业务语义仍然分开。
+`ProjectCommand` entries discovered automatically from project files are separate
+repository command entry points. They are neither merged nor filtered based on whether
+a profile references them; after the user confirms they should be displayed, commands
+of any kind can be executed directly. Even when the underlying command is identical,
+the business semantics remain separate.
 
 ### ProjectCommand
 
@@ -302,12 +328,13 @@ ProjectCommand
   source: package.json / Makefile / Cargo.toml / ...
 ```
 
-命令不是一段可任意执行的 shell 文本。扫描器只产生已知构建工具和项目配置
-中的参数数组；未来的协议文件也必须经过同样的结构校验。
+A command is never a piece of shell text that can be executed arbitrarily. The scanner
+produces argument arrays only from known build tools and project configuration; future
+protocol files must pass through the same structural validation.
 
 ### Runtime records
 
-运行状态属于一次命令执行，而不是项目生命周期：
+Run status belongs to an individual command execution, not to a project lifecycle:
 
 ```text
 RunRecord
@@ -345,18 +372,23 @@ receive a deterministic truncation marker.
 Run IDs are validated as bounded, separator-free, non-control identifiers before
 the stop registry or persisted history is accessed.
 
-项目存储统计在一次遍历中缓存各级路径指标，清理目录的已声明大小直接复用该缓存，
-避免对大型缓存或构建目录再次递归扫描；缓存只保留目录级指标，只存在于本次检查，
-不改变下一次扫描的实时性。
+Project storage statistics cache metrics for every path level in a single pass; the
+declared size of a cleanup directory reuses that cache directly, avoiding a second
+recursive scan of large caches or build directories. The cache keeps only
+directory-level metrics, lives only for the current inspection, and does not affect
+the timeliness of the next scan.
 
-项目详情检查器提供按项目筛选的运行历史入口，最近 12 次运行与日志文本在项目上下文
-中直接查看；脱离项目上下文的独立运行记录页面不在当前范围。运行记录仍由执行核心
-持久化，记录中始终包含项目、命令、平台/渠道和 Git 上下文。
+The project detail inspector provides a run history entry filtered per project; the
+12 most recent runs and their log text are viewed directly in the project context. A
+standalone run history page outside the project context is out of scope for now. Run
+history is still persisted by the execution core, and every record always includes
+the project, command, platform/channel, and Git context.
 
-看板不会出现 `Planning`、`Building`、`Improving` 之类的项目阶段字段。项目
-列表只展示客观的 Git、扫描和命令结果。
+The board never shows project stage fields such as `Planning`, `Building`, or
+`Improving`. The project list shows only objective Git, scan, and command results.
 
-跨项目管理偏好只保存在 Atrium 本地，不写回项目仓库：
+Cross-project management preferences are stored only locally in Atrium and are never
+written back to project repositories:
 
 ```text
 workspaces: string[]
@@ -364,143 +396,198 @@ excludeNames: string[]
 projectMeta[path]: favorite | hidden
 ```
 
-收藏和隐藏只是看板本地显示偏好，不写回项目仓库。项目列表排序由当前扫描快照派生，
-支持名称、Git 状态、最近修改和占用空间；排序不会修改项目文件，也不会改变 Git 历史。
+Favoriting and hiding are local board display preferences only and are never written
+back to project repositories. Project list sorting is derived from the current scan
+snapshot and supports name, Git status, last modified, and disk usage; sorting never
+modifies project files and never changes Git history.
 
-扫描器分别读取每个工作区，按 canonical project path 合并重复项目；无效工作区
-不会阻塞其他工作区，重叠路径会作为扫描警告显示。工作区一级目录的符号链接只有在
-解析后仍位于所选工作区内才会参与扫描，越出工作区的链接会被跳过；canonical project
-path 会再次去重。
+The scanner reads each workspace separately and merges duplicate projects by
+canonical project path; an invalid workspace never blocks other workspaces, and
+overlapping paths are shown as scan warnings. Symlinks in a workspace's top-level
+directories participate in scanning only if they still resolve inside the selected
+workspace; links reaching outside the workspace are skipped, and canonical project
+paths are deduplicated again.
 
-## 5. 扫描流程
+## 5. Scan Flow
 
 ```text
-用户在 Settings 维护多个工作区
-  → 并行枚举每个工作区一级目录
-  → 判断 Git/manifest/project markers
-  → 由 scanner 中的确定性适配器发现项目命令
-  → 读取 Git 只读事实
-  → 生成带 evidence 和 icon 的列表 snapshot
-  → 先更新项目选中态
-  → 通过独立 inspect command 异步读取选中项目详情
-  → UI 补齐 Git、入口和提交信息
+The user maintains multiple workspaces in Settings
+  → enumerate each workspace's top-level directories in parallel
+  → evaluate Git/manifest/project markers
+  → deterministic adapters in the scanner discover project commands
+  → read read-only Git facts
+  → produce a list snapshot with evidence and icon
+  → update the project selection state first
+  → read the selected project's details asynchronously via a separate inspect command
+  → the UI fills in Git, entry point, and commit information
 ```
 
-原生会话会以固定的轻量周期重复工作区扫描。扫描结果用稳定字段计算指纹，只有
-项目事实变化时才替换列表；当前选中项目保持不变。用户也可以从检查器发起单项目
-刷新，重新读取完整详情。磁盘统计不会进入周期扫描。
+The native session repeats the workspace scan at a fixed, lightweight interval. Scan
+results are fingerprinted using stable fields, and the list is replaced only when
+project facts change; the currently selected project stays unchanged. The user can
+also trigger a single-project refresh from the inspector to re-read the full details.
+Disk statistics never enter the periodic scan.
 
-原生命令适配器保持独立，避免一个项目的命令规则污染其他项目：
+Native command adapters stay independent so one project's command rules cannot
+pollute another project's:
 
-- JavaScript/TypeScript：从 `package.json` 读取 scripts；
-- Rust：从 `Cargo.toml` 提供 Cargo 入口；
-- Flutter：从 `pubspec.yaml` 提供 Flutter 入口；
-- Make：从 `Makefile` 读取明确 target；
-- .NET：从 `.sln` / `.csproj` 发现 `dotnet run` / `build` / `test`；
-- Go：从 `go.mod` 发现 `go run` / `build` / `test`；
-- Gradle：从 `build.gradle(.kts)` / `settings.gradle(.kts)` 发现 Gradle 入口；
-- Maven：从 `pom.xml` 发现 Maven 入口；
-- Python：从 `pyproject.toml` / `requirements.txt` 发现 pytest 与构建入口（支持 uv）；
-- Elixir：从 `mix.exs` 发现 Mix 入口；
-- 脚本名和 Make target 只接受不含空白/控制字符、不以 `-` 开头且不超过 128 字节的
-  标识符；异常键会被忽略，避免污染 UI、source 引用或 argv；
-- 平台与渠道：只从 `.atrium/manifest.toml` 读取，不从 workflow、目录名称或文档推断。
-- manifest 结构严格拒绝所有未声明字段；拼写错误或未来版本字段会使配置无效，不会被静默忽略。
-  当前 schema 为 1，已包含按 Run / Check / Build 区分的宿主系统声明（host_requirements）
-  和宿主验证记录（verification）；未来协议演进必须先引入新的 schema 编号再增加字段。
-- package.json、Cargo.toml、pyproject.toml、pubspec.yaml、Makefile 和
-  `.atrium/manifest.toml` 等固定项目描述文件统一经过项目根路径边界读取；缺失、不可读和
-  符号链接不是同一种状态，项目外部或经由符号链接到达的描述文件不会成为 Atrium 事实。
-- Atrium 生成的协议引导报告也经过同一项目路径边界写入；会逐级创建并校验普通目录，拒绝
-  通过符号链接写入项目外部，避免报告生成意外覆盖仓库之外的文件。
+- JavaScript/TypeScript: reads scripts from `package.json`;
+- Rust: provides Cargo entry points from `Cargo.toml`;
+- Flutter: provides Flutter entry points from `pubspec.yaml`;
+- Make: reads explicit targets from `Makefile`;
+- .NET: discovers `dotnet run` / `build` / `test` from `.sln` / `.csproj`;
+- Go: discovers `go run` / `build` / `test` from `go.mod`;
+- Gradle: discovers Gradle entry points from `build.gradle(.kts)` / `settings.gradle(.kts)`;
+- Maven: discovers Maven entry points from `pom.xml`;
+- Python: discovers pytest and build entry points from `pyproject.toml` / `requirements.txt` (uv supported);
+- Elixir: discovers Mix entry points from `mix.exs`;
+- Script names and Make targets accept only identifiers without whitespace or control
+  characters, not starting with `-`, and no longer than 128 bytes; anomalous keys are
+  ignored so they cannot pollute the UI, source references, or argv;
+- Platforms and channels: read only from `.atrium/manifest.toml`, never inferred from
+  workflows, directory names, or documents;
+- The manifest structure strictly rejects every undeclared field; a typo or a
+  future-version field invalidates the configuration instead of being silently
+  ignored. The current schema is 1 and already includes per-action host system
+  declarations for Run / Check / Build (host_requirements) and host verification
+  records (verification); future protocol evolution must introduce a new schema
+  number before adding fields;
+- Fixed project description files such as package.json, Cargo.toml, pyproject.toml,
+  pubspec.yaml, Makefile, and `.atrium/manifest.toml` are all read through the
+  project root path boundary; missing, unreadable, and symlinked are not the same
+  state, and a description file outside the project or reached through a symlink
+  never becomes an Atrium fact;
+- Protocol guidance reports generated by Atrium are written through the same project
+  path boundary; ordinary directories are created and validated level by level, and
+  writes reaching outside the project through symlinks are rejected, so report
+  generation cannot accidentally overwrite files outside the repository.
 
-Atrium 协议是项目上下文的上游接入门槛。只有 manifest 和项目图标声明处于可用状态时，
-界面才把平台、渠道和构建 Profile 作为已接入项目事实展示；协议未就绪时只显示等待
-接入的说明，不把扫描结果伪装成可信配置。图标沿用项目自身的格式和规格，不强制统一
-icon 规范。
+The Atrium protocol is the upstream onboarding gate for project context. Only when
+the manifest and the project icon declaration are in a usable state does the UI
+present platforms, channels, and build profiles as onboarded project facts; while the
+protocol is not ready, the UI shows only an explanation that onboarding is pending
+and never disguises scan results as trusted configuration. Icons follow the project's
+own formats and specifications; no unified icon standard is imposed.
 
-没有 manifest 或没有有效 build profile 时显示未声明/无效，并提供生成结构化配置说明的
-操作；不猜测商店、支付或发布渠道。仓库命令仍然可以从项目文件中确定性发现，默认
-隐藏具体列表，用户明确确认后可执行；它们不能被当作平台/渠道操作。命令执行失败
-由项目和当前运行环境决定，Atrium 只负责返回执行结果。
+When there is no manifest or no valid build profile, the UI shows undeclared/invalid
+and offers an action that generates structured configuration guidance; it never
+guesses store, payment, or release channels. Repository commands can still be
+discovered deterministically from project files; the concrete list is hidden by
+default and becomes executable only after the user explicitly confirms. They must not
+be treated as platform/channel actions. Command execution failures are determined by
+the project and the current execution environment; Atrium only returns the execution
+result.
 
-引导操作一次生成包含项目配置和图标说明的单个 Agent-facing 配置文件，另生成一份内部
-版本元数据。生成成功后，Atrium 同时生成一段固定模板的项目开发 Agent 提示词，用户可以
-复制该提示词，让 Agent 读取这两份引导文件并完成项目配置。
+In one pass, the guidance action generates a single Agent-facing configuration file
+containing the project configuration and icon instructions, plus an internal version
+metadata file. After generation succeeds, Atrium also produces a fixed-template
+prompt for the project development Agent; the user can copy that prompt so the Agent
+reads the two guidance files and completes the project configuration.
 
-项目 Agent 的验证可能受到端口占用、依赖、凭证或工具链状态影响。此类环境阻塞不能被
-当作项目不支持，也不能通过删除命令绑定、缩小检查范围或伪造宿主系统来绕过；在阻塞
-未解决前，`.atrium/guidance-sync.toml` 不得更新。Atrium 自身的开发端口与 Tauri 默认
-端口分离，避免项目 Agent 验证其他 Tauri 项目时产生无关冲突。
+A project Agent's verification can be affected by port occupancy, dependencies,
+credentials, or toolchain state. Such environment blockers must not be treated as the
+project not supporting the action, and they must not be bypassed by deleting command
+bindings, narrowing the check scope, or faking host systems;
+`.atrium/guidance-sync.toml` must not be updated while a blocker is unresolved.
+Atrium's own development port is separate from the Tauri default port, so a project
+Agent verifying other Tauri projects does not run into unrelated conflicts.
 
-项目存储统计和清理同样遵循项目声明：`[cleanup]` 中的 `cache` 与 `build`
-数组由项目开发 Agent 根据真实模板补齐。Rust 核心只统计项目目录中的文件大小，
-并在详情页异步展示；清理命令只接受 manifest 中声明、位于项目目录内且不是符号链接的
-目录；父子重叠的清理声明会被判为无效，路径比较不区分大小写以兼容不同文件系统，避免统计
-重复和重复处理。清理和产物访问还会
-检查解析后的真实路径，拒绝越过项目根目录或穿过符号链接。
-统计结果同时带有完整性标记：遇到无法读取的目录项时，Atrium 展示已读取的部分
-数值并明确提示，不把部分统计伪装成精确总量。工作区总览不递归计算这些目录，避免扫描
-大仓库时阻塞项目列表。
+Project storage statistics and cleanup likewise follow the project's declarations:
+the `cache` and `build` arrays in `[cleanup]` are completed by the project
+development Agent based on real templates. The Rust core only counts file sizes
+inside the project directory and shows them asynchronously on the detail page.
+Cleanup commands accept only directories declared in the manifest, located inside
+the project directory, and not symlinks; cleanup declarations whose parent and child
+overlap are judged invalid, and path comparison is case-insensitive for
+cross-filesystem compatibility, preventing double counting and double processing.
+Cleanup and artifact access also check the resolved real path and reject anything
+that escapes the project root or passes through symlinks. Statistics carry a
+completeness marker: when a directory entry cannot be read, Atrium shows the
+partially read value with an explicit notice and never presents partial statistics
+as an exact total. The workspace overview does not recurse into these directories,
+so scanning large repositories does not block the project list.
 
-构建产物统计只在详情检查中执行，并且只读取当前 manifest 的
-`build_profiles[].artifacts`。声明可以指向文件或目录；不存在的声明显示为缺失，
-不会被解释为构建失败。目录大小和最近修改时间只统计真实文件，不跟随符号链接；目录
-递归无法完整读取时，产物指标带有 `isComplete = false`。
-累计大小或文件数发生溢出时，指标饱和在 `u64::MAX` 并同样标记为不完整，避免溢出后
-展示错误的精确数值。
-递归深度超过固定上限时停止向下读取并标记为不完整，避免异常目录树耗尽调用栈。
+Build artifact statistics run only in the detail inspection and read only the
+current manifest's `build_profiles[].artifacts`. Declarations may point to files or
+directories; a declaration whose target does not exist is shown as missing and is
+never interpreted as a build failure. Directory size and last-modified time count
+only real files and never follow symlinks; when a directory cannot be fully read
+recursively, the artifact metrics carry `isComplete = false`. When the accumulated
+size or file count overflows, the metric saturates at `u64::MAX` and is likewise
+marked incomplete, so a wrong exact value is never shown after overflow. When
+recursion depth exceeds a fixed cap, reading stops going deeper and the result is
+marked incomplete, so an abnormal directory tree cannot exhaust the call stack.
 
-图标检测优先使用项目 manifest 和 Tauri/Unity 常见位置，再在有限目录深度内
-查找 `icon` / `logo` 文件；仅读取小于 8 MiB 的 png、svg、jpeg、webp、ico
-文件，兼容发现最多保留 64 个候选，避免扫描阶段把大型构建产物带入快照。
+Icon detection prefers the project manifest and common Tauri/Unity locations, then
+searches for `icon` / `logo` files within a limited directory depth; only png, svg,
+jpeg, webp, and ico files smaller than 8 MiB are read, and compatibility discovery
+keeps at most 64 candidates, so large build artifacts are not pulled into the
+snapshot during scanning.
 
-项目工具和链接只来自结构化 manifest 字段。打开目录、终端、远程仓库或声明链接时
-由 Rust 原生命令执行；没有项目终端声明时直接使用操作系统默认终端。Atrium 不提供
-让用户填写终端命令的设置，编辑器入口也暂不提供。UI 不拼接 shell 文本。清理选择
-会在 Rust 端再次与 manifest 声明求交集后才允许删除。
+Project tools and links come only from structured manifest fields. Opening
+directories, terminals, remote repositories, or declared links is performed by Rust
+native commands; when no project terminal is declared, the operating system's
+default terminal is used directly. Atrium provides no setting that lets users enter
+a terminal command, and an editor entry point is not provided yet. The UI does not
+concatenate shell text. A cleanup selection is intersected with the manifest
+declarations again on the Rust side before deletion is allowed.
 
-## 6. Git 边界
+## 6. Git Boundary
 
-Git CLI 是第一期的事实来源，因为用户现有项目的 Git 体系不需要改变，也不
-需要在 Atrium 内复制 Git 实现。Atrium 只调用只读命令：
+The Git CLI is the phase-one source of truth because users' existing project Git
+setups do not need to change and Git does not need to be reimplemented inside
+Atrium. Atrium invokes only read-only commands:
 
-- `git rev-parse`：仓库识别和当前分支；
-- `git status --porcelain`：工作区干净/有修改和未提交变更数量；
-- `git remote get-url origin`：远程地址；
-- `git log`：近期提交；
-- `git for-each-ref`：可选择的分支和 Tag 引用；
-- `git diff`：用户选择的两个安全 revision 之间的文件统计；
-- `git rev-list --left-right --count @{upstream}...HEAD`：相对于本地上游跟踪分支的领先/落后提交数量；
-  没有上游分支时显示未设置上游，不伪造为零。
+- `git rev-parse`: repository identification and the current branch;
+- `git status --porcelain`: clean/dirty worktree status and the number of uncommitted
+  changes;
+- `git remote get-url origin`: the remote URL;
+- `git log`: recent commits;
+- `git for-each-ref`: selectable branch and tag refs;
+- `git diff`: file statistics between two user-selected, safe revisions;
+- `git rev-list --left-right --count @{upstream}...HEAD`: ahead/behind commit counts
+  relative to the local upstream tracking branch;
+  when there is no upstream branch, the UI shows that no upstream is set instead of
+  faking zero.
 
-只读分支检查扩展自同一边界：详情面板可以选择任意本地分支查看其提交列表和
-相对检出 HEAD 的领先/落后（`git rev-list --left-right --count HEAD...<branch>`），
-但 Atrium **不执行 checkout、不修改任何 ref、不触碰工作区**。工作区状态、当前
-分支和 dirty 计数永远只描述真实检出的分支；项目列表同样只显示真实 HEAD。分支
-选择是检查器内的查看视角，切换项目即重置。这样工作区的所有权始终属于项目开发
-Agent，观察视角与仓库状态不会互相干扰。
+Read-only branch inspection extends from the same boundary: the detail panel can
+select any local branch to view its commit list and its ahead/behind relative to the
+checked-out HEAD (`git rev-list --left-right --count HEAD...<branch>`), but Atrium
+**never performs a checkout, never modifies any ref, and never touches the
+worktree**. Worktree status, the current branch, and the dirty count always describe
+only the actually checked-out branch; the project list likewise shows only the real
+HEAD. Branch selection is a viewing perspective inside the inspector and resets when
+the project changes. This keeps worktree ownership with the project development
+Agent, so the observation perspective and repository state cannot interfere with each
+other.
 
-Git 命令统一并行排空 stdout/stderr，并分别限制为 4 MiB/64 KiB；用户请求的变更摘要超出
-限制时返回明确错误，要求缩小变更范围，不会截断后继续生成不完整摘要。轻量项目快照在
-工作区状态输出超限或不可读取时标记状态不可用，不会把空输出误报为干净；近期记录仍只
-读取固定数量。
+Git commands uniformly drain stdout/stderr in parallel, with limits of 4 MiB/64 KiB
+respectively; when a user-requested change summary exceeds the limit, a clear error
+is returned asking to narrow the revision range, and no truncated, incomplete summary
+is produced. The lightweight project snapshot marks worktree status unavailable when
+the status output exceeds the limit or cannot be read, never reporting empty output
+as clean; recent commits are still read only up to a fixed count.
 
-后续生成更新日志时，直接以快照中的 commit 范围和提交记录为输入。
+When changelog generation comes later, it takes the commit range and commit records
+in the snapshot directly as input.
 
-## 7. 跨平台进程策略
+## 7. Cross-Platform Process Policy
 
-- 使用 Rust `Command` / `tokio::process::Command`，不经过用户默认 shell；
-- Windows 对 npm 使用 `npm.cmd`，其他工具通过 PATH 解析；
-- macOS/Linux 使用 `npm`、`cargo`、`flutter` 等 PATH 工具；
-- 工作目录始终是项目根目录；
-- 命令显示文本与实际 argv 分开，显示文本不再解析执行；
-- 运行器后续增加更完整的进程监督、取消、输出流和 Windows process tree 清理；
-- 工具不存在、权限不足、退出码非零都作为明确的运行结果返回。
+- Uses Rust `Command` / `tokio::process::Command`, never the user's default shell;
+- On Windows, npm uses `npm.cmd`; other tools resolve through PATH;
+- On macOS/Linux, PATH tools such as `npm`, `cargo`, and `flutter` are used;
+- The working directory is always the project root;
+- The command display text is kept separate from the actual argv; display text is
+  never parsed for execution;
+- The runner will later gain more complete process supervision, cancellation, output
+  streaming, and Windows process tree cleanup;
+- A missing tool, insufficient permissions, and a non-zero exit code are all returned
+  as explicit run results.
 
-## 8. 持久化策略
+## 8. Persistence Policy
 
-第一批使用应用本地存储保存显示偏好和当前工作区路径：
+The first batch uses application local storage to save display preferences and the
+current workspace paths:
 
 ```text
 atrium.preferences.v1
@@ -513,11 +600,13 @@ atrium.preferences.v1
   projectMeta
 ```
 
-它不写入任何项目仓库。偏好是显示和工作区入口的非事实输入，读取和写入均限制在
-256 KiB；工作区/排除名称列表最多保留 128 项，单项字符串最多 4096 个字符，项目
-元数据最多 2048 项。超过边界的载荷不会替换已有偏好，超过边界的列表项会被忽略，
-避免损坏的本地存储在启动时造成无界解析或状态膨胀。后续再使用应用数据目录下的
-SQLite：
+It never writes to any project repository. Preferences are non-factual input for
+display and workspace entry; reads and writes are both capped at 256 KiB. The
+workspace/excluded name lists keep at most 128 entries, single strings are at most
+4096 characters, and project metadata keeps at most 2048 entries. Payloads beyond
+the boundary never replace existing preferences, and list entries beyond the boundary
+are ignored, so corrupted local storage cannot cause unbounded parsing or state bloat
+at startup. Later comes SQLite under the application data directory:
 
 ```text
 workspace_roots
@@ -530,40 +619,46 @@ run_records
 preferences
 ```
 
-仓库源文件和 Git 不受 Atrium 数据库反向写入。扫描缓存必须可丢弃并重新
-生成；用户手动配置和显示偏好才需要迁移。
+Repository source files and Git are never written back to by the Atrium database.
+The scan cache must remain discardable and regenerable; only user manual
+configuration and display preferences need migration.
 
-## 9. 主题和布局
+## 9. Themes and Layouts
 
-主题只改变设计 token，不改变领域数据：
+Themes change only design tokens, never domain data:
 
 - Deep Ocean
 - Mist Silver
 - Warm Ink
 
-布局只改变数据排列，不增加项目语义：
+Layouts change only data arrangement and add no project semantics:
 
-- Overview：项目列表 + 详情检查器；
-- Platform Matrix：按平台和渠道事实筛选。
+- Overview: project list + detail inspector;
+- Platform Matrix: filtered by platform and channel facts.
 
-Settings 页面提供持久化的主题、布局、语言和工作区扫描设置。项目切换时
-选中高亮不等待扫描完成，右侧检查器显示异步加载骨架，避免首次打开项目阻塞
-整个看板。
+The Settings page provides persistent theme, layout, language, and workspace scan
+settings. When switching projects, the selection highlight does not wait for a scan
+to finish; the inspector on the right shows an async loading skeleton, so opening a
+project for the first time does not block the whole board.
 
-任何未来的 `Now / Next / Later` 都只能作为用户自定义视图或标签，不能成为
-ProjectSnapshot 的固定字段。
+Any future `Now / Next / Later` can only be a user-defined view or label and can
+never become a fixed ProjectSnapshot field.
 
-### 界面语言与诊断文本
+### UI language and diagnostics
 
-界面文案（主题、按钮、标题等 UI chrome）跟随 i18n 的 en/zh 双语；而扫描警告、
-manifest issues、运行错误等后端产生的诊断文本、协议引导报告与 AGENTS.md 托管块
-统一使用英文，作为协议与诊断语言。对接提示词仍提供中英双语版本，但引用的报告
-章节标题保持英文原文。此为有意决策：避免为后端错误串建立 i18n 通道，同时保证
-开发 Agent 无论宿主语言如何读到一致的协议文本。
+UI copy (themes, buttons, headings, and other UI chrome) follows the bilingual
+(en/zh) i18n strings, while backend-produced diagnostics such as scan warnings,
+manifest issues, and run errors, along with protocol guidance reports and the
+AGENTS.md managed block, uniformly use English as the protocol and diagnostics
+language. The integration prompt is still provided in both English and Chinese, but
+the referenced report section headings keep their original English. This is a
+deliberate decision: it avoids building an i18n channel for backend error strings
+and guarantees that a development Agent reads consistent protocol text regardless of
+the host language.
 
-## 10. 演进路线
+## 10. Evolution Roadmap
 
-1. 当前：扫描、Git、协议能力状态、检测器、命令发现、跨项目管理 UI；
-2. 当前批次：多工作区、项目终端/链接入口、声明清理预览和 Git 版本差异；
-3. 后续：SQLite 迁移、产物变化历史和更新日志生成；
-4. 网站同步与发布相关能力作为独立适配器，不进入核心扫描模型。
+1. Current: scanning, Git, protocol capability status, detectors, command discovery, and the cross-project management UI;
+2. Current batch: multiple workspaces, project terminal/link entry points, declared cleanup preview, and Git revision diffs;
+3. Later: SQLite migration, artifact change history, and changelog generation;
+4. Website synchronization and release-related capabilities remain separate adapters and do not enter the core scan model.
