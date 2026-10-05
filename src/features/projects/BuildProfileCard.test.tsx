@@ -200,9 +200,7 @@ describe("build profile card", () => {
         build: [],
       },
       unverifiedActions: ["build"],
-      verificationBlockers: [
-        { action: "build", host: "macos", reason },
-      ],
+      verificationBlockers: [{ action: "build", host: "macos", reason }],
       blockedActions: [{ action: "build", reason }],
     });
 

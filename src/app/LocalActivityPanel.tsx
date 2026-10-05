@@ -43,7 +43,9 @@ export function LocalActivityPanel({
       </div>
       <div className="activity-cards">
         <div className="activity-card">
-          <span className={`activity-pulse ${status.kind === "running" ? "is-running" : ""}`} />
+          <span
+            className={`activity-pulse ${status.kind === "running" ? "is-running" : ""}`}
+          />
           <div>
             <strong>
               {status.kind === "running"

@@ -2,10 +2,7 @@ import type { ProjectSnapshot } from "../../bridge";
 import type { TranslationKey } from "../../i18n";
 
 export type ProtocolCardStatus =
-  | "configured"
-  | "needs-sync"
-  | "needs-update"
-  | "missing";
+  "configured" | "needs-sync" | "needs-update" | "missing";
 
 export interface ProtocolViewModel {
   isReady: boolean;

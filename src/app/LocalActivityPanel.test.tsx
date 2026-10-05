@@ -27,7 +27,9 @@ describe("LocalActivityPanel", () => {
     render(<LocalActivityPanel status={status} onStop={noop} />);
 
     expect(screen.getByText("Scanning workspace…")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Stop" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a runtime error without a stop action", () => {
@@ -42,7 +44,9 @@ describe("LocalActivityPanel", () => {
     expect(
       screen.getByText("Workspace scan did not finish in time"),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Stop" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the ready state when idle", () => {
@@ -51,6 +55,8 @@ describe("LocalActivityPanel", () => {
     render(<LocalActivityPanel status={status} onStop={noop} />);
 
     expect(screen.getByText("Ready")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Stop" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Stop" }),
+    ).not.toBeInTheDocument();
   });
 });

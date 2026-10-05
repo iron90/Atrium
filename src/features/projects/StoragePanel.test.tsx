@@ -64,9 +64,7 @@ describe("storage panel entries disclosure", () => {
       "is-open",
     );
     expect(
-      document.querySelector(
-        ".storage-entries .animated-disclosure-shell",
-      ),
+      document.querySelector(".storage-entries .animated-disclosure-shell"),
     ).toHaveAttribute("aria-hidden", "true");
     expect(screen.getByText("2 entries · 12 B")).toBeInTheDocument();
   });

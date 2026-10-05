@@ -54,7 +54,6 @@ describe("project runner", () => {
       await result.current.stopActiveRun();
     });
     act(() => vi.advanceTimersByTime(700));
-
   });
 
   it("does not register a run that starts after unmount", async () => {
@@ -120,7 +119,7 @@ describe("project runner", () => {
           selectedProject,
           language: "en",
           onError: vi.fn(),
-          }),
+        }),
       { initialProps: { selectedProject: project } },
     );
 

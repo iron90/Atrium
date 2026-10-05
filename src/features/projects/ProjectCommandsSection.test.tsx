@@ -70,9 +70,9 @@ describe("discovered repository commands", () => {
     );
 
     // The list stays mounted behind the collapsed shell, as plain commands.
-    const items = Array.from(
-      document.querySelectorAll(".command-item"),
-    ).map((item) => item.textContent);
+    const items = Array.from(document.querySelectorAll(".command-item")).map(
+      (item) => item.textContent,
+    );
     expect(items).toEqual(["npm run dev", "npm run quality", "npm run build"]);
 
     // The Run/Check/Build vocabulary belongs to the build profile cards;

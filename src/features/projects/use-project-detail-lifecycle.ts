@@ -141,12 +141,7 @@ export function useProjectDetailLifecycle({
         setRefreshingProjectId(null);
       }
     },
-    [
-      inspectProject,
-      onError,
-      onProjectRefreshed,
-      refreshingProjectId,
-    ],
+    [inspectProject, onError, onProjectRefreshed, refreshingProjectId],
   );
 
   const updateInspectorProject = useCallback(

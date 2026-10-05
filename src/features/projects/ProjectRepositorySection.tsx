@@ -181,7 +181,10 @@ export function ProjectRepositorySection({
                       onClick={() => setBranchMenuOpen((open) => !open)}
                     >
                       <span className="branch-picker-name">{viewing}</span>
-                      <span className="branch-picker-caret" aria-hidden="true" />
+                      <span
+                        className="branch-picker-caret"
+                        aria-hidden="true"
+                      />
                     </button>
                   );
                 })()}

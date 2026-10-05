@@ -125,49 +125,49 @@ export function ProjectRunHistorySection({
         ) : error ? (
           <p className="empty-copy">{error}</p>
         ) : entries.length ? (
-        <ul className="run-history-list">
-          {entries.map((record) => (
-            <li className="run-history-row" key={record.runId}>
-              <div className="run-history-meta">
-                <span className={`run-status is-${record.status}`}>
-                  {runStatusLabel(record.status, t)}
-                </span>
-                <code>{record.displayCommand}</code>
-                <time dateTime={new Date(record.finishedAt).toISOString()}>
-                  {formatRelative(record.finishedAt, language)}
-                </time>
-                <span className="run-history-detail">
-                  {record.exitCode === null
-                    ? `${Math.round(record.durationMs / 1000)}s`
-                    : `${fill(t("exit"), "code", String(record.exitCode))} · ${Math.round(record.durationMs / 1000)}s`}
-                </span>
-              </div>
-              <div className="run-history-actions">
-                <button
-                  className="text-button"
-                  type="button"
-                  onClick={() => void handleCopyLog(record)}
-                >
-                  {copiedRunId === record.runId
-                    ? t("runLogCopied")
-                    : copyFailedRunId === record.runId
-                      ? t("copyFailed")
-                      : t("copyRunLog")}
-                </button>
-                <button
-                  className="text-button"
-                  type="button"
-                  onClick={() => void handleOpenLog(record.runId)}
-                >
-                  {t("openRunLog")}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="empty-copy">{t("noRunHistory")}</p>
-      )}
+          <ul className="run-history-list">
+            {entries.map((record) => (
+              <li className="run-history-row" key={record.runId}>
+                <div className="run-history-meta">
+                  <span className={`run-status is-${record.status}`}>
+                    {runStatusLabel(record.status, t)}
+                  </span>
+                  <code>{record.displayCommand}</code>
+                  <time dateTime={new Date(record.finishedAt).toISOString()}>
+                    {formatRelative(record.finishedAt, language)}
+                  </time>
+                  <span className="run-history-detail">
+                    {record.exitCode === null
+                      ? `${Math.round(record.durationMs / 1000)}s`
+                      : `${fill(t("exit"), "code", String(record.exitCode))} · ${Math.round(record.durationMs / 1000)}s`}
+                  </span>
+                </div>
+                <div className="run-history-actions">
+                  <button
+                    className="text-button"
+                    type="button"
+                    onClick={() => void handleCopyLog(record)}
+                  >
+                    {copiedRunId === record.runId
+                      ? t("runLogCopied")
+                      : copyFailedRunId === record.runId
+                        ? t("copyFailed")
+                        : t("copyRunLog")}
+                  </button>
+                  <button
+                    className="text-button"
+                    type="button"
+                    onClick={() => void handleOpenLog(record.runId)}
+                  >
+                    {t("openRunLog")}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="empty-copy">{t("noRunHistory")}</p>
+        )}
       </AnimatedDisclosure>
     </section>
   );
