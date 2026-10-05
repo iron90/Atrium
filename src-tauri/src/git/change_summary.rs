@@ -176,13 +176,26 @@ mod tests {
     use std::fs;
     use std::process::Command;
 
+    fn git_command() -> Command {
+        // The git-environment isolation test mutates process-wide GIT_*
+        // variables while tests run in parallel; fixture git calls must not
+        // inherit them.
+        let mut command = Command::new("git");
+        for (variable, _) in std::env::vars_os() {
+            if variable.to_string_lossy().starts_with("GIT_") {
+                command.env_remove(&variable);
+            }
+        }
+        command
+    }
+
     fn init_repo(name: &str) -> std::path::PathBuf {
         let root =
             std::env::temp_dir().join(format!("atrium-git-summary-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).expect("create fixture repo");
         let git = |args: &[&str]| {
-            let status = Command::new("git")
+            let status = git_command()
                 .arg("-C")
                 .arg(&root)
                 .args(args)
@@ -267,7 +280,7 @@ mod tests {
         fs::create_dir_all(root.join("src")).expect("create src");
         fs::write(root.join("src/old.txt"), "kept\n").expect("write old");
         let git = |args: &[&str]| {
-            assert!(Command::new("git")
+            assert!(git_command()
                 .arg("-C")
                 .arg(&root)
                 .args(args)

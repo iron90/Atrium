@@ -182,8 +182,21 @@ mod tests {
     use std::path::Path;
     use std::process::Command;
 
+    fn git_command() -> Command {
+        // The git-environment isolation test mutates process-wide GIT_*
+        // variables while tests run in parallel; fixture git calls must not
+        // inherit them.
+        let mut command = Command::new("git");
+        for (variable, _) in std::env::vars_os() {
+            if variable.to_string_lossy().starts_with("GIT_") {
+                command.env_remove(&variable);
+            }
+        }
+        command
+    }
+
     fn git(root: &Path, args: &[&str]) {
-        let status = Command::new("git")
+        let status = git_command()
             .arg("-C")
             .arg(root)
             .args(args)
