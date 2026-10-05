@@ -122,7 +122,9 @@ fn resolve_workspace_entry(
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_workspace_entry, scan_workspace_with_exclusions, ScanCache};
+    use super::resolve_workspace_entry;
+    #[cfg(unix)]
+    use super::{scan_workspace_with_exclusions, ScanCache};
     use std::path::Path;
 
     #[test]

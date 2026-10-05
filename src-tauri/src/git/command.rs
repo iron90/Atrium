@@ -156,10 +156,14 @@ fn read_limited<R: Read>(mut reader: R, limit: usize) -> io::Result<LimitedOutpu
 
 #[cfg(test)]
 mod tests {
-    use super::{read_limited, run_git, wait_with_timeout};
+    #[cfg(unix)]
+    use super::wait_with_timeout;
+    use super::{read_limited, run_git};
     use std::fs;
     use std::io::Cursor;
+    #[cfg(unix)]
     use std::process::Command;
+    #[cfg(unix)]
     use std::time::{Duration, Instant};
 
     #[test]

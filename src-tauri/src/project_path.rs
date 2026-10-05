@@ -260,8 +260,10 @@ fn classify_path_error(error: std::io::Error) -> ExistingProjectPathError {
 mod tests {
     use super::{
         canonical_project_root, project_entry_exists, read_project_text_file,
-        resolve_existing_path_inside_project, write_project_text_file, ExistingProjectPathError,
+        write_project_text_file,
     };
+    #[cfg(unix)]
+    use super::{resolve_existing_path_inside_project, ExistingProjectPathError};
     use std::fs;
 
     fn fixture_root(name: &str) -> std::path::PathBuf {

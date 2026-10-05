@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+#[cfg(unix)]
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
