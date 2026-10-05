@@ -866,6 +866,9 @@ reason = "Conflicts with the verification record."
         let current = HostOs::current()
             .expect("test host should be supported")
             .as_str();
+        // The not-in-host_requirements case must name a host the fixture does
+        // not declare; on linux "linux" would be the declared host itself.
+        let absent_host = if current == "linux" { "macos" } else { "linux" };
         fs::write(
             root.join(".atrium/manifest.toml"),
             format!(
@@ -895,7 +898,7 @@ reason = "wrong action"
 
 [[build_profiles.verification_blockers]]
 action = "build"
-host = "linux"
+host = "{absent_host}"
 reason = "host not in host_requirements"
 
 [[build_profiles.verification_blockers]]
