@@ -82,8 +82,6 @@ format/test/clippy 门禁——与 CI 在每次推送时检查的内容一致。
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构与持久化边界。
 - [docs/ATRIUM_PROTOCOL.md](docs/ATRIUM_PROTOCOL.md) —— 项目接入看板的契约文档。
-- [docs/INTERACTION_STANDARDS.md](docs/INTERACTION_STANDARDS.md) —— 交互标准。
-- [docs/TECHNOLOGY_OPTIONS.md](docs/TECHNOLOGY_OPTIONS.md) —— 技术选型决策记录，只记录当时的备选与取舍，不构成更换技术栈的指令。
 - [AGENTS.md](AGENTS.md) —— 面向编码 Agent 的实现护栏。
 
 ## 许可证

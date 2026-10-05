@@ -86,8 +86,6 @@ enforces on every push.
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — architecture and persistence boundaries.
 - [docs/ATRIUM_PROTOCOL.md](docs/ATRIUM_PROTOCOL.md) — the integration contract a project adopts so the board can read it.
-- [docs/INTERACTION_STANDARDS.md](docs/INTERACTION_STANDARDS.md) — interaction standards.
-- [docs/TECHNOLOGY_OPTIONS.md](docs/TECHNOLOGY_OPTIONS.md) — the technology decision record. It documents the alternatives considered before implementation; it is not an instruction to change the selected stack.
 - [AGENTS.md](AGENTS.md) — implementation guardrails for coding agents.
 
 ## License

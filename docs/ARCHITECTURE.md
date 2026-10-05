@@ -43,10 +43,8 @@ Phase-one non-goals:
 | Project protocol    | `.atrium/manifest.toml` (optional)              | Lets projects proactively declare platform, channel, and command bindings; projects without configuration are unaffected |
 
 Tauri 2 + React/TypeScript + Rust is settled as Atrium's implementation stack. The
-comparison of candidate options and the rationale for the trade-offs are kept in
-[TECHNOLOGY_OPTIONS.md](TECHNOLOGY_OPTIONS.md) so the architecture decisions can be
-explained once the project is open-sourced in the future; they are no longer open items
-for phase-one implementation.
+candidate options and their trade-offs were evaluated before implementation; they are
+settled decisions, no longer open items for phase-one.
 
 ## 3. Layered Structure
 
