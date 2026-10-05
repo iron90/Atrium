@@ -49,9 +49,9 @@ pub async fn open_project_terminal_command(
                 .map(|_| ())
                 .map_err(|error| format!("Cannot open configured terminal: {error}"));
         }
-        let root_string = root.to_string_lossy().into_owned();
         #[cfg(target_os = "macos")]
         {
+            let root_string = root.to_string_lossy().into_owned();
             return Command::new("open")
                 .args(["-a", "Terminal", &root_string])
                 .spawn()
@@ -60,6 +60,7 @@ pub async fn open_project_terminal_command(
         }
         #[cfg(target_os = "windows")]
         {
+            let root_string = root.to_string_lossy().into_owned();
             return Command::new("wt.exe")
                 .args(["-d", &root_string])
                 .spawn()
