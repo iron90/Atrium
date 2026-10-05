@@ -241,6 +241,7 @@ fn action_label(action: CommandKind) -> &'static str {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn parse_verification_blockers(
     declarations: &[ManifestVerificationBlocker],
     run_command_id: &Option<String>,

@@ -127,7 +127,7 @@ fn read_references(project_path: &Path) -> Vec<GitReference> {
             }
             Some(GitReference {
                 name: fields[0].to_string(),
-                kind: kind.clone(),
+                kind,
                 sha: Some(fields[1].to_string()),
             })
         }));
