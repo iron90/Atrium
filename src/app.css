@@ -345,23 +345,33 @@ button[aria-busy="true"] {
   position: absolute;
   z-index: 5;
   top: 0;
-  right: 7px;
+  right: 0;
   bottom: 0;
-  width: 6px;
-  pointer-events: none;
+  width: 14px;
+  /* The strip intercepts pointer events for dragging; wheel scrolling over it
+     is forwarded to the main column in App. */
+  pointer-events: auto;
 }
 .main-scrollbar-thumb {
   position: absolute;
   top: 0;
-  right: 0;
-  left: 0;
+  right: 4px;
+  left: 4px;
   display: block;
   min-height: 28px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 58%, transparent);
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
   opacity: 0.72;
+  cursor: grab;
   transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.main-scrollbar-thumb:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+.main-scrollbar:hover .main-scrollbar-thumb {
+  opacity: 1;
 }
 .page-transition {
   position: relative;

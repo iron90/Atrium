@@ -57,6 +57,47 @@ import "./app.css";
 
 const EMPTY_OUTPUT_LINES: string[] = [];
 
+// Custom scrollbar geometry shared by the thumb renderer and the drag
+// handlers; the track is inset from the shell edges on both ends.
+const MAIN_SCROLL_TRACK_INSET = 7;
+
+const clampScrollTopValue = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+function mainScrollTrackMetrics(mainColumn: HTMLElement, thumbHeight: number) {
+  const viewportHeight = mainColumn.clientHeight;
+  const contentHeight = mainColumn.scrollHeight;
+  const trackHeight = Math.max(
+    0,
+    viewportHeight - MAIN_SCROLL_TRACK_INSET * 2,
+  );
+  const travel = Math.max(1, trackHeight - thumbHeight);
+  const scrollRange = Math.max(1, contentHeight - viewportHeight);
+  return {
+    travel,
+    scrollRange,
+    minTop: MAIN_SCROLL_TRACK_INSET,
+    maxTop: MAIN_SCROLL_TRACK_INSET + travel,
+  };
+}
+
+function scrollTopForThumbTop(
+  mainColumn: HTMLElement,
+  thumbTop: number,
+  thumbHeight: number,
+) {
+  const { travel, scrollRange, minTop } = mainScrollTrackMetrics(
+    mainColumn,
+    thumbHeight,
+  );
+  const clamped = clampScrollTopValue(
+    thumbTop,
+    minTop,
+    minTop + travel,
+  );
+  return ((clamped - minTop) / travel) * scrollRange;
+}
+
 export default function App() {
   const nativeRuntime = isTauriRuntime();
   const [preferences] = useState<LocalPreferences>(readLocalPreferences);
@@ -105,6 +146,10 @@ export default function App() {
     top: 0,
     height: 0,
   });
+  const scrollbarDragRef = useRef<{
+    startY: number;
+    startTop: number;
+  } | null>(null);
 
   const updateMainScrollThumb = useCallback(() => {
     const mainColumn = mainColumnRef.current;
@@ -112,8 +157,10 @@ export default function App() {
 
     const viewportHeight = mainColumn.clientHeight;
     const contentHeight = mainColumn.scrollHeight;
-    const trackInset = 7;
-    const trackHeight = Math.max(0, viewportHeight - trackInset * 2);
+    const trackHeight = Math.max(
+      0,
+      viewportHeight - MAIN_SCROLL_TRACK_INSET * 2,
+    );
 
     if (contentHeight <= viewportHeight + 1 || trackHeight <= 0) {
       setMainScrollThumb((current) =>
@@ -128,7 +175,8 @@ export default function App() {
     );
     const travel = Math.max(0, trackHeight - height);
     const scrollRange = Math.max(1, contentHeight - viewportHeight);
-    const top = trackInset + (mainColumn.scrollTop / scrollRange) * travel;
+    const top =
+      MAIN_SCROLL_TRACK_INSET + (mainColumn.scrollTop / scrollRange) * travel;
 
     setMainScrollThumb((current) =>
       current.visible &&
@@ -628,7 +676,72 @@ export default function App() {
               </PageTransition>
             </main>
             {mainScrollThumb.visible ? (
-              <div className="main-scrollbar" aria-hidden="true">
+              <div
+                className="main-scrollbar"
+                aria-hidden="true"
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
+                  const mainColumn = mainColumnRef.current;
+                  if (!mainColumn) return;
+                  event.preventDefault();
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  if (event.target !== event.currentTarget) {
+                    // Thumb: drag from where the pointer grabbed it.
+                    scrollbarDragRef.current = {
+                      startY: event.clientY,
+                      startTop: mainScrollThumb.top,
+                    };
+                    return;
+                  }
+                  // Track: jump so the thumb centers under the pointer.
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  const { travel, minTop } = mainScrollTrackMetrics(
+                    mainColumn,
+                    mainScrollThumb.height,
+                  );
+                  const desiredTop = clampScrollTopValue(
+                    event.clientY - rect.top - mainScrollThumb.height / 2,
+                    minTop,
+                    minTop + travel,
+                  );
+                  mainColumn.scrollTop = scrollTopForThumbTop(
+                    mainColumn,
+                    desiredTop,
+                    mainScrollThumb.height,
+                  );
+                  scrollbarDragRef.current = {
+                    startY: event.clientY,
+                    startTop: desiredTop,
+                  };
+                }}
+                onPointerMove={(event) => {
+                  const drag = scrollbarDragRef.current;
+                  const mainColumn = mainColumnRef.current;
+                  if (!drag || !mainColumn) return;
+                  const { travel, scrollRange, minTop } = mainScrollTrackMetrics(
+                    mainColumn,
+                    mainScrollThumb.height,
+                  );
+                  const top = clampScrollTopValue(
+                    drag.startTop + (event.clientY - drag.startY),
+                    minTop,
+                    minTop + travel,
+                  );
+                  mainColumn.scrollTop = ((top - minTop) / travel) * scrollRange;
+                }}
+                onPointerUp={() => {
+                  scrollbarDragRef.current = null;
+                }}
+                onPointerCancel={() => {
+                  scrollbarDragRef.current = null;
+                }}
+                onWheel={(event) => {
+                  // The track intercepts pointer events, so wheel scrolling
+                  // over it must be forwarded to the main column manually.
+                  const mainColumn = mainColumnRef.current;
+                  if (mainColumn) mainColumn.scrollTop += event.deltaY;
+                }}
+              >
                 <span
                   className="main-scrollbar-thumb"
                   style={{
