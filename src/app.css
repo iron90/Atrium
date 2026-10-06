@@ -838,6 +838,12 @@ button[aria-busy="true"] {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* The project list stacks the branch line above left-aligned git facts; only
+   the inspector's label-value row wants it on the right. */
+.git-cell .branch-line {
+  justify-content: flex-start;
+}
 .branch-line-glyph {
   color: var(--accent);
 }
