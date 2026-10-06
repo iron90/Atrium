@@ -45,6 +45,7 @@ const baseProps = () => ({
   update: makeUpdateController(),
   autoCheckUpdates: true,
   onAutoCheckUpdatesChange: vi.fn(),
+  inAppInstallSupported: true,
 });
 
 describe("settings detail-card switches", () => {
@@ -102,6 +103,28 @@ describe("settings detail-card switches", () => {
     expect(update.openReleasePage).toHaveBeenCalledWith(
       "https://github.com/iron90/Atrium/releases/latest",
     );
+  });
+
+  it("falls back to the download page where in-app install is unsupported", () => {
+    const update = makeUpdateController({
+      phase: "available",
+      info: { version: "0.2.0", notes: "", date: "" },
+    });
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        update={update}
+        inAppInstallSupported={false}
+      />,
+    );
+
+    expect(screen.getByText("Update available: 0.2.0")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Update now" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open download page" }),
+    ).toBeInTheDocument();
   });
 
   it("toggles the startup update check", () => {

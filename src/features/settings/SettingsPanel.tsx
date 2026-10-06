@@ -48,6 +48,7 @@ export const SettingsPanel = memo(function SettingsPanel({
   update: appUpdate,
   autoCheckUpdates,
   onAutoCheckUpdatesChange,
+  inAppInstallSupported,
 }: {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
@@ -67,6 +68,7 @@ export const SettingsPanel = memo(function SettingsPanel({
   update: AppUpdateController;
   autoCheckUpdates: boolean;
   onAutoCheckUpdatesChange: (enabled: boolean) => void;
+  inAppInstallSupported: boolean;
 }) {
   const { t } = useI18n();
   const { state: updateState } = appUpdate;
@@ -316,13 +318,15 @@ export const SettingsPanel = memo(function SettingsPanel({
             ) : null}
             {updateState.phase === "available" ? (
               <>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => void appUpdate.install()}
-                >
-                  {t("installUpdate")}
-                </button>
+                {inAppInstallSupported ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => void appUpdate.install()}
+                  >
+                    {t("installUpdate")}
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="secondary-button"

@@ -87,6 +87,10 @@ export default function App() {
     preferences.autoCheckUpdates ?? true,
   );
   const appUpdate = useAppUpdate(autoCheckUpdates);
+  // The macOS release builds are not signed with a Developer ID certificate,
+  // so replacing the bundle in-app cannot be verified by Gatekeeper; the card
+  // falls back to the download page there until signing lands in CI.
+  const inAppInstallSupported = !navigator.userAgent.includes("Mac OS X");
   const { projectMeta, ensureProjectMeta, updateProjectMeta } =
     useProjectMetaState(preferences.projectMeta ?? {});
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
@@ -616,6 +620,7 @@ export default function App() {
                           }
                           appVersion={__APP_VERSION__}
                           update={appUpdate}
+                          inAppInstallSupported={inAppInstallSupported}
                           autoCheckUpdates={autoCheckUpdates}
                           onAutoCheckUpdatesChange={setAutoCheckUpdates}
                         />
