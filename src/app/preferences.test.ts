@@ -16,7 +16,6 @@ describe("local preferences", () => {
     const preferences = parseLocalPreferences(
       JSON.stringify({
         theme: "warm-ink",
-        layout: "matrix",
         language: "zh",
         rootPath: " /workspace ",
         workspaces: ["/one", "", 42],
@@ -30,7 +29,6 @@ describe("local preferences", () => {
 
     expect(preferences).toEqual({
       theme: "warm-ink",
-      layout: "matrix",
       language: "zh",
       rootPath: " /workspace ",
       workspaces: ["/one"],
@@ -84,7 +82,6 @@ describe("local preferences", () => {
   it("round-trips preferences through the browser storage boundary", () => {
     persistLocalPreferences({
       theme: "mist-silver",
-      layout: "overview",
       language: "en",
       rootPath: "/workspace",
     });
@@ -92,7 +89,6 @@ describe("local preferences", () => {
     expect(window.localStorage.getItem(PREFERENCES_STORAGE_KEY)).not.toBeNull();
     expect(readLocalPreferences()).toEqual({
       theme: "mist-silver",
-      layout: "overview",
       language: "en",
       rootPath: "/workspace",
     });

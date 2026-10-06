@@ -4,12 +4,7 @@ import {
   isInspectorSectionId,
   type InspectorSectionId,
 } from "../features/projects/inspector-section-visibility";
-import {
-  isLayoutId,
-  isThemeId,
-  type LayoutId,
-  type ThemeId,
-} from "../features/settings/model";
+import { isThemeId, type ThemeId } from "../features/settings/model";
 
 export const PREFERENCES_STORAGE_KEY = "atrium.preferences.v1";
 export const MAX_PREFERENCES_BYTES = 256 * 1024;
@@ -20,7 +15,6 @@ const MAX_PROJECT_META_ENTRIES = 2048;
 
 export interface LocalPreferences {
   theme?: ThemeId;
-  layout?: LayoutId;
   language?: Language;
   rootPath?: string;
   workspaces?: string[];
@@ -85,7 +79,6 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
     const preferences = value as Record<string, unknown>;
     return {
       theme: isThemeId(preferences.theme) ? preferences.theme : undefined,
-      layout: isLayoutId(preferences.layout) ? preferences.layout : undefined,
       language: isLanguage(preferences.language)
         ? preferences.language
         : undefined,

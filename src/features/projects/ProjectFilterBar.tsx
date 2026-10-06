@@ -1,5 +1,6 @@
 import type { Facet } from "../../bridge";
 import { useI18n } from "../../i18n";
+import { DropdownSelect } from "../../shared/DropdownSelect";
 import { EyeIcon } from "./ProjectActionIcons";
 import type { ProjectSort } from "./project-list-model";
 
@@ -41,42 +42,41 @@ export function ProjectFilterBar({
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      <select
-        className="toolbar-control"
+      <DropdownSelect
+        ariaLabel={t("allPlatforms")}
         value={platformFilter}
-        onChange={(event) => setPlatformFilter(event.target.value)}
-      >
-        <option value="all">{t("allPlatforms")}</option>
-        {filterOptions.platforms.map((facet) => (
-          <option key={facet.key} value={facet.key}>
-            {facet.label}
-          </option>
-        ))}
-      </select>
-      <select
-        className="toolbar-control"
+        options={[
+          { value: "all", label: t("allPlatforms") },
+          ...filterOptions.platforms.map((facet) => ({
+            value: facet.key,
+            label: facet.label,
+          })),
+        ]}
+        onChange={setPlatformFilter}
+      />
+      <DropdownSelect
+        ariaLabel={t("allChannels")}
         value={channelFilter}
-        onChange={(event) => setChannelFilter(event.target.value)}
-      >
-        <option value="all">{t("allChannels")}</option>
-        {filterOptions.channels.map((facet) => (
-          <option key={facet.key} value={facet.key}>
-            {facet.label}
-          </option>
-        ))}
-      </select>
-      <select
-        className="toolbar-control"
+        options={[
+          { value: "all", label: t("allChannels") },
+          ...filterOptions.channels.map((facet) => ({
+            value: facet.key,
+            label: facet.label,
+          })),
+        ]}
+        onChange={setChannelFilter}
+      />
+      <DropdownSelect
+        ariaLabel={t("sortName")}
         value={projectSort}
-        onChange={(event) =>
-          setProjectSort(event.target.value as typeof projectSort)
-        }
-      >
-        <option value="modified">{t("sortModified")}</option>
-        <option value="recent">{t("sortRecentModified")}</option>
-        <option value="storage">{t("sortStorage")}</option>
-        <option value="name">{t("sortName")}</option>
-      </select>
+        options={[
+          { value: "modified", label: t("sortModified") },
+          { value: "recent", label: t("sortRecentModified") },
+          { value: "storage", label: t("sortStorage") },
+          { value: "name", label: t("sortName") },
+        ]}
+        onChange={(value) => setProjectSort(value as ProjectSort)}
+      />
       <button
         type="button"
         className={`toolbar-control ${showHidden ? "is-toggle-active" : ""}`}

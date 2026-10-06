@@ -32,7 +32,7 @@ import {
 } from "./features/runs/run-stream-context";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { useAppUpdate } from "./features/settings/use-app-update";
-import { type LayoutId, type ThemeId } from "./features/settings/model";
+import { type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import { errorMessage } from "./shared/errors";
@@ -69,9 +69,6 @@ export default function App() {
       : [];
   const [theme, setTheme] = useState<ThemeId>(
     preferences.theme ?? "deep-ocean",
-  );
-  const [layout, setLayout] = useState<LayoutId>(
-    preferences.layout ?? "overview",
   );
   const [language, setLanguage] = useState<Language>(
     preferences.language ?? "en",
@@ -275,7 +272,6 @@ export default function App() {
   useEffect(() => {
     persistLocalPreferences({
       theme,
-      layout,
       language,
       rootPath,
       workspaces: workspacePaths,
@@ -289,7 +285,6 @@ export default function App() {
     excludeNames,
     hiddenInspectorSections,
     language,
-    layout,
     projectMeta,
     rootPath,
     theme,
@@ -356,16 +351,6 @@ export default function App() {
         });
     },
     [],
-  );
-
-  const handleLayoutChange = useCallback(
-    (nextLayout: LayoutId) => {
-      setLayout(nextLayout);
-      if (activePage !== "settings") {
-        setActivePage("projects");
-      }
-    },
-    [activePage],
   );
 
   const headingForPage = (page: PageId) =>
@@ -576,7 +561,7 @@ export default function App() {
   return (
     <I18nProvider value={i18nValue}>
       <RunStreamContext.Provider value={runStreamValue}>
-        <div className="app-shell" data-theme={theme} data-layout={layout}>
+        <div className="app-shell" data-theme={theme}>
           <AppSidebar
             activePage={activePage}
             onPageChange={setActivePage}
@@ -604,8 +589,6 @@ export default function App() {
                         <SettingsPanel
                           theme={theme}
                           setTheme={setTheme}
-                          layout={layout}
-                          setLayout={handleLayoutChange}
                           language={language}
                           setLanguage={setLanguage}
                           workspacePaths={workspacePaths}
@@ -633,7 +616,6 @@ export default function App() {
                         />
                       ) : (
                         <ProjectsPage
-                          layout={layout}
                           snapshot={snapshot}
                           visibleProjects={visibleProjects}
                           projectList={projectList}

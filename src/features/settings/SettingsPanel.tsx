@@ -1,9 +1,10 @@
 import { memo } from "react";
 import { bridge, isTauriRuntime } from "../../bridge";
+import { DropdownSelect } from "../../shared/DropdownSelect";
 import { useI18n } from "../../i18n";
 import type { Language, TranslationKey } from "../../i18n";
 import { fill, formatTime } from "../../shared/format";
-import type { LayoutId, ThemeId } from "./model";
+import type { ThemeId } from "./model";
 import type { AppUpdateController } from "./use-app-update";
 
 // Shown when no release metadata is available to hand the user a URL.
@@ -32,8 +33,6 @@ function resolveWorkspaceDirectory(): Promise<string | null> {
 export const SettingsPanel = memo(function SettingsPanel({
   theme,
   setTheme,
-  layout,
-  setLayout,
   language,
   setLanguage,
   workspacePaths,
@@ -52,8 +51,6 @@ export const SettingsPanel = memo(function SettingsPanel({
 }: {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
-  layout: LayoutId;
-  setLayout: (layout: LayoutId) => void;
   language: Language;
   setLanguage: (language: Language) => void;
   workspacePaths: string[];
@@ -81,41 +78,31 @@ export const SettingsPanel = memo(function SettingsPanel({
           <p>{t("appearanceDescription")}</p>
           <label className="settings-control" htmlFor="settings-theme">
             <span>{t("theme")}</span>
-            <select
-              className="form-control"
-              id="settings-theme"
-              value={theme}
-              onChange={(event) => setTheme(event.target.value as ThemeId)}
-            >
-              <option value="deep-ocean">{t("deepOcean")}</option>
-              <option value="mist-silver">{t("mistSilver")}</option>
-              <option value="warm-ink">{t("warmInk")}</option>
-            </select>
           </label>
-          <label className="settings-control" htmlFor="settings-layout">
-            <span>{t("layout")}</span>
-            <select
-              className="form-control"
-              id="settings-layout"
-              value={layout}
-              onChange={(event) => setLayout(event.target.value as LayoutId)}
-            >
-              <option value="overview">{t("overview")}</option>
-              <option value="matrix">{t("platformMatrix")}</option>
-            </select>
-          </label>
+          <DropdownSelect
+            id="settings-theme"
+            ariaLabel={t("theme")}
+            value={theme}
+            options={[
+              { value: "deep-ocean", label: t("deepOcean") },
+              { value: "mist-silver", label: t("mistSilver") },
+              { value: "warm-ink", label: t("warmInk") },
+            ]}
+            onChange={(value) => setTheme(value as ThemeId)}
+          />
           <label className="settings-control" htmlFor="settings-language">
             <span>{t("language")}</span>
-            <select
-              className="form-control"
-              id="settings-language"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value as Language)}
-            >
-              <option value="en">{t("languageEnglish")}</option>
-              <option value="zh">{t("languageChinese")}</option>
-            </select>
           </label>
+          <DropdownSelect
+            id="settings-language"
+            ariaLabel={t("language")}
+            value={language}
+            options={[
+              { value: "en", label: t("languageEnglish") },
+              { value: "zh", label: t("languageChinese") },
+            ]}
+            onChange={(value) => setLanguage(value as Language)}
+          />
         </section>
 
         <section className="settings-card">
@@ -289,10 +276,7 @@ export const SettingsPanel = memo(function SettingsPanel({
               {fill(
                 t("lastChecked"),
                 "time",
-                formatTime(
-                  Math.floor(updateState.lastCheckedAt / 1000),
-                  language,
-                ),
+                formatTime(updateState.lastCheckedAt, language),
               )}
             </p>
           ) : null}

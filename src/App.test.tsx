@@ -45,7 +45,7 @@ describe("Atrium board", () => {
     expect(projectFilters?.children).toHaveLength(5);
     expect(
       Array.from(projectFilters?.children ?? []).every((control) =>
-        control.classList.contains("toolbar-control"),
+        control.matches("input, .dropdown-select, button"),
       ),
     ).toBe(true);
     expect(
@@ -86,25 +86,18 @@ describe("Atrium board", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("switches visual modes without changing the scanned data", () => {
+  it("switches the theme through the shared dropdown", () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    fireEvent.change(document.getElementById("settings-theme")!, {
-      target: { value: "warm-ink" },
-    });
-    fireEvent.change(document.getElementById("settings-layout")!, {
-      target: { value: "matrix" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
+    fireEvent.click(screen.getByRole("option", { name: "Warm Ink" }));
     fireEvent.click(screen.getByRole("button", { name: "Projects" }));
 
     expect(document.querySelector(".app-shell")).toHaveAttribute(
       "data-theme",
       "warm-ink",
     );
-    expect(
-      screen.getByRole("heading", { name: "Platform matrix" }),
-    ).toBeInTheDocument();
     expect(screen.getAllByText("SampleForge").length).toBeGreaterThan(0);
   });
 
@@ -156,9 +149,8 @@ describe("Atrium board", () => {
     ).not.toBeInTheDocument();
     expect(document.querySelector(".settings-card .eyebrow")).toBeNull();
 
-    fireEvent.change(document.getElementById("settings-language")!, {
-      target: { value: "zh" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    fireEvent.click(screen.getByRole("option", { name: "中文" }));
 
     expect(
       screen.getByRole("heading", { name: "设置", level: 1 }),
@@ -243,15 +235,10 @@ describe("Atrium board", () => {
     const firstRender = render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-    fireEvent.change(document.getElementById("settings-theme")!, {
-      target: { value: "warm-ink" },
-    });
-    fireEvent.change(document.getElementById("settings-layout")!, {
-      target: { value: "matrix" },
-    });
-    fireEvent.change(document.getElementById("settings-language")!, {
-      target: { value: "zh" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Theme" }));
+    fireEvent.click(screen.getByRole("option", { name: "Warm Ink" }));
+    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    fireEvent.click(screen.getByRole("option", { name: "中文" }));
     firstRender.unmount();
 
     render(<App />);
@@ -259,10 +246,6 @@ describe("Atrium board", () => {
     expect(document.querySelector(".app-shell")).toHaveAttribute(
       "data-theme",
       "warm-ink",
-    );
-    expect(document.querySelector(".app-shell")).toHaveAttribute(
-      "data-layout",
-      "matrix",
     );
     expect(
       screen.getByRole("heading", { name: "把项目，都放在视野里。", level: 1 }),
@@ -284,9 +267,8 @@ describe("Atrium board", () => {
       "SampleForge",
     );
 
-    fireEvent.change(screen.getByDisplayValue("All platforms"), {
-      target: { value: "windows" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "All platforms" }));
+    fireEvent.click(screen.getByRole("option", { name: "Windows" }));
     expect(screen.getAllByText("SnapCutout").length).toBeGreaterThan(0);
   });
 

@@ -2,8 +2,6 @@ import { memo } from "react";
 import type { ProjectSnapshot, WorkspaceSnapshot } from "../bridge";
 import { useI18n } from "../i18n";
 import { fill, formatTime } from "../shared/format";
-import type { LayoutId } from "../features/settings/model";
-import { PlatformMatrix } from "../features/projects/PlatformMatrix";
 import {
   ProjectInspector,
   type ProjectInspectorProps,
@@ -14,7 +12,6 @@ import {
 } from "../features/projects/ProjectList";
 
 export interface ProjectsPageProps {
-  layout: LayoutId;
   snapshot: WorkspaceSnapshot;
   visibleProjects: ProjectSnapshot[];
   projectList: ProjectListProps;
@@ -22,7 +19,6 @@ export interface ProjectsPageProps {
 }
 
 export const ProjectsPage = memo(function ProjectsPage({
-  layout,
   snapshot,
   visibleProjects,
   projectList,
@@ -79,14 +75,7 @@ export const ProjectsPage = memo(function ProjectsPage({
           </div>
         ) : null}
 
-        {layout === "matrix" ? (
-          <PlatformMatrix
-            projects={visibleProjects}
-            onSelect={projectList.onSelect}
-          />
-        ) : (
-          <ProjectList {...projectList} />
-        )}
+        <ProjectList {...projectList} />
       </div>
 
       <ProjectInspector {...inspector} />

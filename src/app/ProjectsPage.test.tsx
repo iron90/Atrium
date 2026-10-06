@@ -63,7 +63,6 @@ describe("ProjectsPage scan warnings", () => {
 
     render(
       <ProjectsPage
-        layout="overview"
         snapshot={snapshot}
         visibleProjects={snapshot.projects}
         projectList={projectList}
@@ -82,7 +81,6 @@ describe("ProjectsPage scan warnings", () => {
 
     render(
       <ProjectsPage
-        layout="overview"
         snapshot={snapshot}
         visibleProjects={snapshot.projects}
         projectList={projectList}

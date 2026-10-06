@@ -543,8 +543,7 @@ button[aria-busy="true"] {
   gap: 18px;
   margin: 4px 3px 15px;
 }
-.board-summary h2,
-.matrix-intro h2 {
+.board-summary h2 {
   margin: 7px 0 0;
   font-size: 19px;
   letter-spacing: -0.02em;
@@ -650,7 +649,7 @@ button[aria-busy="true"] {
   margin: 0 0 9px;
 }
 .project-filters > input,
-.project-filters > select,
+.project-filters > .dropdown-select,
 .project-filters > button {
   display: block;
   box-sizing: border-box;
@@ -683,10 +682,84 @@ button[aria-busy="true"] {
   width: 18px;
   height: 18px;
 }
+.dropdown-select {
+  position: relative;
+  min-width: 0;
+}
+.dropdown-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  color: var(--text);
+  background: var(--panel-soft);
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.dropdown-select-trigger:hover,
+.dropdown-select-trigger:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  outline: none;
+}
+.dropdown-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dropdown-select-caret {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid var(--muted);
+  border-bottom: 1px solid var(--muted);
+  transform: rotate(45deg) translateY(-1px);
+}
+.dropdown-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--bg) 32%, transparent);
+}
+.dropdown-select-option {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.dropdown-select-option:hover,
+.dropdown-select-option:focus-visible {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: none;
+}
+.dropdown-select-option.is-selected {
+  color: var(--accent-strong);
+}
 .project-filters > input:focus,
 .project-filters > input:focus-visible,
-.project-filters > select:focus,
-.project-filters > select:focus-visible,
 .project-filters > button:focus,
 .project-filters > button:focus-visible {
   border-color: var(--accent);
@@ -727,7 +800,6 @@ button[aria-busy="true"] {
 }
 
 .project-row,
-.matrix-row,
 .git-history-row {
   transition:
     background-color var(--motion-base) var(--ease-standard),
@@ -741,7 +813,6 @@ button[aria-busy="true"] {
 }
 
 .project-row:active,
-.matrix-row:active,
 .git-history-row:active {
   transform: translateY(1px);
 }
@@ -2582,73 +2653,6 @@ button[aria-busy="true"] {
 }
 .sidebar .activity-card button {
   align-self: center;
-}
-
-.matrix-view {
-  display: grid;
-  gap: 14px;
-  min-height: 450px;
-}
-.matrix-intro {
-  padding-bottom: 18px;
-}
-.matrix-intro p {
-  max-width: 560px;
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.55;
-}
-.matrix-table {
-  overflow: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-.matrix-head,
-.matrix-row {
-  display: grid;
-  grid-template-columns: 180px repeat(auto-fit, minmax(90px, 1fr));
-  min-width: max-content;
-  align-items: center;
-}
-.matrix-head {
-  min-height: 36px;
-  padding: 0 12px;
-  color: var(--faint);
-  background: var(--panel-soft);
-  font:
-    9px "DM Mono",
-    monospace;
-  text-transform: uppercase;
-}
-.matrix-row {
-  width: 100%;
-  min-height: 48px;
-  padding: 0 12px;
-  border: 0;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  text-align: left;
-  background: transparent;
-  font-size: 11px;
-}
-.matrix-row:hover {
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
-}
-.matrix-row strong {
-  color: var(--text);
-  font-weight: 600;
-}
-.matrix-row > span {
-  text-align: center;
-}
-.matrix-check {
-  color: var(--accent);
-  font-style: normal;
-}
-.matrix-empty {
-  color: var(--faint);
-  font-style: normal;
 }
 
 .git-history-view {
