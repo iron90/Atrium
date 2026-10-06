@@ -1,4 +1,5 @@
 import type {
+  AppUpdateInfo,
   CleanupResult,
   GitBranchOverview,
   GitChangeSummary,
@@ -50,4 +51,11 @@ export interface AtriumBridge {
   openProjectTerminal(projectPath: string): Promise<void>;
   openProjectRemote(remote: string): Promise<void>;
   openProjectLink(projectPath: string, linkId: string): Promise<void>;
+  getAppVersion(): Promise<string>;
+  checkForAppUpdate(): Promise<AppUpdateInfo | null>;
+  downloadAndInstallAppUpdate(
+    onProgress?: (percent: number) => void,
+  ): Promise<void>;
+  relaunchApp(): Promise<void>;
+  openAppReleasePage(url: string): Promise<void>;
 }

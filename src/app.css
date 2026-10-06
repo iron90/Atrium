@@ -3005,6 +3005,54 @@ button[aria-busy="true"] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.settings-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-version-number {
+  color: var(--text);
+  font:
+    11px "DM Mono",
+    monospace;
+}
+.settings-version-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.settings-version-notes {
+  max-height: 110px;
+  overflow: auto;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.settings-version-progress {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel);
+}
+.settings-version-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.settings-version-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settings-version-actions .secondary-button {
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border-radius: var(--control-radius);
+}
 .settings-footer {
   display: flex;
   align-items: center;

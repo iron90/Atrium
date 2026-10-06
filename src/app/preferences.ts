@@ -27,6 +27,7 @@ export interface LocalPreferences {
   excludeNames?: string[];
   projectMeta?: Record<string, ProjectMeta>;
   hiddenInspectorSections?: InspectorSectionId[];
+  autoCheckUpdates?: boolean;
 }
 
 const isLanguage = (value: unknown): value is Language =>
@@ -97,6 +98,10 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
       hiddenInspectorSections: readStringList(
         preferences.hiddenInspectorSections,
       )?.filter(isInspectorSectionId),
+      autoCheckUpdates:
+        typeof preferences.autoCheckUpdates === "boolean"
+          ? preferences.autoCheckUpdates
+          : undefined,
     };
   } catch {
     return {};

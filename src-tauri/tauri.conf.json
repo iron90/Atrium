@@ -67,6 +67,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU1QTdEREI3MDdDMDlBRUEKUldUcW1zQUh0OTJuVmRIdTZPelRWa3BtTG1OSVlET2JOVTFtKzQ1UklrT1ZTb1I2byszMFVvR1IK",
+      "endpoints": [
+        "https://github.com/iron90/Atrium/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

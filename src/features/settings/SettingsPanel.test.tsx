@@ -1,6 +1,28 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettingsPanel } from "./SettingsPanel";
+import type { InspectorSectionId } from "../projects/inspector-section-visibility";
+import type { AppUpdateController, AppUpdateState } from "./use-app-update";
+
+const idleUpdateState: AppUpdateState = {
+  phase: "idle",
+  info: null,
+  progress: null,
+  errorKind: null,
+  lastCheckedAt: null,
+};
+
+function makeUpdateController(
+  state: Partial<AppUpdateState> = {},
+): AppUpdateController & { check: ReturnType<typeof vi.fn> } {
+  return {
+    state: { ...idleUpdateState, ...state },
+    check: vi.fn(),
+    install: vi.fn(),
+    restart: vi.fn(),
+    openReleasePage: vi.fn(),
+  } as AppUpdateController & { check: ReturnType<typeof vi.fn> };
+}
 
 afterEach(cleanup);
 
@@ -17,7 +39,12 @@ const baseProps = () => ({
   setExcludeNames: vi.fn(),
   onScan: vi.fn(),
   isScanning: false,
+  hiddenInspectorSections: [] as InspectorSectionId[],
   onToggleInspectorSection: vi.fn(),
+  appVersion: "0.1.0",
+  update: makeUpdateController(),
+  autoCheckUpdates: true,
+  onAutoCheckUpdatesChange: vi.fn(),
 });
 
 describe("settings detail-card switches", () => {
@@ -40,7 +67,59 @@ describe("settings detail-card switches", () => {
       "Discovered repository commands",
       "Persistent run history",
       "Recent commits",
+      "Check for updates on startup",
     ]);
+  });
+
+  it("shows the current version and reports update checks", () => {
+    const update = makeUpdateController();
+    render(<SettingsPanel {...baseProps()} update={update} />);
+
+    expect(screen.getByText("0.1.0")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Check for updates" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+    expect(update.check).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers install and download-page fallback when an update is available", () => {
+    const update = makeUpdateController({
+      phase: "available",
+      info: { version: "0.2.0", notes: "Bug fixes", date: "" },
+      lastCheckedAt: 1_000,
+    });
+    render(<SettingsPanel {...baseProps()} update={update} />);
+
+    expect(screen.getByText("Update available: 0.2.0")).toBeInTheDocument();
+    expect(screen.getByText("Bug fixes")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update now" }));
+    expect(update.install).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open download page" }));
+    expect(update.openReleasePage).toHaveBeenCalledWith(
+      "https://github.com/iron90/Atrium/releases/latest",
+    );
+  });
+
+  it("toggles the startup update check", () => {
+    const onAutoCheckUpdatesChange = vi.fn();
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        autoCheckUpdates={false}
+        onAutoCheckUpdatesChange={onAutoCheckUpdatesChange}
+      />,
+    );
+
+    const startupSwitch = screen.getByRole("switch", {
+      name: "Check for updates on startup",
+    });
+    expect(startupSwitch).not.toBeChecked();
+    fireEvent.click(startupSwitch);
+    expect(onAutoCheckUpdatesChange).toHaveBeenCalledWith(true);
   });
 
   it("reflects hidden sections and reports toggle requests", () => {

@@ -42,6 +42,17 @@ describe("local preferences", () => {
     });
   });
 
+  it("round-trips the startup update check preference", () => {
+    const preferences = parseLocalPreferences(
+      JSON.stringify({ autoCheckUpdates: false }),
+    );
+
+    expect(preferences.autoCheckUpdates).toBe(false);
+
+    persistLocalPreferences({ autoCheckUpdates: true });
+    expect(readLocalPreferences().autoCheckUpdates).toBe(true);
+  });
+
   it("keeps only known inspector sections in the hidden list", () => {
     const preferences = parseLocalPreferences(
       JSON.stringify({

@@ -31,6 +31,7 @@ import {
   type RunStreamValue,
 } from "./features/runs/run-stream-context";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
+import { useAppUpdate } from "./features/settings/use-app-update";
 import { type LayoutId, type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
@@ -82,6 +83,10 @@ export default function App() {
   const [hiddenInspectorSections, setHiddenInspectorSections] = useState<
     InspectorSectionId[]
   >(preferences.hiddenInspectorSections ?? []);
+  const [autoCheckUpdates, setAutoCheckUpdates] = useState(
+    preferences.autoCheckUpdates ?? true,
+  );
+  const appUpdate = useAppUpdate(autoCheckUpdates);
   const { projectMeta, ensureProjectMeta, updateProjectMeta } =
     useProjectMetaState(preferences.projectMeta ?? {});
   const [initialSnapshot] = useState<WorkspaceSnapshot>(() =>
@@ -273,8 +278,10 @@ export default function App() {
       excludeNames,
       projectMeta,
       hiddenInspectorSections,
+      autoCheckUpdates,
     });
   }, [
+    autoCheckUpdates,
     excludeNames,
     hiddenInspectorSections,
     language,
@@ -607,6 +614,10 @@ export default function App() {
                           onToggleInspectorSection={
                             handleToggleInspectorSection
                           }
+                          appVersion={__APP_VERSION__}
+                          update={appUpdate}
+                          autoCheckUpdates={autoCheckUpdates}
+                          onAutoCheckUpdatesChange={setAutoCheckUpdates}
                         />
                       ) : page === "git" ? (
                         <GitHistoryView

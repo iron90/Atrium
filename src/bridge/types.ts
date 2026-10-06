@@ -1,3 +1,4 @@
+export type * from "./types/app";
 export type * from "./types/common";
 export type * from "./types/git";
 export type * from "./types/project";

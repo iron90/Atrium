@@ -2,7 +2,12 @@ import { memo } from "react";
 import { bridge, isTauriRuntime } from "../../bridge";
 import { useI18n } from "../../i18n";
 import type { Language, TranslationKey } from "../../i18n";
+import { fill, formatTime } from "../../shared/format";
 import type { LayoutId, ThemeId } from "./model";
+import type { AppUpdateController } from "./use-app-update";
+
+// Shown when no release metadata is available to hand the user a URL.
+const FALLBACK_RELEASE_URL = "https://github.com/iron90/Atrium/releases/latest";
 import {
   INSPECTOR_SECTION_IDS,
   type InspectorSectionId,
@@ -39,6 +44,10 @@ export const SettingsPanel = memo(function SettingsPanel({
   isScanning,
   hiddenInspectorSections,
   onToggleInspectorSection,
+  appVersion,
+  update: appUpdate,
+  autoCheckUpdates,
+  onAutoCheckUpdatesChange,
 }: {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
@@ -54,8 +63,13 @@ export const SettingsPanel = memo(function SettingsPanel({
   isScanning: boolean;
   hiddenInspectorSections: InspectorSectionId[];
   onToggleInspectorSection: (sectionId: InspectorSectionId) => void;
+  appVersion: string;
+  update: AppUpdateController;
+  autoCheckUpdates: boolean;
+  onAutoCheckUpdatesChange: (enabled: boolean) => void;
 }) {
   const { t } = useI18n();
+  const { state: updateState } = appUpdate;
 
   return (
     <div className="settings-view">
@@ -231,6 +245,137 @@ export const SettingsPanel = memo(function SettingsPanel({
               {isScanning ? t("scanning") : t("scanWorkspace")}
             </button>
           </div>
+        </section>
+        <section className="settings-card">
+          <h3>{t("versionCard")}</h3>
+          <div className="settings-version-row">
+            <span>{t("currentVersion")}</span>
+            <span className="settings-version-number">{appVersion}</span>
+          </div>
+          {updateState.phase === "available" && updateState.info ? (
+            <p className="settings-version-status">
+              {fill(
+                t("newVersionAvailable"),
+                "version",
+                updateState.info.version,
+              )}
+            </p>
+          ) : null}
+          {updateState.phase === "available" && updateState.info?.notes ? (
+            <p className="settings-version-notes">{updateState.info.notes}</p>
+          ) : null}
+          {updateState.phase === "downloading" ? (
+            <div className="settings-version-progress" aria-hidden="true">
+              <span style={{ width: `${updateState.progress ?? 0}%` }} />
+            </div>
+          ) : null}
+          {updateState.phase === "upToDate" ? (
+            <p className="settings-version-status">{t("upToDate")}</p>
+          ) : null}
+          {updateState.phase === "ready" ? (
+            <p className="settings-version-status">{t("updateReady")}</p>
+          ) : null}
+          {updateState.phase === "error" ? (
+            <p className="settings-version-status">
+              {updateState.errorKind === "install"
+                ? t("updateFailed")
+                : t("updateCheckFailed")}
+            </p>
+          ) : null}
+          {updateState.lastCheckedAt ? (
+            <p className="settings-help">
+              {fill(
+                t("lastChecked"),
+                "time",
+                formatTime(
+                  Math.floor(updateState.lastCheckedAt / 1000),
+                  language,
+                ),
+              )}
+            </p>
+          ) : null}
+          <div className="settings-version-actions">
+            {updateState.phase === "checking" ? (
+              <button type="button" className="secondary-button" disabled>
+                {t("checkingForUpdates")}
+              </button>
+            ) : null}
+            {updateState.phase === "downloading" ? (
+              <button type="button" className="secondary-button" disabled>
+                {t("updating")}
+              </button>
+            ) : null}
+            {updateState.phase === "ready" ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void appUpdate.restart()}
+              >
+                {t("restartToUpdate")}
+              </button>
+            ) : null}
+            {updateState.phase === "available" ? (
+              <>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void appUpdate.install()}
+                >
+                  {t("installUpdate")}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() =>
+                    void appUpdate.openReleasePage(FALLBACK_RELEASE_URL)
+                  }
+                >
+                  {t("openDownloadPage")}
+                </button>
+              </>
+            ) : null}
+            {updateState.phase === "idle" ||
+            updateState.phase === "upToDate" ||
+            updateState.phase === "error" ? (
+              <>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => void appUpdate.check()}
+                >
+                  {t("checkForUpdates")}
+                </button>
+                {updateState.phase === "error" ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() =>
+                      void appUpdate.openReleasePage(FALLBACK_RELEASE_URL)
+                    }
+                  >
+                    {t("openDownloadPage")}
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <label className="settings-switch">
+            <input
+              type="checkbox"
+              role="switch"
+              className="sr-only"
+              checked={autoCheckUpdates}
+              onChange={(event) =>
+                onAutoCheckUpdatesChange(event.target.checked)
+              }
+            />
+            <span className="settings-switch-track" aria-hidden="true">
+              <span className="settings-switch-thumb" />
+            </span>
+            <span className="settings-switch-label">
+              {t("autoCheckUpdates")}
+            </span>
+          </label>
         </section>
       </div>
     </div>

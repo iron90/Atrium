@@ -36,6 +36,11 @@ pub async fn open_project_link_command(
     .await
 }
 
+#[tauri::command]
+pub async fn open_release_page_command(url: String) -> Result<(), String> {
+    run_blocking("Open release page", move || open_external(&url)).await
+}
+
 fn open_external(url: &str) -> Result<(), String> {
     validate_browsable_url(url).map_err(|error| format!("Cannot open link: {error}"))?;
     os_open::open_url(url).map_err(|error| format!("Cannot open link: {error}"))

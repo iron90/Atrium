@@ -39,6 +39,8 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(state::AppState::default())
         .invoke_handler(tauri::generate_handler![
             workspace_commands::scan_workspace_command,
@@ -56,7 +58,8 @@ pub fn run() {
             tool_commands::project::open_project_directory_command,
             tool_commands::project::open_project_terminal_command,
             tool_commands::external::open_project_remote_command,
-            tool_commands::external::open_project_link_command
+            tool_commands::external::open_project_link_command,
+            tool_commands::external::open_release_page_command
         ])
         .build(tauri::generate_context!())
         .expect("error while building Atrium")
