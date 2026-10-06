@@ -48,8 +48,9 @@ Atrium 是一个面向本地项目的可视化看板。它能扫描指定工作�
 ## 下载
 
 从 [GitHub Releases](https://github.com/iron90/Atrium/releases) 下载 macOS（`.dmg`）
-和 Windows（`.msi` / `.exe`）安装包。产物未做签名：macOS 首次打开需要右键选择
-「打开」，Windows 会显示一次 SmartScreen 提示。
+和 Windows（`.msi` / `.exe`）安装包。产物未做苹果签名：macOS 首次打开可能提示
+"已损坏"，在终端执行一次 `xattr -rd com.apple.quarantine /Applications/Atrium.app`
+即可正常使用；Windows 会显示一次 SmartScreen 提示。
 
 ## 如何让 Atrium 获取完整项目功能
 
