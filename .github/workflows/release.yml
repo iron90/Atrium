@@ -66,3 +66,31 @@ jobs:
           releaseBody: "Download the installer for your platform from the assets below."
           releaseDraft: false
           prerelease: false
+
+  normalize-assets:
+    name: Normalize asset names
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Drop the WiX language suffix from MSI asset names
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The WiX bundler hardcodes the language into the msi file name;
+          # GitHub serves renamed assets under the new name, so the updater
+          # manifest only needs its URL rewritten to match.
+          tag="${GITHUB_REF_NAME}"
+          release_api="repos/${{ github.repository }}/releases/tags/$tag"
+          msi_assets=$(gh api "$release_api" --jq '.assets[] | select(.name | endswith("_en-US.msi")) | "\(.id) \(.name)"')
+          if [ -z "$msi_assets" ]; then
+            echo "No language-suffixed MSI assets to rename."
+            exit 0
+          fi
+          while read -r asset_id asset_name; do
+            new_name="${asset_name/_en-US.msi/.msi}"
+            gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$asset_id" -f name="$new_name" --jq '.name'
+            echo "Renamed $asset_name -> $new_name"
+          done <<< "$msi_assets"
+          gh release download "$tag" --pattern "latest.json" --output latest.json || exit 0
+          sed -i 's/_en-US\.msi/.msi/g' latest.json
+          gh release upload "$tag" latest.json --clobber
