@@ -99,7 +99,9 @@ export function useAppUpdate(autoCheck: boolean): AppUpdateController {
 
   useEffect(() => {
     if (!autoCheck) return;
-    void check();
+    // Defer the check so no state is set synchronously within the effect.
+    const timer = window.setTimeout(() => void check(), 0);
+    return () => window.clearTimeout(timer);
   }, [autoCheck, check]);
 
   return { state, check, install, restart, openReleasePage };
