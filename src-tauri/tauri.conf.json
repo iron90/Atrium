@@ -61,6 +61,12 @@
     "macOS": {
       "bundleName": "Atrium"
     },
+    "windows": {
+      "nsis": {
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": true
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
