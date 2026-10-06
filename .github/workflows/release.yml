@@ -81,7 +81,7 @@ jobs:
           # manifest only needs its URL rewritten to match.
           tag="${GITHUB_REF_NAME}"
           release_api="repos/${{ github.repository }}/releases/tags/$tag"
-          msi_assets=$(gh api "$release_api" --jq '.assets[] | select(.name | endswith("_en-US.msi")) | "\(.id) \(.name)"')
+          msi_assets=$(gh api "$release_api" --jq '.assets[] | select(.name | contains("_en-US.msi")) | "\(.id) \(.name)"')
           if [ -z "$msi_assets" ]; then
             echo "No language-suffixed MSI assets to rename."
             exit 0
@@ -91,6 +91,15 @@ jobs:
             gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$asset_id" -f name="$new_name" --jq '.name'
             echo "Renamed $asset_name -> $new_name"
           done <<< "$msi_assets"
-          gh release download "$tag" --pattern "latest.json" --output latest.json || exit 0
-          sed -i 's/_en-US\.msi/.msi/g' latest.json
-          gh release upload "$tag" latest.json --clobber
+          if gh release download "$tag" --pattern "latest.json" --output latest.json; then
+            if ! grep -q "_en-US.msi" latest.json; then
+              echo "latest.json has no language-suffixed URLs."
+              exit 0
+            fi
+            sed -i 's/_en-US\.msi/.msi/g' latest.json
+            gh release upload "$tag" latest.json --clobber
+            echo "latest.json rewritten"
+          else
+            echo "latest.json exists but could not be downloaded; the updater manifest still points at the old asset name." >&2
+            exit 1
+          fi
