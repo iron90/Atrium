@@ -109,8 +109,8 @@ const protocolStatus = (
   capabilities: [
     protocolCapability("identity", statuses.identity ?? "missing"),
     protocolCapability("context", statuses.context ?? "missing"),
-    protocolCapability("build_profiles", statuses.build_profiles ?? "missing"),
     protocolCapability("cleanup", statuses.cleanup ?? "missing"),
+    protocolCapability("build_profiles", statuses.build_profiles ?? "missing"),
   ],
 });
 

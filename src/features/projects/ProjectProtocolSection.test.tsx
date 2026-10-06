@@ -97,8 +97,8 @@ describe("project protocol section", () => {
       "Agent guidance",
       "Identity & icon",
       "Platform & channel context",
-      "Check / Build / Run",
       "Cleanup directories",
+      "Check / Build / Run",
     ]);
     expect(
       screen.getByRole("button", { name: "Update Agent guidance" }),

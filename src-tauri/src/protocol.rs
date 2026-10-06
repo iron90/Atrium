@@ -142,8 +142,8 @@ pub fn build_protocol_status(
         capabilities: vec![
             icon_capability,
             context_capability,
-            build_capability,
             cleanup_capability,
+            build_capability,
         ],
     }
 }
