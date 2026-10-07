@@ -91,13 +91,13 @@ jobs:
             gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$asset_id" -f name="$new_name" --jq '.name'
             echo "Renamed $asset_name -> $new_name"
           done <<< "$msi_assets"
-          if gh release download "$tag" --pattern "latest.json" --output latest.json; then
+          if gh release download "$tag" --repo "${{ github.repository }}" --pattern "latest.json" --output latest.json; then
             if ! grep -q "_en-US.msi" latest.json; then
               echo "latest.json has no language-suffixed URLs."
               exit 0
             fi
             sed -i 's/_en-US\.msi/.msi/g' latest.json
-            gh release upload "$tag" latest.json --clobber
+            gh release upload "$tag" --repo "${{ github.repository }}" latest.json --clobber
             echo "latest.json rewritten"
           else
             echo "latest.json exists but could not be downloaded; the updater manifest still points at the old asset name." >&2
