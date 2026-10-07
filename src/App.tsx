@@ -67,10 +67,7 @@ const clampScrollTopValue = (value: number, min: number, max: number) =>
 function mainScrollTrackMetrics(mainColumn: HTMLElement, thumbHeight: number) {
   const viewportHeight = mainColumn.clientHeight;
   const contentHeight = mainColumn.scrollHeight;
-  const trackHeight = Math.max(
-    0,
-    viewportHeight - MAIN_SCROLL_TRACK_INSET * 2,
-  );
+  const trackHeight = Math.max(0, viewportHeight - MAIN_SCROLL_TRACK_INSET * 2);
   const travel = Math.max(1, trackHeight - thumbHeight);
   const scrollRange = Math.max(1, contentHeight - viewportHeight);
   return {
@@ -90,11 +87,7 @@ function scrollTopForThumbTop(
     mainColumn,
     thumbHeight,
   );
-  const clamped = clampScrollTopValue(
-    thumbTop,
-    minTop,
-    minTop + travel,
-  );
+  const clamped = clampScrollTopValue(thumbTop, minTop, minTop + travel);
   return ((clamped - minTop) / travel) * scrollRange;
 }
 
@@ -718,16 +711,15 @@ export default function App() {
                   const drag = scrollbarDragRef.current;
                   const mainColumn = mainColumnRef.current;
                   if (!drag || !mainColumn) return;
-                  const { travel, scrollRange, minTop } = mainScrollTrackMetrics(
-                    mainColumn,
-                    mainScrollThumb.height,
-                  );
+                  const { travel, scrollRange, minTop } =
+                    mainScrollTrackMetrics(mainColumn, mainScrollThumb.height);
                   const top = clampScrollTopValue(
                     drag.startTop + (event.clientY - drag.startY),
                     minTop,
                     minTop + travel,
                   );
-                  mainColumn.scrollTop = ((top - minTop) / travel) * scrollRange;
+                  mainColumn.scrollTop =
+                    ((top - minTop) / travel) * scrollRange;
                 }}
                 onPointerUp={() => {
                   scrollbarDragRef.current = null;
