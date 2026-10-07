@@ -659,7 +659,6 @@ button[aria-busy="true"] {
   margin: 0 0 9px;
 }
 .project-filters > input,
-.project-filters > .dropdown-select,
 .project-filters > button {
   display: block;
   box-sizing: border-box;
@@ -681,6 +680,39 @@ button[aria-busy="true"] {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+.project-filters > .dropdown-select {
+  display: grid;
+  align-items: center;
+  min-width: 0;
+}
+.dropdown-select-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dropdown-select-input-wrap .dropdown-select-input {
+  padding-right: 30px;
+}
+.dropdown-select-caret-button {
+  position: absolute;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.dropdown-select-option.is-active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.git-revision-controls .git-revision-field {
+  display: grid;
+  gap: 5px;
 }
 .project-action-icon {
   display: block;

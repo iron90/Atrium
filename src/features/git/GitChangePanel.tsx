@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
+import { ComboboxInput } from "../../shared/DropdownSelect";
 import { CommitList } from "./CommitList";
 import { useGitChangeSummary } from "./use-git-change-summary";
 
@@ -29,34 +30,30 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
       {project?.repo ? (
         <>
           <div className="git-revision-controls">
-            <label>
-              <span>{t("fromRevision")}</span>
-              <input
-                className="form-control"
-                list="git-revisions-from"
+            <div className="git-revision-field">
+              <label htmlFor="git-revision-from">
+                <span>{t("fromRevision")}</span>
+              </label>
+              <ComboboxInput
+                id="git-revision-from"
+                ariaLabel={t("fromRevision")}
                 value={fromRevision}
-                onChange={(event) => setFromRevision(event.target.value)}
+                options={revisionOptions}
+                onChange={setFromRevision}
               />
-              <datalist id="git-revisions-from">
-                {revisionOptions.map((revision) => (
-                  <option value={revision} key={revision} />
-                ))}
-              </datalist>
-            </label>
-            <label>
-              <span>{t("toRevision")}</span>
-              <input
-                className="form-control"
-                list="git-revisions-to"
+            </div>
+            <div className="git-revision-field">
+              <label htmlFor="git-revision-to">
+                <span>{t("toRevision")}</span>
+              </label>
+              <ComboboxInput
+                id="git-revision-to"
+                ariaLabel={t("toRevision")}
                 value={toRevision}
-                onChange={(event) => setToRevision(event.target.value)}
+                options={revisionOptions}
+                onChange={setToRevision}
               />
-              <datalist id="git-revisions-to">
-                {revisionOptions.map((revision) => (
-                  <option value={revision} key={revision} />
-                ))}
-              </datalist>
-            </label>
+            </div>
             <button
               className={isLoadingChanges ? "is-loading" : ""}
               type="button"
