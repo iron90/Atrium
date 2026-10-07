@@ -55,7 +55,7 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
               />
             </div>
             <button
-              className={isLoadingChanges ? "is-loading" : ""}
+              className={`load-changes-button ${isLoadingChanges ? "is-loading" : ""}`}
               type="button"
               disabled={isLoadingChanges || !fromRevision.trim()}
               aria-busy={isLoadingChanges}

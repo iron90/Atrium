@@ -2794,7 +2794,10 @@ button[aria-busy="true"] {
   padding-bottom: 8px;
   line-height: 1.45;
 }
-.git-revision-controls button {
+.git-revision-controls .load-changes-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--control-height);
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
@@ -2803,10 +2806,7 @@ button[aria-busy="true"] {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   font-size: 10px;
 }
-.git-revision-controls button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.git-revision-controls .load-changes-button {
   padding: 0 var(--control-padding-x);
 }
 .git-change-summary {
