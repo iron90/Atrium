@@ -197,23 +197,48 @@ export const SettingsPanel = memo(function SettingsPanel({
           >
             {t("addWorkspace")}
           </button>
-          <label className="settings-control">
+          <div className="settings-control">
             <span>{t("excludeDirectories")}</span>
-            <textarea
-              className="form-control form-control-multiline"
-              value={excludeNames.join("\n")}
-              onChange={(event) =>
-                setExcludeNames(
-                  event.target.value
-                    .split(/\n|,/)
-                    .map((value) => value.trim())
-                    .filter(Boolean),
-                )
-              }
-              rows={3}
-              placeholder="node_modules, target"
-            />
-          </label>
+          </div>
+          {excludeNames.length ? (
+            <div className="exclusion-list">
+              {excludeNames.map((name) => (
+                <div className="exclusion-row" key={name}>
+                  <span className="exclusion-name">{name}</span>
+                  <button
+                    type="button"
+                    className="exclusion-remove"
+                    aria-label={`${t("removeExclusion")} ${name}`}
+                    onClick={() =>
+                      setExcludeNames(
+                        excludeNames.filter((entry) => entry !== name),
+                      )
+                    }
+                  >
+                    −
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="settings-version-status">{t("noExclusions")}</p>
+          )}
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              void bridge.pickWorkspaceDirectory().then((picked) => {
+                if (!picked) return;
+                // The exclusion engine matches directory NAMES inside the
+                // workspaces, so the picker contributes the folder's own name.
+                const name = picked.split(/[\\/]/).filter(Boolean).pop();
+                if (!name || excludeNames.includes(name)) return;
+                setExcludeNames([...excludeNames, name]);
+              });
+            }}
+          >
+            {t("addExcludedFolder")}
+          </button>
           <div className="settings-footer">
             <p className="settings-help">
               {t("workspaceExclusionDescription")}

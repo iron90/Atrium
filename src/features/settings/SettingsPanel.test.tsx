@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { bridge } from "../../bridge";
 import { SettingsPanel } from "./SettingsPanel";
 import type { InspectorSectionId } from "../projects/inspector-section-visibility";
 import type { AppUpdateController, AppUpdateState } from "./use-app-update";
@@ -46,6 +47,65 @@ const baseProps = () => ({
   autoCheckUpdates: true,
   onAutoCheckUpdatesChange: vi.fn(),
   inAppInstallSupported: true,
+});
+
+describe("workspace exclusions", () => {
+  it("adds a picked folder's name to the exclusions", async () => {
+    const setExcludeNames = vi.fn();
+    const pickSpy = vi
+      .spyOn(bridge, "pickWorkspaceDirectory")
+      .mockResolvedValue("/ws/demo/node_modules");
+    render(
+      <SettingsPanel {...baseProps()} setExcludeNames={setExcludeNames} />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add excluded folder" }),
+    );
+    await vi.waitFor(() =>
+      expect(setExcludeNames).toHaveBeenCalledWith(["node_modules"]),
+    );
+    pickSpy.mockRestore();
+  });
+
+  it("skips a folder whose name is already excluded", async () => {
+    const setExcludeNames = vi.fn();
+    const pickSpy = vi
+      .spyOn(bridge, "pickWorkspaceDirectory")
+      .mockResolvedValue("/ws/demo/node_modules");
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        excludeNames={["node_modules"]}
+        setExcludeNames={setExcludeNames}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add excluded folder" }),
+    );
+    await vi.waitFor(() => expect(pickSpy).toHaveBeenCalled());
+    expect(setExcludeNames).not.toHaveBeenCalled();
+    pickSpy.mockRestore();
+  });
+
+  it("removes an exclusion row", () => {
+    const setExcludeNames = vi.fn();
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        excludeNames={["node_modules", "target"]}
+        setExcludeNames={setExcludeNames}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Remove excluded directory node_modules",
+      }),
+    );
+    expect(setExcludeNames).toHaveBeenCalledWith(["target"]);
+  });
 });
 
 describe("settings detail-card switches", () => {

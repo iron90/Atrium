@@ -257,7 +257,10 @@ export const en = {
   addWorkspace: "Add workspace",
   browseWorkspace: "Browse for workspace",
   removeWorkspace: "Remove workspace",
-  excludeDirectories: "Excluded directory names",
+  excludeDirectories: "Excluded directories",
+  addExcludedFolder: "Add excluded folder",
+  removeExclusion: "Remove excluded directory",
+  noExclusions: "No excluded directories yet.",
   workspaceExclusionDescription:
     "These names are excluded only from workspace discovery; Atrium never deletes them.",
   workspaceOverlap: "Overlapping workspaces are merged by project path.",
@@ -535,7 +538,10 @@ export const zh: Record<keyof typeof en, string> = {
   addWorkspace: "添加工作区",
   browseWorkspace: "浏览选择工作区",
   removeWorkspace: "移除工作区",
-  excludeDirectories: "排除的目录名",
+  excludeDirectories: "排除的目录",
+  addExcludedFolder: "添加排除目录",
+  removeExclusion: "移除排除的目录",
+  noExclusions: "还没有排除的目录。",
   workspaceExclusionDescription:
     "这些名称只用于排除工作区发现；Atrium 不会因此删除它们。",
   workspaceOverlap: "重叠工作区会按项目路径合并。",

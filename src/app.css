@@ -2904,6 +2904,45 @@ button[aria-busy="true"] {
 .workspace-path-row .workspace-path-remove {
   color: var(--danger);
 }
+.exclusion-list {
+  display: grid;
+  gap: 6px;
+}
+.exclusion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--control-height);
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--control-radius);
+  background: var(--panel);
+}
+.exclusion-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font:
+    10px "DM Mono",
+    monospace;
+}
+.exclusion-remove {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--danger);
+  background: transparent;
+  cursor: pointer;
+}
+.exclusion-remove:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
 .secondary-button {
   justify-self: start;
 }
