@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GitBranchOverview, ProjectSnapshot } from "../../bridge";
 import { useI18n } from "../../i18n";
+import { normalizeWindowsPath } from "../../shared/windows-path";
 import { DetailLoading, InspectorSection } from "./InspectorPrimitives";
 import type { ProjectAction } from "./project-actions";
 import {
@@ -41,6 +42,7 @@ export function ProjectRepositorySection({
   const [branchMenuProjectId, setBranchMenuProjectId] = useState(project.id);
   const branchRowRef = useRef<HTMLDivElement | null>(null);
   const repo = inspectedProject.repo;
+  const localPath = normalizeWindowsPath(project.path);
   const links = inspectedProject.links;
 
   // A keyboard-driven project switch bypasses the outside-click handler, so
@@ -109,7 +111,7 @@ export function ProjectRepositorySection({
           </div>
           <div className="repo-path">
             <span aria-hidden="true">⌁</span>
-            <span title={project.path}>{project.path}</span>
+            <span title={localPath}>{localPath}</span>
           </div>
         </div>
         {repo?.remote ? (

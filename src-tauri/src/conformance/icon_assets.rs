@@ -53,8 +53,7 @@ pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf,
             "identity.icon cannot traverse symbolic links: {value}"
         ));
     }
-    let resolved = candidate
-        .canonicalize()
+    let resolved = dunce::canonicalize(candidate)
         .map_err(|error| format!("Icon file {value} cannot be resolved: {error}"))?;
     if !resolved.starts_with(root) {
         return Err(format!(
@@ -65,12 +64,10 @@ pub(super) fn resolve_declared_icon(root: &Path, value: &str) -> Result<PathBuf,
 }
 
 pub(super) fn load_icon(root: &Path, path: &Path) -> Result<ProjectIcon, String> {
-    let canonical_root = root
-        .canonicalize()
+    let canonical_root = dunce::canonicalize(root)
         .map_err(|error| format!("cannot resolve project root: {error}"))?;
-    let resolved_path = path
-        .canonicalize()
-        .map_err(|error| format!("cannot resolve icon path: {error}"))?;
+    let resolved_path =
+        dunce::canonicalize(path).map_err(|error| format!("cannot resolve icon path: {error}"))?;
     if !resolved_path.starts_with(&canonical_root) {
         return Err("icon path resolves outside the project".to_string());
     }

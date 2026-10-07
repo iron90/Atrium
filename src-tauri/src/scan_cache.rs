@@ -78,7 +78,7 @@ impl ScanCache {
     pub fn cached_or_scan(&self, project_path: &Path) -> Option<ProjectSnapshot> {
         let signature = ScanSignature::capture(project_path);
         let now = Instant::now();
-        let canonical = project_path.canonicalize().ok()?;
+        let canonical = dunce::canonicalize(project_path).ok()?;
         if let Some(entry) = self.entries.lock().ok()?.get(&canonical) {
             if entry.signature == signature
                 && now.duration_since(entry.last_full_scan) < FULL_SCAN_INTERVAL

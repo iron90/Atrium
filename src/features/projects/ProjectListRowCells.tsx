@@ -1,5 +1,6 @@
 import type { Facet, ProjectSnapshot } from "../../bridge";
 import { useI18n, localizedFacetLabel } from "../../i18n";
+import { normalizeWindowsPath } from "../../shared/windows-path";
 import { FacetMark } from "./FacetMark";
 import { facetTitle } from "./facets";
 import { EyeIcon, StarIcon } from "./ProjectActionIcons";
@@ -34,7 +35,9 @@ export function ProjectIdentityCell({
         <ProjectIconView project={project} variant="list" />
         <span className="project-copy">
           <strong>{project.name}</strong>
-          <span>{project.description ?? project.path}</span>
+          <span>
+            {project.description ?? normalizeWindowsPath(project.path)}
+          </span>
         </span>
       </button>
     </div>

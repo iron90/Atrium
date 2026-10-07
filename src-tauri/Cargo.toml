@@ -1,6 +1,6 @@
 [package]
 name = "atrium"
-version = "0.3.0"
+version = "0.3.1"
 description = "A local-first visual project board"
 authors = ["Atrium contributors"]
 license = "MIT"
@@ -27,6 +27,7 @@ base64 = "0.23"
 futures-util = "0.3"
 tokio = { version = "1", features = ["io-util", "process", "sync"] }
 url = "2"
+dunce = "1"
 
 [profile.dev]
 debug = 1

@@ -18,9 +18,7 @@ pub fn inspect_project_storage(
 ) -> ProjectStorage {
     // Canonicalize first: a project reached through a symlink must be
     // measured at its real location instead of being skipped as a symlink.
-    let root = project_path
-        .canonicalize()
-        .unwrap_or_else(|_| project_path.to_path_buf());
+    let root = dunce::canonicalize(project_path).unwrap_or_else(|_| project_path.to_path_buf());
     let total = measure_path(&root);
     let entries = discover_cleanable_entries(&root, cleanup);
     let cleanable_bytes = entries.iter().map(|entry| entry.bytes).sum();
@@ -84,7 +82,7 @@ pub(super) fn resolve_safe_cleanable_directory(root: &Path, target: &Path) -> Op
     if !metadata.is_dir() || metadata.file_type().is_symlink() {
         return None;
     }
-    let canonical_root = root.canonicalize().ok()?;
+    let canonical_root = dunce::canonicalize(root).ok()?;
     if path_targets_protected_component(
         &canonical_root,
         &canonical_target,

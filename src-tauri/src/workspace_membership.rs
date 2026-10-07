@@ -9,8 +9,7 @@ pub(crate) fn ensure_project_in_workspace_roots(
         return Err("No workspace has been scanned in this session".to_string());
     }
 
-    let canonical = project_path
-        .canonicalize()
+    let canonical = dunce::canonicalize(project_path)
         .map_err(|error| format!("Cannot open project: {error}"))?;
     if !canonical.is_dir() {
         return Err("Project path is not a directory".to_string());
@@ -53,7 +52,7 @@ mod tests {
         let project = workspace.join("demo");
         fs::create_dir_all(&project).expect("create project");
         let mut roots = BTreeSet::new();
-        roots.insert(workspace.canonicalize().expect("canonical workspace"));
+        roots.insert(dunce::canonicalize(&workspace).expect("canonical workspace"));
 
         assert!(ensure_project_in_workspace_roots(&roots, &project).is_ok());
 
@@ -67,7 +66,7 @@ mod tests {
         fs::create_dir_all(&workspace).expect("create workspace");
         fs::create_dir_all(&outside).expect("create outside project");
         let mut roots = BTreeSet::new();
-        roots.insert(workspace.canonicalize().expect("canonical workspace"));
+        roots.insert(dunce::canonicalize(&workspace).expect("canonical workspace"));
 
         let error = ensure_project_in_workspace_roots(&roots, &outside)
             .expect_err("outside project must reject");
@@ -85,7 +84,7 @@ mod tests {
         fs::create_dir_all(&workspace).expect("create workspace");
         fs::create_dir_all(&sibling).expect("create sibling");
         let mut roots = BTreeSet::new();
-        roots.insert(workspace.canonicalize().expect("canonical workspace"));
+        roots.insert(dunce::canonicalize(&workspace).expect("canonical workspace"));
 
         assert!(
             ensure_project_in_workspace_roots(&roots, &sibling).is_err(),

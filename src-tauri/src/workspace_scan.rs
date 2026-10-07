@@ -12,8 +12,7 @@ pub fn scan_workspace_with_exclusions(
     excluded_names: &[String],
     scan_cache: &ScanCache,
 ) -> Result<WorkspaceSnapshot, String> {
-    let root = root_path
-        .canonicalize()
+    let root = dunce::canonicalize(root_path)
         .map_err(|error| format!("Cannot open workspace: {error}"))?;
     if !root.is_dir() {
         return Err("Workspace path is not a directory".to_string());
@@ -87,7 +86,7 @@ fn resolve_workspace_entry(
     };
 
     if metadata.file_type().is_symlink() {
-        let resolved = match path.canonicalize() {
+        let resolved = match dunce::canonicalize(path) {
             Ok(resolved) => resolved,
             Err(error) => {
                 warnings.push(format!(
@@ -192,8 +191,7 @@ mod tests {
         assert_eq!(snapshot.projects.len(), 1);
         assert_eq!(
             snapshot.projects[0].path,
-            project
-                .canonicalize()
+            dunce::canonicalize(project)
                 .expect("canonical project")
                 .to_string_lossy()
         );

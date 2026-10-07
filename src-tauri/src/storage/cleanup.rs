@@ -19,8 +19,7 @@ pub fn clean_project_artifacts_selected_with_progress<F>(
 where
     F: FnMut(CleanupProgress),
 {
-    let root = project_path
-        .canonicalize()
+    let root = dunce::canonicalize(project_path)
         .map_err(|error| format!("Cannot open project for cleanup: {error}"))?;
     if !root.is_dir() {
         return Err("Project path is not a directory".to_string());

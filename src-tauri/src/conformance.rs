@@ -23,9 +23,7 @@ pub struct IconInspection {
 }
 
 pub fn inspect_icon(project_path: &Path) -> IconInspection {
-    let root = project_path
-        .canonicalize()
-        .unwrap_or_else(|_| project_path.to_path_buf());
+    let root = dunce::canonicalize(project_path).unwrap_or_else(|_| project_path.to_path_buf());
 
     match read_project_text_file(&root, Path::new(MANIFEST_PATH)) {
         Ok(Some(raw)) => inspect_manifest(&root, &raw),

@@ -5,6 +5,7 @@ import {
   type InspectorSectionId,
 } from "../features/projects/inspector-section-visibility";
 import { isThemeId, type ThemeId } from "../features/settings/model";
+import { normalizeWindowsPath } from "../shared/windows-path";
 
 export const PREFERENCES_STORAGE_KEY = "atrium.preferences.v1";
 export const MAX_PREFERENCES_BYTES = 256 * 1024;
@@ -61,10 +62,20 @@ const readProjectMeta = (
         return;
       }
       const meta = rawMeta as Record<string, unknown>;
-      result[projectId] = {
+      const id = normalizeWindowsPath(projectId);
+      const next = {
         favorite: meta.favorite === true,
         hidden: meta.hidden === true,
       };
+      const previous = result[id];
+      // A project remembered under both the verbatim and legacy path keeps
+      // either flag instead of dropping the one read first.
+      result[id] = previous
+        ? {
+            favorite: previous.favorite || next.favorite,
+            hidden: previous.hidden || next.hidden,
+          }
+        : next;
     });
   return result;
 };
@@ -83,9 +94,11 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
         ? preferences.language
         : undefined,
       rootPath: isBoundedNonEmptyString(preferences.rootPath)
-        ? preferences.rootPath
+        ? normalizeWindowsPath(preferences.rootPath)
         : undefined,
-      workspaces: readStringList(preferences.workspaces),
+      workspaces: readStringList(preferences.workspaces)?.map(
+        normalizeWindowsPath,
+      ),
       excludeNames: readStringList(preferences.excludeNames),
       projectMeta: readProjectMeta(preferences.projectMeta),
       hiddenInspectorSections: readStringList(

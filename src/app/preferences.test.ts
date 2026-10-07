@@ -40,6 +40,28 @@ describe("local preferences", () => {
     });
   });
 
+  it("rewrites stored windows verbatim paths to the legacy form", () => {
+    const preferences = parseLocalPreferences(
+      JSON.stringify({
+        rootPath: "\\\\?\\D:\\A_Projects",
+        workspaces: ["\\\\?\\D:\\A_Projects", "\\\\?\\UNC\\files\\share"],
+        projectMeta: {
+          "\\\\?\\D:\\A_Projects\\SpinningTop": { favorite: true },
+          "D:\\A_Projects\\SpinningTop": { hidden: true },
+        },
+      }),
+    );
+
+    expect(preferences.rootPath).toBe("D:\\A_Projects");
+    expect(preferences.workspaces).toEqual([
+      "D:\\A_Projects",
+      "\\\\files\\share",
+    ]);
+    expect(preferences.projectMeta).toEqual({
+      "D:\\A_Projects\\SpinningTop": { favorite: true, hidden: true },
+    });
+  });
+
   it("round-trips the startup update check preference", () => {
     const preferences = parseLocalPreferences(
       JSON.stringify({ autoCheckUpdates: false }),

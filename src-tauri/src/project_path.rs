@@ -10,9 +10,8 @@ pub(crate) enum ExistingProjectPathError {
 }
 
 pub(crate) fn canonical_project_root(path: &Path) -> Result<PathBuf, String> {
-    let root = path
-        .canonicalize()
-        .map_err(|error| format!("Cannot open project: {error}"))?;
+    let root =
+        dunce::canonicalize(path).map_err(|error| format!("Cannot open project: {error}"))?;
     if !root.is_dir() {
         return Err("Project path is not a directory".to_string());
     }
@@ -212,7 +211,7 @@ pub(crate) fn resolve_existing_path_inside_project(
     root: &Path,
     target: &Path,
 ) -> Result<PathBuf, ExistingProjectPathError> {
-    let canonical_root = root.canonicalize().map_err(classify_path_error)?;
+    let canonical_root = dunce::canonicalize(root).map_err(classify_path_error)?;
     if target.strip_prefix(root).is_err() {
         return Err(ExistingProjectPathError::OutsideProject);
     }
@@ -220,7 +219,7 @@ pub(crate) fn resolve_existing_path_inside_project(
         return Err(ExistingProjectPathError::SymbolicLink);
     }
 
-    let canonical_target = target.canonicalize().map_err(classify_path_error)?;
+    let canonical_target = dunce::canonicalize(target).map_err(classify_path_error)?;
     if !canonical_target.starts_with(&canonical_root) {
         return Err(ExistingProjectPathError::OutsideProject);
     }
@@ -278,10 +277,30 @@ mod tests {
 
         assert_eq!(
             canonical_project_root(&root).expect("canonical project root"),
-            root.canonicalize().expect("canonical fixture root")
+            dunce::canonicalize(&root).expect("canonical fixture root")
         );
 
-        fs::remove_dir_all(root).expect("remove project directory");
+        fs::remove_dir_all(&root).expect("remove project directory");
+    }
+
+    // The path string is the project id and the text shown in the list.
+    // On Windows, std::fs::canonicalize keeps the `\\?\` prefix; the UI must
+    // receive the legacy drive path instead.
+    #[cfg(windows)]
+    #[test]
+    fn canonical_project_root_drops_the_verbatim_prefix() {
+        let root = fixture_root("verbatim-prefix");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("create project directory");
+
+        let canonical = canonical_project_root(&root).expect("canonical project root");
+        let text = canonical.to_string_lossy();
+        assert!(
+            !text.starts_with(r"\\?\"),
+            "project path must not keep the verbatim prefix: {text}"
+        );
+
+        fs::remove_dir_all(&root).expect("remove project directory");
     }
 
     #[test]

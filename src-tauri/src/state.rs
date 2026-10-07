@@ -26,14 +26,14 @@ pub struct StorageMetricsCache {
 
 impl StorageMetricsCache {
     pub fn lookup(&self, project_path: &Path) -> Option<ProjectStorage> {
-        let canonical = project_path.canonicalize().ok()?;
+        let canonical = dunce::canonicalize(project_path).ok()?;
         let entries = self.entries.lock().ok()?;
         let (measured_at, storage) = entries.get(&canonical)?;
         (measured_at.elapsed() < STORAGE_METRICS_TTL).then(|| storage.clone())
     }
 
     pub fn store(&self, project_path: &Path, storage: ProjectStorage) {
-        let Ok(canonical) = project_path.canonicalize() else {
+        let Ok(canonical) = dunce::canonicalize(project_path) else {
             return;
         };
         if let Ok(mut entries) = self.entries.lock() {
@@ -42,7 +42,7 @@ impl StorageMetricsCache {
     }
 
     pub fn invalidate(&self, project_path: &Path) {
-        if let Ok(canonical) = project_path.canonicalize() {
+        if let Ok(canonical) = dunce::canonicalize(project_path) {
             if let Ok(mut entries) = self.entries.lock() {
                 entries.remove(&canonical);
             }
@@ -93,7 +93,7 @@ impl AppState {
     pub fn replace_workspace_roots(&self, root_paths: &[PathBuf]) {
         let canonical: BTreeSet<PathBuf> = root_paths
             .iter()
-            .filter_map(|path| path.canonicalize().ok())
+            .filter_map(|path| dunce::canonicalize(path).ok())
             .collect();
         match self.workspace_roots.lock() {
             Ok(mut roots) => {
@@ -185,7 +185,7 @@ mod tests {
         // stale entry: store again from a "future" measurement is not
         // possible, so instead verify lookup expiry via a direct entry edit.
         {
-            let canonical = root.canonicalize().expect("canonical fixture root");
+            let canonical = dunce::canonicalize(&root).expect("canonical fixture root");
             let mut entries = cache.entries.lock().expect("lock entries");
             if let Some((measured_at, _)) = entries.get_mut(&canonical) {
                 *measured_at = Instant::now() - Duration::from_secs(120);
