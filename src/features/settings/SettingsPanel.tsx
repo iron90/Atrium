@@ -3,7 +3,7 @@ import { bridge, isTauriRuntime } from "../../bridge";
 import { DropdownSelect } from "../../shared/DropdownSelect";
 import { useI18n } from "../../i18n";
 import type { Language, TranslationKey } from "../../i18n";
-import { fill, formatTime } from "../../shared/format";
+import { fill, formatTime, localizedReleaseNotes } from "../../shared/format";
 import type { ThemeId } from "./model";
 import type { AppUpdateController } from "./use-app-update";
 
@@ -251,7 +251,9 @@ export const SettingsPanel = memo(function SettingsPanel({
             </p>
           ) : null}
           {updateState.phase === "available" && updateState.info?.notes ? (
-            <p className="settings-version-notes">{updateState.info.notes}</p>
+            <p className="settings-version-notes">
+              {localizedReleaseNotes(updateState.info.notes, language)}
+            </p>
           ) : null}
           {updateState.phase === "downloading" ? (
             <div className="settings-version-progress" aria-hidden="true">

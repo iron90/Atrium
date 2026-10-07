@@ -11,6 +11,17 @@ export const formatTime = (timestamp: number, language: Language): string =>
     minute: "2-digit",
   }).format(new Date(timestamp));
 
+// Release notes are published with the Chinese block first and the English
+// block after a dash separator line; each UI language renders its own half.
+export const localizedReleaseNotes = (
+  notes: string,
+  language: Language,
+): string => {
+  const parts = notes.split(/\n-{3,}\n/);
+  if (parts.length < 2) return notes;
+  return (language === "zh" ? parts[0] : parts.slice(1).join("\n---\n")).trim();
+};
+
 export const formatRelative = (
   timestamp: number,
   language: Language,
