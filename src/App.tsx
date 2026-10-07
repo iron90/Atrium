@@ -607,6 +607,7 @@ export default function App() {
             activePage={activePage}
             onPageChange={setActivePage}
             status={runtimeStatus}
+            updateAvailable={appUpdate.state.phase === "available"}
             onStop={() =>
               globalActiveRun ? handleStopRun(globalActiveRun.runId) : undefined
             }

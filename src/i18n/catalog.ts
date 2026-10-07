@@ -196,6 +196,7 @@ export const en = {
   updateCheckFailed: "Update check failed; try again later.",
   updateFailed: "Update failed; download the installer from the release page.",
   autoCheckUpdates: "Check for updates on startup",
+  sidebarUpdateAvailable: "Update available",
   lastChecked: "Last checked {time}",
   workspace: "Workspace",
   workspaceDescription:
@@ -479,6 +480,7 @@ export const zh: Record<keyof typeof en, string> = {
   updateCheckFailed: "检查失败，请稍后再试。",
   updateFailed: "更新失败，请从发布页下载安装包。",
   autoCheckUpdates: "启动时自动检查更新",
+  sidebarUpdateAvailable: "发现新版本",
   lastChecked: "上次检查 {time}",
   workspace: "工作区",
   workspaceDescription: "Atrium 扫描的本地目录，仓库文件仍然是真实来源。",

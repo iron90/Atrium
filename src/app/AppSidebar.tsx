@@ -1,5 +1,6 @@
 import atriumIcon from "../../src-tauri/icons/icon.png";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { FiArrowUp } from "react-icons/fi";
 import { useI18n } from "../i18n";
 import { fill } from "../shared/format";
 import { APP_VERSION } from "./app-version";
@@ -12,11 +13,13 @@ export function AppSidebar({
   onPageChange,
   status,
   onStop,
+  updateAvailable,
 }: {
   activePage: PageId;
   onPageChange: (page: PageId) => void;
   status: RuntimeStatus;
   onStop: () => Promise<void> | void;
+  updateAvailable: boolean;
 }) {
   const { t } = useI18n();
   const navRef = useRef<HTMLElement>(null);
@@ -75,6 +78,17 @@ export function AppSidebar({
           <div className="brand-subtitle">{t("localProjectBoard")}</div>
           <div className="brand-version">
             {fill(t("appVersion"), "version", APP_VERSION)}
+            {updateAvailable ? (
+              <button
+                type="button"
+                className="sidebar-update-badge"
+                title={t("sidebarUpdateAvailable")}
+                aria-label={t("sidebarUpdateAvailable")}
+                onClick={() => onPageChange("settings")}
+              >
+                <FiArrowUp aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

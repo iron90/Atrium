@@ -254,6 +254,9 @@ button[aria-busy="true"] {
   color: var(--faint);
 }
 .brand-version {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 5px;
   color: var(--muted);
   font:
@@ -261,6 +264,26 @@ button[aria-busy="true"] {
     ui-monospace,
     monospace;
   letter-spacing: 0.08em;
+}
+.sidebar-update-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  cursor: pointer;
+}
+.sidebar-update-badge:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+.sidebar-update-badge svg {
+  width: 10px;
+  height: 10px;
 }
 
 .primary-nav {
