@@ -6,6 +6,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   { ignores: ["dist", "src-tauri/target"] },
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: "module",
+    },
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {

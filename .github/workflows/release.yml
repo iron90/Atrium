@@ -21,18 +21,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # The release is tagged after the app version baked into tauri.conf.json,
-      # so a mismatched tag must fail here instead of publishing under the
-      # conf version's tag name.
-      - name: Verify the tag matches the app version
-        shell: bash
-        run: |
-          version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
-          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match the app version v${version}." >&2
-            exit 1
-          fi
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -41,6 +29,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Source manifests stay at 0.0.0. The git tag is the release version and
+      # is written into the package only for this build.
+      - name: Write the git tag into the package version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/stamp-release-version.mjs
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@1.97.1
