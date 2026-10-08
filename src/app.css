@@ -3175,12 +3175,25 @@ button[aria-busy="true"] {
   line-height: 1.55;
 }
 .settings-version-notes {
-  max-height: 110px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  max-height: 180px;
   overflow: auto;
-  color: var(--faint);
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: pre-line;
+}
+.settings-version-command {
+  display: block;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--console-bg);
+  color: var(--console-text);
+  font:
+    11px/1.5 "DM Mono",
+    ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .settings-version-progress {
   height: 4px;

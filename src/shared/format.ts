@@ -17,10 +17,47 @@ export const localizedReleaseNotes = (
   notes: string,
   language: Language,
 ): string => {
-  const parts = notes.split(/\n-{3,}\n/);
-  if (parts.length < 2) return notes;
+  const parts = notes
+    .replace(/\r\n/g, "\n")
+    .split(/\n[ \t]*-{3,}[ \t]*(?:\n|$)/);
+  if (parts.length < 2) return notes.trim();
   return (language === "zh" ? parts[0] : parts.slice(1).join("\n---\n")).trim();
 };
+
+export type ReleaseNoteBlock =
+  { type: "paragraph"; text: string } | { type: "command"; text: string };
+
+const looksLikeCommand = (value: string): boolean => {
+  const shaped = /^[a-z][\w.-]*(?:\s+\S+)+$/i.test(value);
+  return shaped && (/(?:^|\s)-\w/.test(value) || /[\\/]/.test(value));
+};
+
+// A shell command after the last colon is pulled onto its own line so a long
+// path does not wrap inside the sentence.
+const splitCommand = (paragraph: string): ReleaseNoteBlock[] => {
+  const colon = Math.max(
+    paragraph.lastIndexOf(":"),
+    paragraph.lastIndexOf("："),
+  );
+  if (colon <= 0) return [{ type: "paragraph", text: paragraph }];
+  const tail = paragraph.slice(colon + 1).trim();
+  if (!looksLikeCommand(tail)) return [{ type: "paragraph", text: paragraph }];
+  return [
+    { type: "paragraph", text: paragraph.slice(0, colon + 1).trim() },
+    { type: "command", text: tail },
+  ];
+};
+
+export const releaseNoteBlocks = (
+  notes: string,
+  language: Language,
+): ReleaseNoteBlock[] =>
+  localizedReleaseNotes(notes, language)
+    .split(/\n{2,}/)
+    .flatMap((paragraph) => {
+      const trimmed = paragraph.trim();
+      return trimmed ? splitCommand(trimmed) : [];
+    });
 
 export const formatRelative = (
   timestamp: number,

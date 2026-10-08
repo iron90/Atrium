@@ -3,7 +3,7 @@ import { bridge, isTauriRuntime } from "../../bridge";
 import { DropdownSelect } from "../../shared/DropdownSelect";
 import { useI18n } from "../../i18n";
 import type { Language, TranslationKey } from "../../i18n";
-import { fill, formatTime, localizedReleaseNotes } from "../../shared/format";
+import { fill, formatTime, releaseNoteBlocks } from "../../shared/format";
 import type { ThemeId } from "./model";
 import type { AppUpdateController } from "./use-app-update";
 
@@ -69,6 +69,10 @@ export const SettingsPanel = memo(function SettingsPanel({
 }) {
   const { t } = useI18n();
   const { state: updateState } = appUpdate;
+  const noteBlocks =
+    updateState.phase === "available" && updateState.info?.notes
+      ? releaseNoteBlocks(updateState.info.notes, language)
+      : [];
 
   return (
     <div className="settings-view">
@@ -275,10 +279,18 @@ export const SettingsPanel = memo(function SettingsPanel({
               )}
             </p>
           ) : null}
-          {updateState.phase === "available" && updateState.info?.notes ? (
-            <p className="settings-version-notes">
-              {localizedReleaseNotes(updateState.info.notes, language)}
-            </p>
+          {noteBlocks.length > 0 ? (
+            <div className="settings-version-notes">
+              {noteBlocks.map((block, index) =>
+                block.type === "command" ? (
+                  <code key={index} className="settings-version-command">
+                    {block.text}
+                  </code>
+                ) : (
+                  <p key={index}>{block.text}</p>
+                ),
+              )}
+            </div>
           ) : null}
           {updateState.phase === "downloading" ? (
             <div className="settings-version-progress" aria-hidden="true">
