@@ -1,5 +1,6 @@
 import type { ProjectSnapshot } from "../../bridge";
 import { AnimatedDisclosure } from "../../shared/AnimatedDisclosure";
+import { ScrollArea } from "../../shared/ScrollArea";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { InspectorSection } from "./InspectorPrimitives";
@@ -17,6 +18,7 @@ export interface ProjectProtocolSectionProps {
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   onCopyAgentPrompt: () => void;
+  onDismissAgentPrompt: () => void;
   isWritingGuidance: boolean;
   onGenerateGuidance: (project: ProjectSnapshot) => void;
 }
@@ -28,6 +30,7 @@ export function ProjectProtocolSection({
   isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
   onCopyAgentPrompt,
+  onDismissAgentPrompt,
   isWritingGuidance,
   onGenerateGuidance,
 }: ProjectProtocolSectionProps) {
@@ -112,26 +115,35 @@ export function ProjectProtocolSection({
       {agentPrompt && shouldShowAgentGuidance ? (
         <div className="agent-prompt-card">
           <div className="agent-prompt-heading">
-            <div>
-              <strong>{t("agentPromptTitle")}</strong>
-              <span>{t("agentPromptDescription")}</span>
+            <strong>{t("agentPromptTitle")}</strong>
+            <div className="agent-prompt-actions">
+              <button
+                className="protocol-action"
+                type="button"
+                onClick={onCopyAgentPrompt}
+              >
+                {isAgentPromptCopied
+                  ? t("agentPromptCopied")
+                  : t("copyAgentPrompt")}
+              </button>
+              <button
+                className="protocol-action"
+                type="button"
+                onClick={onDismissAgentPrompt}
+              >
+                {t("dismissAgentPrompt")}
+              </button>
             </div>
-            <button
-              className="protocol-action"
-              type="button"
-              onClick={onCopyAgentPrompt}
-            >
-              {isAgentPromptCopied
-                ? t("agentPromptCopied")
-                : t("copyAgentPrompt")}
-            </button>
           </div>
-          <textarea
-            className="agent-prompt"
-            readOnly
-            value={agentPrompt}
-            aria-label={t("agentPromptTitle")}
-            rows={10}
+          <ScrollArea
+            viewportComponent="textarea"
+            viewportClassName="agent-prompt"
+            viewportProps={{
+              readOnly: true,
+              value: agentPrompt,
+              "aria-label": t("agentPromptTitle"),
+              rows: 10,
+            }}
           />
         </div>
       ) : null}

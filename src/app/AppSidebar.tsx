@@ -1,6 +1,7 @@
 import atriumIcon from "../../src-tauri/icons/icon.png";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { FiArrowUp } from "react-icons/fi";
+import { ScrollArea } from "../shared/ScrollArea";
 import { useI18n } from "../i18n";
 import { fill } from "../shared/format";
 import { APP_VERSION } from "./app-version";
@@ -65,7 +66,11 @@ export function AppSidebar({
   }, [measureActiveIndicator]);
 
   return (
-    <aside className="sidebar">
+    <ScrollArea
+      className="sidebar-shell"
+      viewportClassName="sidebar"
+      viewportComponent="aside"
+    >
       <div className="brand-block">
         <img
           className="brand-mark"
@@ -127,6 +132,6 @@ export function AppSidebar({
       </nav>
 
       <LocalActivityPanel status={status} onStop={onStop} />
-    </aside>
+    </ScrollArea>
   );
 }

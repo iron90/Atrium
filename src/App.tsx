@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppSidebar } from "./app/AppSidebar";
 import { PageTransition } from "./app/PageTransition";
 import { type PageId } from "./app/navigation";
@@ -36,11 +29,8 @@ import { type ThemeId } from "./features/settings/model";
 import { I18nProvider, translate } from "./i18n";
 import type { Language, TranslationKey } from "./i18n";
 import { errorMessage } from "./shared/errors";
+import { ScrollArea } from "./shared/ScrollArea";
 import type { RuntimeStatus } from "./app/LocalActivityPanel";
-import {
-  cancelScheduledAnimationFrame,
-  scheduleAnimationFrame,
-} from "./shared/animation";
 import {
   persistLocalPreferences,
   readLocalPreferences,
@@ -56,40 +46,6 @@ import type {
 import "./app.css";
 
 const EMPTY_OUTPUT_LINES: string[] = [];
-
-// Custom scrollbar geometry shared by the thumb renderer and the drag
-// handlers; the track is inset from the shell edges on both ends.
-const MAIN_SCROLL_TRACK_INSET = 7;
-
-const clampScrollTopValue = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
-
-function mainScrollTrackMetrics(mainColumn: HTMLElement, thumbHeight: number) {
-  const viewportHeight = mainColumn.clientHeight;
-  const contentHeight = mainColumn.scrollHeight;
-  const trackHeight = Math.max(0, viewportHeight - MAIN_SCROLL_TRACK_INSET * 2);
-  const travel = Math.max(1, trackHeight - thumbHeight);
-  const scrollRange = Math.max(1, contentHeight - viewportHeight);
-  return {
-    travel,
-    scrollRange,
-    minTop: MAIN_SCROLL_TRACK_INSET,
-    maxTop: MAIN_SCROLL_TRACK_INSET + travel,
-  };
-}
-
-function scrollTopForThumbTop(
-  mainColumn: HTMLElement,
-  thumbTop: number,
-  thumbHeight: number,
-) {
-  const { travel, scrollRange, minTop } = mainScrollTrackMetrics(
-    mainColumn,
-    thumbHeight,
-  );
-  const clamped = clampScrollTopValue(thumbTop, minTop, minTop + travel);
-  return ((clamped - minTop) / travel) * scrollRange;
-}
 
 export default function App() {
   const nativeRuntime = isTauriRuntime();
@@ -132,90 +88,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [runHistoryRefreshToken, setRunHistoryRefreshToken] = useState(0);
   const inspectorResetRef = useRef<() => void>(() => undefined);
-  const mainColumnRef = useRef<HTMLElement>(null);
-  const scrollFrameRef = useRef<number | null>(null);
-  const [mainScrollThumb, setMainScrollThumb] = useState({
-    visible: false,
-    top: 0,
-    height: 0,
-  });
-  const scrollbarDragRef = useRef<{
-    startY: number;
-    startTop: number;
-  } | null>(null);
-
-  const updateMainScrollThumb = useCallback(() => {
-    const mainColumn = mainColumnRef.current;
-    if (!mainColumn) return;
-
-    const viewportHeight = mainColumn.clientHeight;
-    const contentHeight = mainColumn.scrollHeight;
-    const trackHeight = Math.max(
-      0,
-      viewportHeight - MAIN_SCROLL_TRACK_INSET * 2,
-    );
-
-    if (contentHeight <= viewportHeight + 1 || trackHeight <= 0) {
-      setMainScrollThumb((current) =>
-        current.visible ? { visible: false, top: 0, height: 0 } : current,
-      );
-      return;
-    }
-
-    const height = Math.max(
-      28,
-      Math.min(trackHeight, (trackHeight * viewportHeight) / contentHeight),
-    );
-    const travel = Math.max(0, trackHeight - height);
-    const scrollRange = Math.max(1, contentHeight - viewportHeight);
-    const top =
-      MAIN_SCROLL_TRACK_INSET + (mainColumn.scrollTop / scrollRange) * travel;
-
-    setMainScrollThumb((current) =>
-      current.visible &&
-      Math.abs(current.top - top) < 0.5 &&
-      Math.abs(current.height - height) < 0.5
-        ? current
-        : { visible: true, top, height },
-    );
-  }, []);
-
-  useLayoutEffect(() => {
-    const mainColumn = mainColumnRef.current;
-    if (!mainColumn) return;
-
-    const scheduleScrollThumbUpdate = () => {
-      if (scrollFrameRef.current !== null) return;
-      scrollFrameRef.current = scheduleAnimationFrame(() => {
-        scrollFrameRef.current = null;
-        updateMainScrollThumb();
-      });
-    };
-
-    scheduleScrollThumbUpdate();
-    mainColumn.addEventListener("scroll", scheduleScrollThumbUpdate, {
-      passive: true,
-    });
-
-    const resizeObserver =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(scheduleScrollThumbUpdate);
-    resizeObserver?.observe(mainColumn);
-
-    const mutationObserver = new MutationObserver(scheduleScrollThumbUpdate);
-    mutationObserver.observe(mainColumn, { childList: true, subtree: true });
-
-    return () => {
-      mainColumn.removeEventListener("scroll", scheduleScrollThumbUpdate);
-      resizeObserver?.disconnect();
-      mutationObserver.disconnect();
-      if (scrollFrameRef.current !== null) {
-        cancelScheduledAnimationFrame(scrollFrameRef.current);
-        scrollFrameRef.current = null;
-      }
-    };
-  }, [updateMainScrollThumb]);
 
   const handleWorkspaceError = useCallback(
     (message: string | null) => setError(message),
@@ -284,6 +156,7 @@ export default function App() {
     cancelCleanup,
     confirmCleanup,
     copyAgentPrompt: handleCopyAgentPrompt,
+    dismissAgentPrompt: handleDismissAgentPrompt,
   } = useProjectInspectorActions({
     language,
     inspectorProject,
@@ -509,6 +382,10 @@ export default function App() {
     () => void handleCopyAgentPrompt(),
     [handleCopyAgentPrompt],
   );
+  const handleDismissInspectorPrompt = useCallback(
+    () => handleDismissAgentPrompt(),
+    [handleDismissAgentPrompt],
+  );
   const handleInspectorCleanup = useCallback(
     (project: ProjectSnapshot) => void handleCleanArtifacts(project),
     [handleCleanArtifacts],
@@ -553,6 +430,7 @@ export default function App() {
       isAgentPromptForGuidanceUpdate,
       isAgentPromptCopied,
       onCopyAgentPrompt: handleCopyInspectorPrompt,
+      onDismissAgentPrompt: handleDismissInspectorPrompt,
       isWritingGuidance,
       cleanupFeedback,
       cleanupSelection,
@@ -575,6 +453,7 @@ export default function App() {
       cleanupProgress,
       cleanupSelection,
       handleCopyInspectorPrompt,
+      handleDismissInspectorPrompt,
       handleInspectorCleanup,
       handleInspectorConfirmCleanup,
       handleInspectorGuidance,
@@ -613,138 +492,63 @@ export default function App() {
             }
           />
 
-          <div className="main-column-shell">
-            <main ref={mainColumnRef} className="main-column">
-              <PageTransition pageKey={activePage}>
-                {(page) => {
-                  const heading = headingForPage(page);
-                  return (
-                    <div className="page-view" data-page={page}>
-                      <header className="topbar">
-                        <div className="page-heading">
-                          <h1>{heading.title}</h1>
-                          <p>{heading.body}</p>
-                        </div>
-                      </header>
+          <ScrollArea
+            className="main-column-shell"
+            viewportClassName="main-column"
+            viewportComponent="main"
+          >
+            <PageTransition pageKey={activePage}>
+              {(page) => {
+                const heading = headingForPage(page);
+                return (
+                  <div className="page-view" data-page={page}>
+                    <header className="topbar">
+                      <div className="page-heading">
+                        <h1>{heading.title}</h1>
+                        <p>{heading.body}</p>
+                      </div>
+                    </header>
 
-                      {page === "settings" ? (
-                        <SettingsPanel
-                          theme={theme}
-                          setTheme={setTheme}
-                          language={language}
-                          setLanguage={setLanguage}
-                          workspacePaths={workspacePaths}
-                          onWorkspacePathsChange={updateWorkspacePaths}
-                          excludeNames={excludeNames}
-                          setExcludeNames={setExcludeNames}
-                          onScan={handleScanWorkspace}
-                          isScanning={isScanning}
-                          hiddenInspectorSections={hiddenInspectorSections}
-                          onToggleInspectorSection={
-                            handleToggleInspectorSection
-                          }
-                          appVersion={__APP_VERSION__}
-                          update={appUpdate}
-                          inAppInstallSupported={inAppInstallSupported}
-                          autoCheckUpdates={autoCheckUpdates}
-                          onAutoCheckUpdatesChange={setAutoCheckUpdates}
-                        />
-                      ) : page === "git" ? (
-                        <GitHistoryView
-                          key={selectedProject?.id ?? "none"}
-                          projects={snapshot.projects}
-                          selectedId={selectedProject?.id}
-                          onSelect={selectProject}
-                        />
-                      ) : (
-                        <ProjectsPage
-                          snapshot={snapshot}
-                          visibleProjects={visibleProjects}
-                          projectList={projectList}
-                          inspector={inspector}
-                        />
-                      )}
-                    </div>
-                  );
-                }}
-              </PageTransition>
-            </main>
-            {mainScrollThumb.visible ? (
-              <div
-                className="main-scrollbar"
-                aria-hidden="true"
-                onPointerDown={(event) => {
-                  if (event.button !== 0) return;
-                  const mainColumn = mainColumnRef.current;
-                  if (!mainColumn) return;
-                  event.preventDefault();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  if (event.target !== event.currentTarget) {
-                    // Thumb: drag from where the pointer grabbed it.
-                    scrollbarDragRef.current = {
-                      startY: event.clientY,
-                      startTop: mainScrollThumb.top,
-                    };
-                    return;
-                  }
-                  // Track: jump so the thumb centers under the pointer.
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  const { travel, minTop } = mainScrollTrackMetrics(
-                    mainColumn,
-                    mainScrollThumb.height,
-                  );
-                  const desiredTop = clampScrollTopValue(
-                    event.clientY - rect.top - mainScrollThumb.height / 2,
-                    minTop,
-                    minTop + travel,
-                  );
-                  mainColumn.scrollTop = scrollTopForThumbTop(
-                    mainColumn,
-                    desiredTop,
-                    mainScrollThumb.height,
-                  );
-                  scrollbarDragRef.current = {
-                    startY: event.clientY,
-                    startTop: desiredTop,
-                  };
-                }}
-                onPointerMove={(event) => {
-                  const drag = scrollbarDragRef.current;
-                  const mainColumn = mainColumnRef.current;
-                  if (!drag || !mainColumn) return;
-                  const { travel, scrollRange, minTop } =
-                    mainScrollTrackMetrics(mainColumn, mainScrollThumb.height);
-                  const top = clampScrollTopValue(
-                    drag.startTop + (event.clientY - drag.startY),
-                    minTop,
-                    minTop + travel,
-                  );
-                  mainColumn.scrollTop =
-                    ((top - minTop) / travel) * scrollRange;
-                }}
-                onPointerUp={() => {
-                  scrollbarDragRef.current = null;
-                }}
-                onPointerCancel={() => {
-                  scrollbarDragRef.current = null;
-                }}
-                onWheel={(event) => {
-                  // The track intercepts pointer events, so wheel scrolling
-                  // over it must be forwarded to the main column manually.
-                  const mainColumn = mainColumnRef.current;
-                  if (mainColumn) mainColumn.scrollTop += event.deltaY;
-                }}
-              >
-                <span
-                  className="main-scrollbar-thumb"
-                  style={{
-                    height: `${mainScrollThumb.height}px`,
-                    transform: `translateY(${mainScrollThumb.top}px)`,
-                  }}
-                />
-              </div>
-            ) : null}
-          </div>
+                    {page === "settings" ? (
+                      <SettingsPanel
+                        theme={theme}
+                        setTheme={setTheme}
+                        language={language}
+                        setLanguage={setLanguage}
+                        workspacePaths={workspacePaths}
+                        onWorkspacePathsChange={updateWorkspacePaths}
+                        excludeNames={excludeNames}
+                        setExcludeNames={setExcludeNames}
+                        onScan={handleScanWorkspace}
+                        isScanning={isScanning}
+                        hiddenInspectorSections={hiddenInspectorSections}
+                        onToggleInspectorSection={handleToggleInspectorSection}
+                        appVersion={__APP_VERSION__}
+                        update={appUpdate}
+                        inAppInstallSupported={inAppInstallSupported}
+                        autoCheckUpdates={autoCheckUpdates}
+                        onAutoCheckUpdatesChange={setAutoCheckUpdates}
+                      />
+                    ) : page === "git" ? (
+                      <GitHistoryView
+                        key={selectedProject?.id ?? "none"}
+                        projects={snapshot.projects}
+                        selectedId={selectedProject?.id}
+                        onSelect={selectProject}
+                      />
+                    ) : (
+                      <ProjectsPage
+                        snapshot={snapshot}
+                        visibleProjects={visibleProjects}
+                        projectList={projectList}
+                        inspector={inspector}
+                      />
+                    )}
+                  </div>
+                );
+              }}
+            </PageTransition>
+          </ScrollArea>
         </div>
       </RunStreamContext.Provider>
     </I18nProvider>

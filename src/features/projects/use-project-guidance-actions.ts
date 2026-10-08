@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { bridge } from "../../bridge";
 import type { ProjectSnapshot } from "../../bridge";
 import { createConfigurationAgentPrompt } from "./guidance-prompt";
+import { protocolViewModel } from "./protocol-presentation";
 import type { Language } from "../../i18n";
 import { errorMessage } from "../../shared/errors";
 
@@ -11,6 +12,7 @@ export interface ProjectGuidanceActions {
   isAgentPromptCopied: boolean;
   isWritingGuidance: boolean;
   reset: () => void;
+  dismissAgentPrompt: () => void;
   generateGuidance: (project: ProjectSnapshot) => Promise<void>;
   copyAgentPrompt: () => Promise<void>;
 }
@@ -45,7 +47,12 @@ export function useProjectGuidanceActions({
         setAgentPrompt(
           createConfigurationAgentPrompt(project, report.paths, language),
         );
-        setIsAgentPromptForGuidanceUpdate(true);
+        // A prompt opened while integration is unfinished closes once the
+        // card reports completion. Only a request made after the card is
+        // already integrated stays open, because that click asked for it.
+        setIsAgentPromptForGuidanceUpdate(
+          protocolViewModel(project).cardStatus === "configured",
+        );
         setIsAgentPromptCopied(false);
       } catch (error) {
         onError(errorMessage(error));
@@ -75,6 +82,7 @@ export function useProjectGuidanceActions({
     isAgentPromptCopied,
     isWritingGuidance,
     reset,
+    dismissAgentPrompt: reset,
     generateGuidance,
     copyAgentPrompt,
   };

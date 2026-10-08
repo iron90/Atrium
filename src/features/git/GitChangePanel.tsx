@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ProjectSnapshot } from "../../bridge";
+import { ScrollArea } from "../../shared/ScrollArea";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { ComboboxInput } from "../../shared/DropdownSelect";
@@ -93,7 +94,7 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
                 <p className="empty-copy">{t("noChanges")}</p>
               )}
               {changeSummary.files.length ? (
-                <div className="changed-file-list">
+                <ScrollArea viewportClassName="changed-file-list">
                   {changeSummary.files.map((file) => (
                     <div key={file.path}>
                       <span>
@@ -104,7 +105,7 @@ export function GitChangePanel({ project }: { project?: ProjectSnapshot }) {
                       </small>
                     </div>
                   ))}
-                </div>
+                </ScrollArea>
               ) : null}
               <button
                 type="button"

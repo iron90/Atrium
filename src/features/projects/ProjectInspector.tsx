@@ -43,6 +43,7 @@ export interface ProjectInspectorProps {
   isAgentPromptForGuidanceUpdate: boolean;
   isAgentPromptCopied: boolean;
   onCopyAgentPrompt: () => void;
+  onDismissAgentPrompt: () => void;
   isWritingGuidance: boolean;
   cleanupFeedback: CleanupFeedback | null;
   cleanupSelection: string[];
@@ -82,6 +83,7 @@ export function ProjectInspector({
   isAgentPromptForGuidanceUpdate,
   isAgentPromptCopied,
   onCopyAgentPrompt,
+  onDismissAgentPrompt,
   isWritingGuidance,
   cleanupFeedback,
   cleanupSelection,
@@ -157,6 +159,7 @@ export function ProjectInspector({
         isAgentPromptForGuidanceUpdate={isAgentPromptForGuidanceUpdate}
         isAgentPromptCopied={isAgentPromptCopied}
         onCopyAgentPrompt={onCopyAgentPrompt}
+        onDismissAgentPrompt={onDismissAgentPrompt}
         isWritingGuidance={isWritingGuidance}
         onGenerateGuidance={onGenerateGuidance}
       />

@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { CleanupProgress, ProjectSnapshot } from "../../bridge";
+import { protocolViewModel } from "./protocol-presentation";
 import {
   useProjectCleanupActions,
   type CleanupFeedback,
@@ -34,6 +35,7 @@ export interface ProjectInspectorActions {
   setCleanupSelection: (paths: string[]) => void;
   isCleaningArtifacts: boolean;
   generateGuidance: (project: ProjectSnapshot) => Promise<void>;
+  dismissAgentPrompt: () => void;
   cleanArtifacts: (project: ProjectSnapshot) => void;
   cancelCleanup: () => void;
   confirmCleanup: () => Promise<void>;
@@ -52,6 +54,7 @@ export function useProjectInspectorActions({
     isAgentPromptCopied,
     isWritingGuidance,
     reset: resetGuidance,
+    dismissAgentPrompt,
     generateGuidance,
     copyAgentPrompt,
   } = useProjectGuidanceActions({ language, onError });
@@ -77,6 +80,11 @@ export function useProjectInspectorActions({
     resetCleanup();
   }, [resetCleanup, resetGuidance]);
 
+  useEffect(() => {
+    if (!inspectorProject || isAgentPromptForGuidanceUpdate) return;
+    if (!protocolViewModel(inspectorProject).needsGuidance) resetGuidance();
+  }, [inspectorProject, isAgentPromptForGuidanceUpdate, resetGuidance]);
+
   return {
     reset,
     agentPrompt,
@@ -90,6 +98,7 @@ export function useProjectInspectorActions({
     setCleanupSelection,
     isCleaningArtifacts,
     generateGuidance,
+    dismissAgentPrompt,
     cleanArtifacts,
     cancelCleanup,
     confirmCleanup,

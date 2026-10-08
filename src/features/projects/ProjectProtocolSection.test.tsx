@@ -19,6 +19,7 @@ const renderSection = (
       isAgentPromptForGuidanceUpdate={isAgentPromptForGuidanceUpdate}
       isAgentPromptCopied={false}
       onCopyAgentPrompt={vi.fn()}
+      onDismissAgentPrompt={vi.fn()}
       isWritingGuidance={false}
       onGenerateGuidance={vi.fn()}
     />,
@@ -44,6 +45,45 @@ describe("project protocol section", () => {
         name: "Prompt for the project development Agent",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("closes the prompt from its own button without the repeated description", () => {
+    const onDismissAgentPrompt = vi.fn();
+    const incompleteProject = {
+      ...baseProject,
+      protocol: {
+        ...baseProject.protocol,
+        capabilities: baseProject.protocol.capabilities.map((capability) => ({
+          ...capability,
+          status:
+            capability.id === "context"
+              ? ("missing" as const)
+              : ("configured" as const),
+        })),
+      },
+    };
+
+    render(
+      <ProjectProtocolSection
+        project={incompleteProject}
+        inspectedProject={incompleteProject}
+        agentPrompt="Generated agent prompt"
+        isAgentPromptForGuidanceUpdate={false}
+        isAgentPromptCopied={false}
+        onCopyAgentPrompt={vi.fn()}
+        onDismissAgentPrompt={onDismissAgentPrompt}
+        isWritingGuidance={false}
+        onGenerateGuidance={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByText(
+        "Copy this prompt to the Agent working in the project repository.",
+      ),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onDismissAgentPrompt).toHaveBeenCalledOnce();
   });
 
   it("keeps the prompt visible while protocol guidance is still needed", () => {

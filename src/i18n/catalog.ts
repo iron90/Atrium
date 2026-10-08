@@ -107,9 +107,8 @@ export const en = {
   protocolRequiredDescription:
     "Platform, channel, and build-profile facts will appear after the project completes the Atrium integration.",
   agentPromptTitle: "Prompt for the project development Agent",
-  agentPromptDescription:
-    "Copy this prompt to the Agent working in the project repository.",
   copyAgentPrompt: "Copy prompt",
+  dismissAgentPrompt: "Close",
   agentPromptCopied: "Copied",
   rawRepositoryCommands: "Discovered repository commands",
   discoveredCommandsCount: "{count} commands discovered from this repository",
@@ -399,8 +398,8 @@ export const zh: Record<keyof typeof en, string> = {
   protocolRequiredDescription:
     "项目完成 Atrium 接入后，平台、渠道和构建配置事实才会在这里显示。",
   agentPromptTitle: "发给项目开发 Agent 的提示词",
-  agentPromptDescription: "复制这段提示词，发送给项目仓库中的开发 Agent。",
   copyAgentPrompt: "复制提示词",
+  dismissAgentPrompt: "关闭",
   agentPromptCopied: "已复制",
   rawRepositoryCommands: "发现的仓库命令",
   discoveredCommandsCount: "从该仓库发现 {count} 条命令",

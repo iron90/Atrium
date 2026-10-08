@@ -246,14 +246,25 @@ button[aria-busy="true"] {
   gap: 28px;
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
   padding: 28px 18px 20px;
   background: color-mix(in srgb, var(--sidebar) 94%, transparent);
   border-right: 1px solid var(--line);
 }
-.sidebar::-webkit-scrollbar,
-.main-column::-webkit-scrollbar {
+.sidebar-shell {
+  height: 100%;
+  min-height: 0;
+}
+.scroll-area {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.scroll-area-viewport {
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.scroll-area-viewport::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
@@ -396,9 +407,6 @@ button[aria-busy="true"] {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: none;
   padding: 38px 38px 34px;
 }
 .main-scrollbar {
@@ -2122,28 +2130,24 @@ button[aria-busy="true"] {
 }
 .agent-prompt-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
-.agent-prompt-heading > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
 .agent-prompt-heading strong {
+  min-width: 0;
   color: var(--text);
   font-size: 10px;
 }
-.agent-prompt-heading span {
-  color: var(--muted);
-  font-size: 9px;
-  line-height: 1.4;
+.agent-prompt-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
 }
 .agent-prompt {
   width: 100%;
   min-height: 180px;
-  padding: 8px;
+  padding: 8px 16px 8px 8px;
   border: 1px solid var(--line);
   border-radius: 5px;
   resize: vertical;
@@ -2535,9 +2539,8 @@ button[aria-busy="true"] {
 }
 .output-console {
   max-height: 145px;
-  overflow: auto;
   margin: 10px 0 0;
-  padding: 10px;
+  padding: 10px 16px 10px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--console-text);
@@ -2561,10 +2564,9 @@ button[aria-busy="true"] {
 }
 .commit-list {
   max-height: 320px;
-  overflow-y: auto;
   display: grid;
   gap: 11px;
-  padding-right: 6px;
+  padding-right: 16px;
 }
 .commit-row {
   display: grid;
@@ -2892,8 +2894,7 @@ button[aria-busy="true"] {
   display: grid;
   gap: 3px;
   max-height: 180px;
-  overflow: auto;
-  padding: 7px;
+  padding: 7px 16px 7px 7px;
   border: 1px solid var(--line);
   border-radius: 6px;
 }
@@ -3179,7 +3180,7 @@ button[aria-busy="true"] {
   gap: 8px;
   min-width: 0;
   max-height: 180px;
-  overflow: auto;
+  padding-right: 16px;
 }
 .settings-version-command {
   display: block;

@@ -2,6 +2,7 @@ import type { FinishedRunRecord } from "../runs/use-run-event-stream";
 import { useRunStream } from "../runs/run-stream-context";
 import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
+import { ScrollArea } from "../../shared/ScrollArea";
 import { InspectorSection } from "./InspectorPrimitives";
 
 export function ProjectRunSection({
@@ -28,9 +29,9 @@ export function ProjectRunSection({
           <span>{activeRun.displayCommand}</span>
           <em>{t("running")}</em>
         </div>
-        <pre className="output-console">
+        <ScrollArea viewportComponent="pre" viewportClassName="output-console">
           {outputLines.length ? outputLines.join("\n") : t("waitingForOutput")}
-        </pre>
+        </ScrollArea>
       </InspectorSection>
     );
   }
@@ -67,7 +68,9 @@ export function ProjectRunSection({
           {meta ? ` · ${meta}` : ""}
         </em>
       </div>
-      <pre className="output-console">{consoleText}</pre>
+      <ScrollArea viewportComponent="pre" viewportClassName="output-console">
+        {consoleText}
+      </ScrollArea>
     </InspectorSection>
   );
 }

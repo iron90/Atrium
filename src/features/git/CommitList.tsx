@@ -1,12 +1,13 @@
 import { useI18n } from "../../i18n";
 import type { GitCommit } from "../../bridge";
 import { formatRelative } from "../../shared/format";
+import { ScrollArea } from "../../shared/ScrollArea";
 
 export function CommitList({ commits }: { commits: GitCommit[] }) {
   const { language } = useI18n();
 
   return (
-    <div className="commit-list">
+    <ScrollArea viewportClassName="commit-list">
       {commits.map((commit) => (
         <div className="commit-row" key={commit.sha}>
           <span className="commit-dot" />
@@ -19,6 +20,6 @@ export function CommitList({ commits }: { commits: GitCommit[] }) {
           <time>{formatRelative(commit.timestamp, language)}</time>
         </div>
       ))}
-    </div>
+    </ScrollArea>
   );
 }

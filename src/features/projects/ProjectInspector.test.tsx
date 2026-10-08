@@ -21,6 +21,7 @@ const baseProps = {
   isAgentPromptForGuidanceUpdate: false,
   isAgentPromptCopied: false,
   onCopyAgentPrompt: () => undefined,
+  onDismissAgentPrompt: () => undefined,
   isWritingGuidance: false,
   cleanupFeedback: null,
   cleanupSelection: [],

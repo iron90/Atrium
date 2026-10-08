@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("project guidance actions", () => {
-  it("keeps an update prompt available for a complete protocol", async () => {
+  it("lets a prompt close once unfinished integration completes", async () => {
     vi.spyOn(bridge, "generateProjectGuidance").mockResolvedValue(
       guidanceReport,
     );
@@ -40,20 +40,20 @@ describe("project guidance actions", () => {
       await result.current.generateGuidance(project);
     });
 
-    expect(result.current.isAgentPromptForGuidanceUpdate).toBe(true);
+    expect(result.current.isAgentPromptForGuidanceUpdate).toBe(false);
     expect(result.current.agentPrompt).toContain(".atrium/guidance.toml");
     expect(result.current.agentPrompt).toContain(
       ".atrium/reports/project-configuration.md",
     );
   });
 
-  it("keeps an update prompt available for an older protocol schema", async () => {
+  it("keeps a prompt requested from an already integrated protocol", async () => {
     vi.spyOn(bridge, "generateProjectGuidance").mockResolvedValue(
       guidanceReport,
     );
     const project = {
       ...baseProject,
-      protocol: { ...completeProtocol, needsUpdate: true },
+      protocol: completeProtocol,
       guidance: { revision: 1, needsUpdate: false, needsSync: false },
     };
     const { result } = renderHook(() =>
@@ -65,5 +65,31 @@ describe("project guidance actions", () => {
     });
 
     expect(result.current.isAgentPromptForGuidanceUpdate).toBe(true);
+    expect(result.current.agentPrompt).toContain(".atrium/guidance.toml");
+  });
+
+  it("clears a prompt when the user closes it", async () => {
+    vi.spyOn(bridge, "generateProjectGuidance").mockResolvedValue(
+      guidanceReport,
+    );
+    const project = {
+      ...baseProject,
+      protocol: completeProtocol,
+      guidance: { revision: 1, needsUpdate: false, needsSync: false },
+    };
+    const { result } = renderHook(() =>
+      useProjectGuidanceActions({ language: "en", onError: vi.fn() }),
+    );
+
+    await act(async () => {
+      await result.current.generateGuidance(project);
+    });
+    act(() => {
+      result.current.dismissAgentPrompt();
+    });
+
+    expect(result.current.agentPrompt).toBeNull();
+    expect(result.current.isAgentPromptForGuidanceUpdate).toBe(false);
+    expect(result.current.isAgentPromptCopied).toBe(false);
   });
 });
