@@ -55,29 +55,29 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
 
-Atrium guidance revision: 3
+Atrium guidance revision: 4
 
-## Run / Check / Build command bindings
+## Check / Build / Run command bindings
 
-Each build profile must reference commands already owned by the project. First identify the profile's primary local runtime entry and its existing local entry point:
+Each build profile must reference commands already owned by the project:
 
-- `run`: a command that starts or provides the primary target. A web development server is valid for a web target; a desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.
 - `check`: an existing project quality-validation entry such as tests, lint, typecheck, or another command that reports success or failure through its exit code.
 - `build`: an existing project build entry that produces the profile's declared distributable artifacts. Build must not silently install, replace, or open an application; installation is a separate, explicit user action.
+- `run`: a command that starts or provides the primary target. First identify the profile's primary local runtime entry and its existing local entry point. A web development server is valid for a web target; a desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.
 
 These rules are framework-neutral. A framework command such as `tauri dev` is only an example when the repository actually uses Tauri. Atrium does not invent or wrap project commands.
 
 ## Host requirements and verification
 
-`platform` is the target of the produced artifact. Keep the artifact target, compatible execution hosts, and verification evidence separate; do not infer either host requirement or verification from the target platform. `[build_profiles.host_requirements]` declares the hosts where an action may execute; it is the lower compatibility boundary, not proof that the action has passed. `[build_profiles.verification]` records hosts where the exact bound action has passed; it is the upper evidence boundary. Declare host requirements and verification independently for `run`, `check`, and `build` using only `macos`, `windows`, or `linux`, and update them whenever cross-compilation or toolchain support changes.
+`platform` is the target of the produced artifact. Keep the artifact target, compatible execution hosts, and verification evidence separate; do not infer either host requirement or verification from the target platform. `[build_profiles.host_requirements]` declares the hosts where an action may execute; it is the lower compatibility boundary, not proof that the action has passed. `[build_profiles.verification]` records hosts where the exact bound action has passed; it is the upper evidence boundary. Declare host requirements and verification independently for `check`, `build`, and `run` using only `macos`, `windows`, or `linux`, and update them whenever cross-compilation or toolchain support changes.
 
 For every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:
 
 | Action  | Required proof                                                                                                                                                                                                                  |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run`   | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough.                                                                                                                  |
 | `check` | The complete command finishes with exit code `0`.                                                                                                                                                                               |
 | `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |
+| `run`   | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough.                                                                                                                  |
 
 Add a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
@@ -115,6 +115,6 @@ Atrium only enforces that cleanup paths are relative, stay inside the project at
 
 ## Keeping the protocol current
 
-When a development task changes the project's icon, supported platforms or channels, Run / Check / Build commands, build artifacts, cleanup directories, or another Atrium protocol field, re-read the current `.atrium/guidance.toml`, `.atrium/manifest.toml`, and relevant project files, and update `.atrium/manifest.toml` so it matches the project's actual current structure. If `.atrium/guidance.toml` contains a newer guidance revision than this managed block, read the latest Atrium guidance reports, apply their migration instructions, and update this managed block to the latest version. Do not invent platforms, channels, commands, artifacts, cleanup paths, or host support. Do not launch, control, or terminate Atrium.
+When a development task changes the project's icon, supported platforms or channels, Check / Build / Run commands, build artifacts, cleanup directories, or another Atrium protocol field, re-read the current `.atrium/guidance.toml`, `.atrium/manifest.toml`, and relevant project files, and update `.atrium/manifest.toml` so it matches the project's actual current structure. If `.atrium/guidance.toml` contains a newer guidance revision than this managed block, read the latest Atrium guidance reports, apply their migration instructions, and update this managed block to the latest version. Do not invent platforms, channels, commands, artifacts, cleanup paths, or host support. Do not launch, control, or terminate Atrium.
 
 <!-- END ATRIUM MANAGED RULES -->

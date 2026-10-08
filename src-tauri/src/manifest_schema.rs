@@ -61,17 +61,17 @@ pub(crate) struct ManifestVerificationBlocker {
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ManifestCommands {
-    pub(crate) run: Option<String>,
     pub(crate) check: Option<String>,
     pub(crate) build: Option<String>,
+    pub(crate) run: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ManifestHostRequirements {
-    pub(crate) run: Option<Vec<String>>,
     pub(crate) check: Option<Vec<String>>,
     pub(crate) build: Option<Vec<String>>,
+    pub(crate) run: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Deserialize)]

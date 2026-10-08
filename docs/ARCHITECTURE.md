@@ -278,11 +278,11 @@ BuildProfile
   label
   platform: Facet
   channel: Facet
-  runCommandId?
   checkCommandId?
   buildCommandId?
-  hostRequirements: { run?: HostOs[]; check?: HostOs[]; build?: HostOs[] }
-  verification: { run?: HostOs[]; check?: HostOs[]; build?: HostOs[] }
+  runCommandId?
+  hostRequirements: { check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
+  verification: { check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
   hostMismatchActions / unverifiedActions
   source: manifest key
   region? / payment?  (reserved for later variants)
@@ -292,7 +292,8 @@ BuildProfile
 
 A BuildProfile is the combination of "platform + channel + project command bindings".
 For a formal target action, the user first selects a profile, and Atrium then invokes
-the repository command bound to that profile.
+the repository command bound to that profile. Those actions are presented and
+discussed in workflow order: check, then build, then run.
 
 `hostRequirements` is the per-action lower bound of host compatibility (the
 environments where execution is allowed), not a verification conclusion; `verification`
@@ -317,8 +318,8 @@ the business semantics remain separate.
 ```text
 ProjectCommand
   id: stable detector id
-  kind: run | check | build | other
-  label: Run / Check / Build / ...
+  kind: check | build | run | other
+  label: Check / Build / Run / ...
   program: executable name
   args: argv array
   workingDirectory: project path
@@ -433,8 +434,8 @@ pollute another project's:
 - Rust: provides Cargo entry points from `Cargo.toml`;
 - Flutter: provides Flutter entry points from `pubspec.yaml`;
 - Make: reads explicit targets from `Makefile`;
-- .NET: discovers `dotnet run` / `build` / `test` from `.sln` / `.csproj`;
-- Go: discovers `go run` / `build` / `test` from `go.mod`;
+- .NET: discovers `dotnet test` / `build` / `run` from `.sln` / `.csproj`;
+- Go: discovers `go test` / `build` / `run` from `go.mod`;
 - Gradle: discovers Gradle entry points from `build.gradle(.kts)` / `settings.gradle(.kts)`;
 - Maven: discovers Maven entry points from `pom.xml`;
 - Python: discovers pytest and build entry points from `pyproject.toml` / `requirements.txt` (uv supported);
@@ -447,7 +448,7 @@ pollute another project's:
 - The manifest structure strictly rejects every undeclared field; a typo or a
   future-version field invalidates the configuration instead of being silently
   ignored. The current schema is 1 and already includes per-action host system
-  declarations for Run / Check / Build (host_requirements) and host verification
+  declarations for Check / Build / Run (host_requirements) and host verification
   records (verification); future protocol evolution must introduce a new schema
   number before adding fields;
 - Fixed project description files such as package.json, Cargo.toml, pyproject.toml,

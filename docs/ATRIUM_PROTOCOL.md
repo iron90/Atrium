@@ -117,16 +117,16 @@ channel = "apple-app-store"
 artifacts = ["src-tauri/target/release/bundle/macos"]
 
 [build_profiles.commands]
-run = "package.json#scripts.dev"
 build = "package.json#scripts.build:macos:appstore"
+run = "package.json#scripts.dev"
 
 [build_profiles.host_requirements]
-run = ["macos"]
 build = ["macos"]
+run = ["macos"]
 
 [build_profiles.verification]
-run = ["macos"]
 build = ["macos"]
+run = ["macos"]
 ```
 
 The `build_profiles` entry is the executable relationship. It combines a
@@ -135,8 +135,14 @@ already owned by the repository. A command reference may use the discovered
 command id or its structured source path. Atrium never replaces that command
 with its own build implementation.
 
-The command roles are framework-neutral:
+The command roles are framework-neutral, in workflow order:
 
+- `check` points to an existing project quality-validation command, such as
+  tests, lint, type checking, or another command with a meaningful exit result.
+- `build` points to the existing command that produces the profile's declared
+  distributable artifacts. Installation, replacement, and opening an installed
+  application are separate explicit actions; they are not implicit build
+  behavior.
 - `run` must execute the actual platform and channel target of its profile.
   A generic dev command starting a macOS app is not evidence that Windows Run
   works. Cross-building Windows artifacts on macOS does not establish Run
@@ -157,12 +163,6 @@ The command roles are framework-neutral:
   their existing project-owned run entry. It must not point only to a
   subordinate service required by another runtime. If no reliable entry exists,
   the field is omitted rather than guessed.
-- `check` points to an existing project quality-validation command, such as
-  tests, lint, type checking, or another command with a meaningful exit result.
-- `build` points to the existing command that produces the profile's declared
-  distributable artifacts. Installation, replacement, and opening an installed
-  application are separate explicit actions; they are not implicit build
-  behavior.
 
 The target platform and the operating system that executes a command are
 separate facts. A profile declares compatible execution hosts and records
@@ -170,14 +170,14 @@ successful verification hosts independently:
 
 ```toml
 [build_profiles.host_requirements]
-run = ["macos", "windows"]
 check = ["macos", "windows", "linux"]
 build = ["windows"]
+run = ["macos", "windows"]
 
 [build_profiles.verification]
-run = ["macos"]
 check = ["macos", "windows"]
 build = ["windows"]
+run = ["macos"]
 ```
 
 Host values are limited to `macos`, `windows`, and `linux`. The three actions

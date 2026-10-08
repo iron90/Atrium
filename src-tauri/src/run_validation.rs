@@ -159,9 +159,9 @@ fn resolve_profile(
 
 fn format_command_kind(kind: &CommandKind) -> &'static str {
     match kind {
-        CommandKind::Run => "run",
         CommandKind::Check => "check",
         CommandKind::Build => "build",
+        CommandKind::Run => "run",
         CommandKind::Other => "other",
     }
 }

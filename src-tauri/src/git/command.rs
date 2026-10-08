@@ -1,8 +1,10 @@
 use std::io::{self, Read};
 use std::path::Path;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, ExitStatus, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use crate::captured_process::captured_command;
 
 const MAX_GIT_STDOUT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_GIT_STDERR_BYTES: usize = 64 * 1024;
@@ -47,7 +49,7 @@ struct GitProcessOutput {
 }
 
 fn run_git_process(project_path: &Path, args: &[&str]) -> Result<GitProcessOutput, String> {
-    let mut command = Command::new("git");
+    let mut command = captured_command("git");
     command
         // Atrium only observes repositories: optional locks make `git status`
         // write index/untracked-cache updates, and repo-local fsmonitor or

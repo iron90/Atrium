@@ -43,9 +43,9 @@ export interface CleanupDeclaration {
 export type HostOs = "macos" | "windows" | "linux";
 
 export interface BuildHostRequirements {
-  run: HostOs[] | null;
   check: HostOs[] | null;
   build: HostOs[] | null;
+  run: HostOs[] | null;
 }
 
 export interface ProfileVerificationBlocker {
@@ -64,9 +64,9 @@ export interface BuildProfile {
   label: string;
   platform: Facet;
   channel: Facet;
-  runCommandId: string | null;
   checkCommandId: string | null;
   buildCommandId: string | null;
+  runCommandId: string | null;
   hostRequirements: BuildHostRequirements;
   verification: BuildHostRequirements;
   hostMismatchActions: ProfileAction[];

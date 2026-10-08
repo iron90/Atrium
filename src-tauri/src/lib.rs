@@ -1,4 +1,5 @@
 mod artifacts;
+mod captured_process;
 mod command_boundary;
 mod command_discovery;
 mod conformance;

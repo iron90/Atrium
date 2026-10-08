@@ -78,9 +78,9 @@ mod tests {
 
         let commands = discover_commands(&root);
 
-        assert_eq!(commands[0].id, "npm:dev");
-        assert_eq!(commands[1].id, "npm:lint");
-        assert_eq!(commands[2].id, "npm:build");
+        assert_eq!(commands[0].id, "npm:lint");
+        assert_eq!(commands[1].id, "npm:build");
+        assert_eq!(commands[2].id, "npm:dev");
         assert_eq!(commands[3].id, "npm:docs");
         assert_eq!(commands[3].kind, CommandKind::Other);
 

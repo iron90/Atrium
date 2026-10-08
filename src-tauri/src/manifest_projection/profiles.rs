@@ -64,9 +64,9 @@ pub(super) fn parse_build_profiles(
                 .verification_blockers
                 .as_deref()
                 .unwrap_or(&[]),
-            &run_command_id,
             &check_command_id,
             &build_command_id,
+            &run_command_id,
             &host_requirements,
             &verification,
             &id,
@@ -90,41 +90,37 @@ pub(super) fn parse_build_profiles(
             }
         };
 
-        let host_mismatch_actions = [
-            (CommandKind::Run, run_command_id.is_some()),
-            (CommandKind::Check, check_command_id.is_some()),
-            (CommandKind::Build, build_command_id.is_some()),
-        ]
-        .into_iter()
-        .filter_map(|(action, is_bound)| {
-            (is_bound
-                && !host_requirements.action_supported_for_platform(
-                    &action,
-                    &platform.key,
-                    HostOs::current(),
-                ))
-            .then_some(action)
-        })
-        .collect();
-        let unverified_actions = [
-            (CommandKind::Run, run_command_id.is_some()),
-            (CommandKind::Check, check_command_id.is_some()),
-            (CommandKind::Build, build_command_id.is_some()),
-        ]
-        .into_iter()
-        .filter_map(|(action, is_bound)| {
-            (is_bound
-                && host_requirements.action_supported_for_platform(
-                    &action,
-                    &platform.key,
-                    HostOs::current(),
-                )
-                && !verification.for_action(&action).is_some_and(|hosts| {
-                    HostOs::current().is_some_and(|host| hosts.contains(&host))
-                }))
-            .then_some(action)
-        })
-        .collect();
+        let action_is_bound = |action: CommandKind| match action {
+            CommandKind::Check => check_command_id.is_some(),
+            CommandKind::Build => build_command_id.is_some(),
+            CommandKind::Run => run_command_id.is_some(),
+            CommandKind::Other => false,
+        };
+        let host_mismatch_actions = CommandKind::PROFILE_ACTIONS
+            .into_iter()
+            .filter(|action| {
+                action_is_bound(*action)
+                    && !host_requirements.action_supported_for_platform(
+                        action,
+                        &platform.key,
+                        HostOs::current(),
+                    )
+            })
+            .collect();
+        let unverified_actions = CommandKind::PROFILE_ACTIONS
+            .into_iter()
+            .filter(|action| {
+                action_is_bound(*action)
+                    && host_requirements.action_supported_for_platform(
+                        action,
+                        &platform.key,
+                        HostOs::current(),
+                    )
+                    && !verification.for_action(action).is_some_and(|hosts| {
+                        HostOs::current().is_some_and(|host| hosts.contains(&host))
+                    })
+            })
+            .collect();
 
         let label = normalize_optional_text(manifest_profile.label)
             .unwrap_or_else(|| format!("{} · {}", platform.label, channel.label));
@@ -133,9 +129,9 @@ pub(super) fn parse_build_profiles(
             label,
             platform,
             channel,
-            run_command_id,
             check_command_id,
             build_command_id,
+            run_command_id,
             host_requirements,
             verification,
             host_mismatch_actions,
@@ -225,18 +221,19 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
 }
 
 fn bound_actions(profile: &BuildProfile) -> [(CommandKind, Option<String>); 3] {
-    [
-        (CommandKind::Run, profile.run_command_id.clone()),
-        (CommandKind::Check, profile.check_command_id.clone()),
-        (CommandKind::Build, profile.build_command_id.clone()),
-    ]
+    CommandKind::PROFILE_ACTIONS.map(|action| {
+        (
+            action,
+            profile.command_id_for_action(&action).map(str::to_string),
+        )
+    })
 }
 
 fn action_label(action: CommandKind) -> &'static str {
     match action {
-        CommandKind::Run => "run",
         CommandKind::Check => "check",
         CommandKind::Build => "build",
+        CommandKind::Run => "run",
         CommandKind::Other => "other",
     }
 }
@@ -244,9 +241,9 @@ fn action_label(action: CommandKind) -> &'static str {
 #[allow(clippy::too_many_arguments)]
 fn parse_verification_blockers(
     declarations: &[ManifestVerificationBlocker],
-    run_command_id: &Option<String>,
     check_command_id: &Option<String>,
     build_command_id: &Option<String>,
+    run_command_id: &Option<String>,
     host_requirements: &BuildHostRequirements,
     verification: &BuildHostRequirements,
     profile_id: &str,
@@ -256,21 +253,21 @@ fn parse_verification_blockers(
     let mut seen = HashSet::new();
     for declaration in declarations {
         let action = match declaration.action.trim().to_ascii_lowercase().as_str() {
-            "run" => CommandKind::Run,
             "check" => CommandKind::Check,
             "build" => CommandKind::Build,
+            "run" => CommandKind::Run,
             _ => {
                 issues.push(format!(
-                    "Build profile {profile_id} verification blocker uses unsupported action {}; expected run, check, or build.",
+                    "Build profile {profile_id} verification blocker uses unsupported action {}; expected check, build, or run.",
                     declaration.action
                 ));
                 continue;
             }
         };
         let command_bound = match action {
-            CommandKind::Run => run_command_id.is_some(),
             CommandKind::Check => check_command_id.is_some(),
             CommandKind::Build => build_command_id.is_some(),
+            CommandKind::Run => run_command_id.is_some(),
             CommandKind::Other => false,
         };
         if !command_bound {
@@ -345,9 +342,9 @@ fn parse_host_requirements(
     };
 
     BuildHostRequirements {
-        run: parse_host_list(declaration.run, profile_id, "run", issues),
         check: parse_host_list(declaration.check, profile_id, "check", issues),
         build: parse_host_list(declaration.build, profile_id, "build", issues),
+        run: parse_host_list(declaration.run, profile_id, "run", issues),
     }
 }
 
@@ -357,11 +354,8 @@ fn validate_verification_hosts(
     profile_id: &str,
     issues: &mut Vec<String>,
 ) {
-    for (action, label) in [
-        (CommandKind::Run, "run"),
-        (CommandKind::Check, "check"),
-        (CommandKind::Build, "build"),
-    ] {
+    for action in CommandKind::PROFILE_ACTIONS {
+        let label = action_label(action);
         let Some(required_hosts) = requirements.for_action(&action) else {
             continue;
         };

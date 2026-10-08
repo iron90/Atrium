@@ -149,8 +149,8 @@ channel = "apple-app-store"
 artifacts = ["dist/Atrium.dmg", "src-tauri/target/release/bundle/macos"]
 
 [build_profiles.commands]
-run = "package.json#scripts.dev"
 build = "package.json#scripts.build:macos:appstore"
+run = "package.json#scripts.dev"
 
 [cleanup]
 cache = [".cache"]

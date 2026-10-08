@@ -6,16 +6,6 @@ use crate::model::{CommandKind, ProjectCommand};
 pub(super) fn cargo_commands(path: &Path) -> Vec<ProjectCommand> {
     vec![
         command(
-            "cargo:run",
-            CommandKind::Run,
-            "Run",
-            executable("cargo"),
-            vec!["run".to_string()],
-            path,
-            "Cargo.toml",
-            "cargo run",
-        ),
-        command(
             "cargo:test",
             CommandKind::Check,
             "Check",
@@ -35,21 +25,21 @@ pub(super) fn cargo_commands(path: &Path) -> Vec<ProjectCommand> {
             "Cargo.toml",
             "cargo build",
         ),
+        command(
+            "cargo:run",
+            CommandKind::Run,
+            "Run",
+            executable("cargo"),
+            vec!["run".to_string()],
+            path,
+            "Cargo.toml",
+            "cargo run",
+        ),
     ]
 }
 
 pub(super) fn flutter_commands(path: &Path) -> Vec<ProjectCommand> {
     vec![
-        command(
-            "flutter:run",
-            CommandKind::Run,
-            "Run",
-            executable("flutter"),
-            vec!["run".to_string()],
-            path,
-            "pubspec.yaml",
-            "flutter run",
-        ),
         command(
             "flutter:test",
             CommandKind::Check,
@@ -69,6 +59,16 @@ pub(super) fn flutter_commands(path: &Path) -> Vec<ProjectCommand> {
             path,
             "pubspec.yaml",
             "flutter build",
+        ),
+        command(
+            "flutter:run",
+            CommandKind::Run,
+            "Run",
+            executable("flutter"),
+            vec!["run".to_string()],
+            path,
+            "pubspec.yaml",
+            "flutter run",
         ),
     ]
 }

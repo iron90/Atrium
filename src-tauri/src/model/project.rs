@@ -64,9 +64,9 @@ pub struct BuildProfile {
     pub label: String,
     pub platform: Facet,
     pub channel: Facet,
-    pub run_command_id: Option<String>,
     pub check_command_id: Option<String>,
     pub build_command_id: Option<String>,
+    pub run_command_id: Option<String>,
     pub host_requirements: BuildHostRequirements,
     pub verification: BuildHostRequirements,
     pub host_mismatch_actions: Vec<CommandKind>,
@@ -102,9 +102,9 @@ pub struct BlockedAction {
 impl BuildProfile {
     pub fn command_id_for_action(&self, action: &CommandKind) -> Option<&str> {
         match action {
-            CommandKind::Run => self.run_command_id.as_deref(),
             CommandKind::Check => self.check_command_id.as_deref(),
             CommandKind::Build => self.build_command_id.as_deref(),
+            CommandKind::Run => self.run_command_id.as_deref(),
             CommandKind::Other => None,
         }
     }
@@ -133,9 +133,9 @@ impl BuildProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildHostRequirements {
-    pub run: Option<Vec<HostOs>>,
     pub check: Option<Vec<HostOs>>,
     pub build: Option<Vec<HostOs>>,
+    pub run: Option<Vec<HostOs>>,
 }
 
 impl BuildHostRequirements {
@@ -158,9 +158,9 @@ impl BuildHostRequirements {
 
     pub fn for_action(&self, action: &CommandKind) -> Option<&[HostOs]> {
         match action {
-            CommandKind::Run => self.run.as_deref(),
             CommandKind::Check => self.check.as_deref(),
             CommandKind::Build => self.build.as_deref(),
+            CommandKind::Run => self.run.as_deref(),
             CommandKind::Other => None,
         }
     }
@@ -251,10 +251,16 @@ pub struct ProjectCommand {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum CommandKind {
-    Run,
     Check,
     Build,
+    Run,
     Other,
+}
+
+impl CommandKind {
+    /// Profile actions in workflow order: check, then build, then run.
+    pub const PROFILE_ACTIONS: [CommandKind; 3] =
+        [CommandKind::Check, CommandKind::Build, CommandKind::Run];
 }
 
 #[cfg(test)]

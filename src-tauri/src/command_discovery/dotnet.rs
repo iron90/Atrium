@@ -11,16 +11,6 @@ pub(super) fn dotnet_commands(path: &Path) -> Vec<ProjectCommand> {
 
     vec![
         command(
-            "dotnet:run",
-            CommandKind::Run,
-            "Run",
-            "dotnet".to_string(),
-            vec!["run".to_string()],
-            path,
-            &source,
-            "dotnet run",
-        ),
-        command(
             "dotnet:test",
             CommandKind::Check,
             "Check",
@@ -39,6 +29,16 @@ pub(super) fn dotnet_commands(path: &Path) -> Vec<ProjectCommand> {
             path,
             &source,
             "dotnet build",
+        ),
+        command(
+            "dotnet:run",
+            CommandKind::Run,
+            "Run",
+            "dotnet".to_string(),
+            vec!["run".to_string()],
+            path,
+            &source,
+            "dotnet run",
         ),
     ]
 }

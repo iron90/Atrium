@@ -3,6 +3,7 @@ use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
+use crate::captured_process::captured_command;
 use crate::history::{append_run_history, with_history_lock};
 use crate::model::{CommandKind, ProjectCommand, RunError, RunStarted};
 use crate::run_context::RunContext;
@@ -132,7 +133,7 @@ pub fn stop_project_run(state: &AppState, run_id: &str) -> Result<(), String> {
 }
 
 fn build_process(command: &ProjectCommand) -> Result<tokio::process::Child, String> {
-    let mut process = std::process::Command::new(&command.program);
+    let mut process = captured_command(&command.program);
     process
         .args(&command.args)
         .current_dir(&command.working_directory)

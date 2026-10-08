@@ -71,12 +71,12 @@ fn render_configuration_report(root: &Path, project: &ProjectSnapshot) -> String
 }
 
 fn binding_rules() -> String {
-    "## Run / Check / Build command bindings\n\nEach build profile must reference commands already owned by the project. First identify the profile's primary local runtime entry and its existing local entry point:\n\n- `run`: a command that starts or provides the primary target. A web development server is valid for a web target; a desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.\n- `check`: an existing project quality-validation entry such as tests, lint, typecheck, or another command that reports success or failure through its exit code.\n- `build`: an existing project build entry that produces the profile's declared distributable artifacts. Build must not silently install, replace, or open an application; installation is a separate, explicit user action.\n\nThese rules are framework-neutral. A framework command such as `tauri dev` is only an example when the repository actually uses Tauri. Atrium does not invent or wrap project commands.\n\n"
+    "## Check / Build / Run command bindings\n\nEach build profile must reference commands already owned by the project:\n\n- `check`: an existing project quality-validation entry such as tests, lint, typecheck, or another command that reports success or failure through its exit code.\n- `build`: an existing project build entry that produces the profile's declared distributable artifacts. Build must not silently install, replace, or open an application; installation is a separate, explicit user action.\n- `run`: a command that starts or provides the primary target. First identify the profile's primary local runtime entry and its existing local entry point. A web development server is valid for a web target; a desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.\n\nThese rules are framework-neutral. A framework command such as `tauri dev` is only an example when the repository actually uses Tauri. Atrium does not invent or wrap project commands.\n\n"
         .to_string()
 }
 
 fn host_verification_rules() -> String {
-    "## Host requirements and verification\n\n`platform` is the target of the produced artifact. Keep the artifact target, compatible execution hosts, and verification evidence separate; do not infer either host requirement or verification from the target platform. `[build_profiles.host_requirements]` declares the hosts where an action may execute; it is the lower compatibility boundary, not proof that the action has passed. `[build_profiles.verification]` records hosts where the exact bound action has passed; it is the upper evidence boundary. Declare host requirements and verification independently for `run`, `check`, and `build` using only `macos`, `windows`, or `linux`, and update them whenever cross-compilation or toolchain support changes.\n\nFor every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:\n\n| Action | Required proof |\n| --- | --- |\n| `run` | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |\n| `check` | The complete command finishes with exit code `0`. |\n| `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |\n\nAdd a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
+    "## Host requirements and verification\n\n`platform` is the target of the produced artifact. Keep the artifact target, compatible execution hosts, and verification evidence separate; do not infer either host requirement or verification from the target platform. `[build_profiles.host_requirements]` declares the hosts where an action may execute; it is the lower compatibility boundary, not proof that the action has passed. `[build_profiles.verification]` records hosts where the exact bound action has passed; it is the upper evidence boundary. Declare host requirements and verification independently for `check`, `build`, and `run` using only `macos`, `windows`, or `linux`, and update them whenever cross-compilation or toolchain support changes.\n\nFor every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:\n\n| Action | Required proof |\n| --- | --- |\n| `check` | The complete command finishes with exit code `0`. |\n| `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |\n| `run` | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |\n\nAdd a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
 Every bound action on a candidate host has one of three verification states: verified (the host is recorded in `[build_profiles.verification]`), blocked (a `[[build_profiles.<profile-id>.verification_blockers]]` entry declares why verification cannot complete on that host), or pending (no record yet). When the current host matches but verification cannot complete — a missing signing identity, credential, SDK, or toolchain — declare the blocker with the exact reason instead of leaving the action silently pending.
 
@@ -105,7 +105,7 @@ fn sync_rules() -> String {
 }
 
 fn migration_rules() -> String {
-    "## Keeping the protocol current\n\nWhen a development task changes the project's icon, supported platforms or channels, Run / Check / Build commands, build artifacts, cleanup directories, or another Atrium protocol field, re-read the current `.atrium/guidance.toml`, `.atrium/manifest.toml`, and relevant project files, and update `.atrium/manifest.toml` so it matches the project's actual current structure. If `.atrium/guidance.toml` contains a newer guidance revision than this managed block, read the latest Atrium guidance reports, apply their migration instructions, and update this managed block to the latest version. Do not invent platforms, channels, commands, artifacts, cleanup paths, or host support. Do not launch, control, or terminate Atrium.\n\n".to_string()
+    "## Keeping the protocol current\n\nWhen a development task changes the project's icon, supported platforms or channels, Check / Build / Run commands, build artifacts, cleanup directories, or another Atrium protocol field, re-read the current `.atrium/guidance.toml`, `.atrium/manifest.toml`, and relevant project files, and update `.atrium/manifest.toml` so it matches the project's actual current structure. If `.atrium/guidance.toml` contains a newer guidance revision than this managed block, read the latest Atrium guidance reports, apply their migration instructions, and update this managed block to the latest version. Do not invent platforms, channels, commands, artifacts, cleanup paths, or host support. Do not launch, control, or terminate Atrium.\n\n".to_string()
 }
 
 fn render_managed_agent_rules() -> String {
@@ -166,31 +166,31 @@ channel = "<actual-channel-id>"
 artifacts = ["<relative generated file or directory>"]
 
 [build_profiles.commands]
-# Run the profile's primary local target; omit when the project has no reliable entry.
-# Do not use only a subordinate service required by another runtime.
-run = "<existing command id or source>"
 # Project quality validation with a meaningful success/failure exit code.
 check = "<existing command id or source>"
 # Project build command that produces this profile's declared artifacts.
 # It must not silently install, replace, or open an application.
 build = "<existing command id or source>"
+# Run the profile's primary local target; omit when the project has no reliable entry.
+# Do not use only a subordinate service required by another runtime.
+run = "<existing command id or source>"
 
 # Execution-host restrictions. `platform` above is the artifact target; these
 # values are the lower compatibility boundary. Preserve a required host even
 # when the current machine cannot test it.
 # [build_profiles.host_requirements]
-# run = ["macos", "windows"]
 # check = ["macos", "windows", "linux"]
 # build = ["windows"]
+# run = ["macos", "windows"]
 
 # Hosts where the exact bound command has passed the required verification.
 # Add a host only after running on that host and recording the required success
 # postcondition. A host omitted here is not automatically unsupported; it may
 # simply be waiting for verification on the matching machine.
 # [build_profiles.verification]
-# run = ["windows"]
 # check = ["macos", "windows", "linux"]
 # build = ["windows"]
+# run = ["windows"]
 
 # Known environmental blockers. Declare one entry per (action, host) whose
 # verification cannot complete, with the exact missing dependency the Agent
@@ -316,7 +316,7 @@ mod tests {
         let rules = render_managed_agent_rules();
 
         for heading in [
-            "## Run / Check / Build command bindings",
+            "## Check / Build / Run command bindings",
             "## Host requirements and verification",
             "## Run target rules",
             "## Validation blockers and completion",

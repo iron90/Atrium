@@ -13,12 +13,11 @@ pub(crate) fn kill_process_tree(pid: u32) {
     }
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
-        use std::process::{Command, Stdio};
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        let _ = Command::new("taskkill")
+        use std::process::Stdio;
+
+        use crate::captured_process::captured_command;
+        let _ = captured_command("taskkill")
             .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .creation_flags(CREATE_NO_WINDOW)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();

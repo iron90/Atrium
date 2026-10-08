@@ -1,12 +1,18 @@
 import type { BuildProfile, ProfileAction, ProjectCommand } from "../../bridge";
 
+export const profileActionOrder: readonly ProfileAction[] = [
+  "check",
+  "build",
+  "run",
+];
+
 const profileCommandId = (
   profile: BuildProfile,
   action: ProfileAction,
 ): string | null => {
-  if (action === "run") return profile.runCommandId;
   if (action === "check") return profile.checkCommandId;
-  return profile.buildCommandId;
+  if (action === "build") return profile.buildCommandId;
+  return profile.runCommandId;
 };
 
 export const commandForProfile = (

@@ -30,25 +30,25 @@ const buildProfile = (
   platform: Facet,
   channel: Facet,
   commands: Partial<
-    Pick<BuildProfile, "runCommandId" | "checkCommandId" | "buildCommandId">
+    Pick<BuildProfile, "checkCommandId" | "buildCommandId" | "runCommandId">
   >,
 ): BuildProfile => ({
   id,
   label,
   platform,
   channel,
-  runCommandId: commands.runCommandId ?? null,
   checkCommandId: commands.checkCommandId ?? null,
   buildCommandId: commands.buildCommandId ?? null,
+  runCommandId: commands.runCommandId ?? null,
   hostRequirements: {
-    run: null,
     check: null,
     build: null,
+    run: null,
   },
   verification: {
-    run: ["macos"],
     check: ["macos"],
     build: ["macos"],
+    run: ["macos"],
   },
   hostMismatchActions: [],
   unverifiedActions: [],
@@ -176,7 +176,7 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
         "macOS · GitHub Releases",
         configuredFacet("macos", "macOS"),
         configuredFacet("github-releases", "GitHub Releases"),
-        { runCommandId: "npm:dev", buildCommandId: "npm:build" },
+        { buildCommandId: "npm:build", runCommandId: "npm:dev" },
       ),
     ],
     configuration: {
@@ -282,7 +282,7 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
         "Windows · Website",
         configuredFacet("windows", "Windows"),
         configuredFacet("website", "Website"),
-        { runCommandId: "npm:dev", buildCommandId: "npm:build" },
+        { buildCommandId: "npm:build", runCommandId: "npm:dev" },
       ),
     ],
     configuration: {
@@ -376,8 +376,8 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
         configuredFacet("macos", "macOS"),
         configuredFacet("apple-app-store", "App Store"),
         {
-          runCommandId: "npm:dev",
           buildCommandId: "npm:build:macos:appstore",
+          runCommandId: "npm:dev",
         },
       ),
       buildProfile(
@@ -385,14 +385,14 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
         "macOS · Website",
         configuredFacet("macos", "macOS"),
         configuredFacet("website", "Website"),
-        { runCommandId: "npm:dev", buildCommandId: "npm:build:macos" },
+        { buildCommandId: "npm:build:macos", runCommandId: "npm:dev" },
       ),
       buildProfile(
         "windows-website",
         "Windows · Website",
         configuredFacet("windows", "Windows"),
         configuredFacet("website", "Website"),
-        { runCommandId: "npm:dev", buildCommandId: "npm:build:windows" },
+        { buildCommandId: "npm:build:windows", runCommandId: "npm:dev" },
       ),
     ],
     configuration: {
@@ -531,7 +531,7 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
         "macOS · GitHub Releases",
         configuredFacet("macos", "macOS"),
         configuredFacet("github-releases", "GitHub Releases"),
-        { runCommandId: "npm:dev", buildCommandId: "npm:build" },
+        { buildCommandId: "npm:build", runCommandId: "npm:dev" },
       ),
     ],
     configuration: {

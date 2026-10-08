@@ -30,25 +30,25 @@ artifacts = [
 ]
 
 [build_profiles.commands]
-run = "package.json#scripts.dev"
 check = "package.json#scripts.quality"
 build = "package.json#scripts.build:macos"
+run = "package.json#scripts.dev"
 
 # Lower compatibility boundary. CI exercises the quality gate on all three
-# hosts; the desktop run entry and the macOS bundle only apply on macOS.
+# hosts; the macOS bundle and the desktop run entry only apply on macOS.
 [build_profiles.host_requirements]
-run = ["macos"]
 check = ["macos", "windows", "linux"]
 build = ["macos"]
+run = ["macos"]
 
 # Hosts where the exact bound command passed the required postconditions on
-# this machine (run: desktop target started with devUrl readiness/smoke 200;
-# check: full quality gate exit 0; build: exit 0 with both declared artifacts
-# produced during that run).
+# this machine (check: full quality gate exit 0; build: exit 0 with both
+# declared artifacts produced during that run; run: desktop target started
+# with devUrl readiness/smoke 200).
 [build_profiles.verification]
-run = ["macos"]
 check = ["macos"]
 build = ["macos"]
+run = ["macos"]
 
 [[build_profiles]]
 id = "windows-local-development"
@@ -61,11 +61,11 @@ artifacts = [
 ]
 
 [build_profiles.commands]
-run = "package.json#scripts.dev"
 check = "package.json#scripts.quality"
 build = "package.json#scripts.build:windows"
+run = "package.json#scripts.dev"
 
 [build_profiles.host_requirements]
-run = ["windows"]
 check = ["macos", "windows", "linux"]
 build = ["windows"]
+run = ["windows"]

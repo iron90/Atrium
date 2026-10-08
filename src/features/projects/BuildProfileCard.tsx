@@ -8,7 +8,11 @@ import type {
 } from "../../bridge";
 import { useI18n, localizedFacetLabel } from "../../i18n";
 import { fill, formatBytes, formatTime } from "../../shared/format";
-import { artifactKindLabel, commandForProfile } from "./presentation";
+import {
+  artifactKindLabel,
+  commandForProfile,
+  profileActionOrder,
+} from "./presentation";
 
 const hostLabels: Record<HostOs, string> = {
   macos: "macOS",
@@ -44,7 +48,7 @@ export function BuildProfileCard({
   ) => void;
 }) {
   const { language, t } = useI18n();
-  const actions: ProfileAction[] = ["check", "build", "run"];
+  const actions = profileActionOrder;
   const profileReady = canExecute && profile.issues.length === 0;
   const profileArtifacts = artifacts.filter(
     (artifact) => artifact.profileId === profile.id,

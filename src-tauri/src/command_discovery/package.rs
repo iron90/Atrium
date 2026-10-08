@@ -36,10 +36,11 @@ pub(super) fn detect_commands(path: &Path, package: &Value, commands: &mut Vec<P
     };
     let mut names = scripts.keys().cloned().collect::<Vec<_>>();
     names.sort();
+    // Canonical commands follow the workflow order: check, build, run.
     let preferred: &[(CommandKind, &[&str])] = &[
-        (CommandKind::Run, &["dev", "start", "run", "preview"]),
         (CommandKind::Check, &["check", "test", "typecheck", "lint"]),
         (CommandKind::Build, &["build", "package"]),
+        (CommandKind::Run, &["dev", "start", "run", "preview"]),
     ];
     let mut selected = HashSet::new();
     for (kind, candidates) in preferred {

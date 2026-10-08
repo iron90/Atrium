@@ -31,9 +31,9 @@ pub(super) fn command(
 
 pub(super) fn command_label(kind: &CommandKind, script: &str) -> String {
     match kind {
-        CommandKind::Run => "Run".to_string(),
         CommandKind::Check => "Check".to_string(),
         CommandKind::Build => "Build".to_string(),
+        CommandKind::Run => "Run".to_string(),
         CommandKind::Other => script.to_string(),
     }
 }

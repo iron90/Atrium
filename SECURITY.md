@@ -22,7 +22,7 @@ valuable:
   canonicalization mismatch);
 - command execution that goes beyond `program + args + working directory`,
   such as shell string interpolation of untrusted input;
-- the Run / Check / Build boundary: commands must only execute on hosts the
+- the Check / Build / Run boundary: commands must only execute on hosts the
   profile declares, and Git operations must stay read-only;
 - local data handling: run records, logs, and preferences must stay inside
   Atrium's own storage and must not leak into project repositories.

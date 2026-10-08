@@ -75,7 +75,7 @@ describe("discovered repository commands", () => {
     );
     expect(items).toEqual(["npm run dev", "npm run quality", "npm run build"]);
 
-    // The Run/Check/Build vocabulary belongs to the build profile cards;
+    // The Check/Build/Run vocabulary belongs to the build profile cards;
     // name-guessed kinds must not resurface as action labels here.
     expect(
       screen.queryByRole("button", { name: "Run" }),
