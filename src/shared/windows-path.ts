@@ -31,7 +31,8 @@ const RESERVED_NAMES = new Set([
 
 const needsVerbatimForm = (path: string): boolean =>
   path.split(/[\\/]/).some((segment) => {
-    if (!segment || segment.endsWith(" ") || segment.endsWith(".")) return Boolean(segment);
+    if (!segment || segment.endsWith(" ") || segment.endsWith("."))
+      return Boolean(segment);
     const stem = segment.includes(".")
       ? segment.slice(0, segment.lastIndexOf("."))
       : segment;
