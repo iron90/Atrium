@@ -16,56 +16,53 @@ const bilingualNotes = [
 ].join("\n");
 
 describe("localizedReleaseNotes", () => {
-  it("returns the chinese block for the zh interface", () => {
-    expect(localizedReleaseNotes(bilingualNotes, "zh")).toBe(
-      "从下方资产下载对应平台的安装包。macOS 首次打开若提示“已损坏”，执行一次 xattr。",
-    );
-  });
-
-  it("returns the english block for the en interface", () => {
-    expect(localizedReleaseNotes(bilingualNotes, "en")).toBe(
+  it("returns the english half of a bilingual body", () => {
+    expect(localizedReleaseNotes(bilingualNotes)).toBe(
       "Download the installer for your platform from the assets below.",
     );
   });
 
   it("returns the notes unchanged when there is no language separator", () => {
-    expect(localizedReleaseNotes("Single-language notes", "zh")).toBe(
-      "Single-language notes",
-    );
+    expect(
+      localizedReleaseNotes(
+        "fix: suppress the console\n\nstyle: format the path",
+      ),
+    ).toBe("fix: suppress the console\n\nstyle: format the path");
   });
 
-  it("splits a published body that leaves blank lines around the separator", () => {
-    expect(localizedReleaseNotes(publishedNotes, "zh")).not.toContain(
-      "Download the installer",
-    );
+  it("keeps the english half when blank lines surround the separator", () => {
+    expect(localizedReleaseNotes(publishedNotes)).not.toContain("从下方资产");
     expect(
-      localizedReleaseNotes(publishedNotes.replace(/\n/g, "\r\n"), "en"),
-    ).not.toContain("从下方资产");
+      localizedReleaseNotes(publishedNotes.replace(/\n/g, "\r\n")),
+    ).toContain("Download the installer");
   });
 });
 
 describe("releaseNoteBlocks", () => {
-  it("keeps the current language and lifts the shell command out of the sentence", () => {
-    expect(releaseNoteBlocks(publishedNotes, "zh")).toEqual([
+  it("uses the english half and lifts the shell command out of the sentence", () => {
+    expect(releaseNoteBlocks(publishedNotes)).toEqual([
       {
         type: "paragraph",
-        text: "从下方资产下载对应平台的安装包。macOS 首次打开若提示“已损坏”，在终端执行一次：",
+        text: "Download the installer for your platform from the assets below. If macOS reports the app as damaged on first launch, run once:",
       },
       {
         type: "command",
         text: "xattr -rd com.apple.quarantine /Applications/Atrium.app",
       },
     ]);
-    expect(releaseNoteBlocks(publishedNotes, "en")[0]).toEqual({
-      type: "paragraph",
-      text: "Download the installer for your platform from the assets below. If macOS reports the app as damaged on first launch, run once:",
-    });
+  });
+
+  it("leaves commit subjects as separate paragraphs", () => {
+    expect(
+      releaseNoteBlocks("fix: suppress the console\n\nstyle: format the path"),
+    ).toEqual([
+      { type: "paragraph", text: "fix: suppress the console" },
+      { type: "paragraph", text: "style: format the path" },
+    ]);
   });
 
   it("leaves ordinary sentences as paragraphs", () => {
-    expect(
-      releaseNoteBlocks("Bug fixes and a note: read the guide", "en"),
-    ).toEqual([
+    expect(releaseNoteBlocks("Bug fixes and a note: read the guide")).toEqual([
       { type: "paragraph", text: "Bug fixes and a note: read the guide" },
     ]);
   });

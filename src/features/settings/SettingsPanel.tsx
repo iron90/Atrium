@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { bridge, isTauriRuntime } from "../../bridge";
 import { DropdownSelect } from "../../shared/DropdownSelect";
+import { ScrollArea } from "../../shared/ScrollArea";
 import { useI18n } from "../../i18n";
 import type { Language, TranslationKey } from "../../i18n";
 import { fill, formatTime, releaseNoteBlocks } from "../../shared/format";
@@ -71,7 +72,7 @@ export const SettingsPanel = memo(function SettingsPanel({
   const { state: updateState } = appUpdate;
   const noteBlocks =
     updateState.phase === "available" && updateState.info?.notes
-      ? releaseNoteBlocks(updateState.info.notes, language)
+      ? releaseNoteBlocks(updateState.info.notes)
       : [];
 
   return (
@@ -280,7 +281,7 @@ export const SettingsPanel = memo(function SettingsPanel({
             </p>
           ) : null}
           {noteBlocks.length > 0 ? (
-            <div className="settings-version-notes">
+            <ScrollArea viewportClassName="settings-version-notes">
               {noteBlocks.map((block, index) =>
                 block.type === "command" ? (
                   <code key={index} className="settings-version-command">
@@ -290,7 +291,7 @@ export const SettingsPanel = memo(function SettingsPanel({
                   <p key={index}>{block.text}</p>
                 ),
               )}
-            </div>
+            </ScrollArea>
           ) : null}
           {updateState.phase === "downloading" ? (
             <div className="settings-version-progress" aria-hidden="true">

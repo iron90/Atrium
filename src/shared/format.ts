@@ -11,17 +11,15 @@ export const formatTime = (timestamp: number, language: Language): string =>
     minute: "2-digit",
   }).format(new Date(timestamp));
 
-// Release notes are published with the Chinese block first and the English
-// block after a dash separator line; each UI language renders its own half.
-export const localizedReleaseNotes = (
-  notes: string,
-  language: Language,
-): string => {
+// Older release bodies put Chinese before a dash line and English after it.
+// Commit subjects are English, so both interface languages render that English
+// half. A body without the separator is shown whole.
+export const localizedReleaseNotes = (notes: string): string => {
   const parts = notes
     .replace(/\r\n/g, "\n")
     .split(/\n[ \t]*-{3,}[ \t]*(?:\n|$)/);
   if (parts.length < 2) return notes.trim();
-  return (language === "zh" ? parts[0] : parts.slice(1).join("\n---\n")).trim();
+  return parts.slice(1).join("\n---\n").trim();
 };
 
 export type ReleaseNoteBlock =
@@ -48,11 +46,8 @@ const splitCommand = (paragraph: string): ReleaseNoteBlock[] => {
   ];
 };
 
-export const releaseNoteBlocks = (
-  notes: string,
-  language: Language,
-): ReleaseNoteBlock[] =>
-  localizedReleaseNotes(notes, language)
+export const releaseNoteBlocks = (notes: string): ReleaseNoteBlock[] =>
+  localizedReleaseNotes(notes)
     .split(/\n{2,}/)
     .flatMap((paragraph) => {
       const trimmed = paragraph.trim();

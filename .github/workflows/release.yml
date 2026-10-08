@@ -20,12 +20,23 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      # Notes are the commit subjects since the previous vX.Y.Z tag. They stay
+      # English in both interface languages. Install steps live in the README.
+      - name: Collect release notes
+        id: notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/collect-release-notes.mjs
 
       - name: Install dependencies
         run: npm ci
@@ -58,12 +69,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: "Atrium v__VERSION__"
-          releaseBody: |
-            从下方资产下载对应平台的安装包。macOS 首次打开若提示"已损坏"，在终端执行一次：xattr -rd com.apple.quarantine /Applications/Atrium.app
-
-            ---
-
-            Download the installer for your platform from the assets below. If macOS reports the app as damaged on first launch, run once: xattr -rd com.apple.quarantine /Applications/Atrium.app
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
 

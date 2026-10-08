@@ -165,7 +165,7 @@ describe("settings detail-card switches", () => {
     );
   });
 
-  it("shows only the release notes for the current language", () => {
+  it("shows the english release notes in both interface languages", () => {
     const notes = [
       "从下方资产下载对应平台的安装包。在终端执行一次：xattr -rd com.apple.quarantine /Applications/Atrium.app",
       "",
@@ -182,10 +182,8 @@ describe("settings detail-card switches", () => {
       <SettingsPanel {...baseProps()} language="zh" update={update} />,
     );
 
-    expect(screen.getByText(/从下方资产下载/)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Download the installer/),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText(/Download the installer/)).toBeInTheDocument();
+    expect(screen.queryByText(/从下方资产下载/)).not.toBeInTheDocument();
     expect(screen.getByText(/xattr -rd/)).toBeInTheDocument();
 
     rerender(<SettingsPanel {...baseProps()} language="en" update={update} />);
