@@ -4,44 +4,39 @@ import { normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { versionFromTag } from "./stamp-release-version.mjs";
 
-function tagParts(tag) {
-  try {
-    return versionFromTag(tag).split(".").map(Number);
-  } catch {
-    return null;
-  }
-}
+const SECTION =
+  /<!--\s*atrium:notes:(en|zh)\s*-->([\s\S]*?)<!--\s*\/atrium:notes:\1\s*-->/g;
 
-function compareParts(left, right) {
-  for (let index = 0; index < 3; index += 1) {
-    if (left[index] !== right[index]) return left[index] - right[index];
-  }
-  return 0;
-}
+// Kept outside the note markers. GitHub renders it; the app ignores it.
+export const MACOS_INSTALL_NOTE = [
+  "macOS 首次打开若提示「已损坏」，在终端执行：",
+  "",
+  "xattr -rd com.apple.quarantine /Applications/Atrium.app",
+  "",
+  "On macOS, if the first launch says the app is damaged, run:",
+  "",
+  "xattr -rd com.apple.quarantine /Applications/Atrium.app",
+].join("\n");
 
-export function previousReleaseTag(tags, current) {
-  const currentParts = tagParts(current);
-  if (!currentParts) {
-    throw new Error(`Tag "${current}" must look like v1.2.3.`);
+export function releaseNotesBody(tagMessage) {
+  const notes = String(tagMessage ?? "")
+    .replace(/\r\n/g, "\n")
+    .trim();
+  const found = new Set();
+  for (const match of notes.matchAll(SECTION)) {
+    if (match[2].trim()) found.add(match[1]);
   }
-  let best = null;
-  let bestParts = null;
-  for (const tag of tags) {
-    const parts = tagParts(tag);
-    if (!parts || compareParts(parts, currentParts) >= 0) continue;
-    if (!bestParts || compareParts(parts, bestParts) > 0) {
-      best = tag;
-      bestParts = parts;
+  for (const language of ["en", "zh"]) {
+    if (!found.has(language)) {
+      throw new Error(
+        `Tag message must include a non-empty <!-- atrium:notes:${language} --> section. Create the tag with: node scripts/tag-release.mjs vX.Y.Z --en-file notes.en.txt --zh-file notes.zh.txt`,
+      );
     }
   }
-  return best;
-}
-
-export function releaseNotesBody(subjects) {
-  const changes = subjects.map((subject) => subject.trim()).filter(Boolean);
-  const summary =
-    changes.length > 0 ? changes.join("\n\n") : "No changes recorded.";
-  return `${summary}\n`;
+  if (notes.includes("xattr -rd com.apple.quarantine")) {
+    return `${notes}\n`;
+  }
+  return `${notes}\n\n${MACOS_INSTALL_NOTE}\n`;
 }
 
 function git(root, args) {
@@ -53,17 +48,23 @@ function git(root, args) {
 
 export function collectReleaseNotes(root, tag) {
   versionFromTag(tag);
-  const tags = git(root, ["tag", "--list", "v*", "--merged", tag])
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const previous = previousReleaseTag(tags, tag);
-  const range = previous ? `${previous}..${tag}` : tag;
-  const subjects = git(root, ["log", "--no-merges", "--format=%s", range])
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  return releaseNotesBody(subjects);
+  const ref = `refs/tags/${tag}`;
+  const listed = git(root, ["tag", "--list", tag]).trim();
+  if (!listed) {
+    throw new Error(`Tag ${tag} does not exist.`);
+  }
+  const objectType = git(root, [
+    "for-each-ref",
+    ref,
+    "--format=%(objecttype)",
+  ]).trim();
+  if (objectType !== "tag") {
+    throw new Error(
+      `Tag ${tag} is lightweight. Create an annotated tag with: node scripts/tag-release.mjs ${tag} --en-file notes.en.txt --zh-file notes.zh.txt`,
+    );
+  }
+  const message = git(root, ["for-each-ref", ref, "--format=%(contents)"]);
+  return releaseNotesBody(message);
 }
 
 const isDirectRun =
@@ -77,7 +78,13 @@ if (isDirectRun) {
     console.error("Set RELEASE_TAG or pass a tag like v1.2.3.");
     process.exit(1);
   }
-  const body = collectReleaseNotes(process.cwd(), tag);
+  let body;
+  try {
+    body = collectReleaseNotes(process.cwd(), tag);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
   const output = process.env.GITHUB_OUTPUT;
   if (output) {
     const delimiter = `NOTES_${crypto.randomUUID().replaceAll("-", "")}`;

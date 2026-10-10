@@ -53,6 +53,24 @@ cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
+## Releasing
+
+When the user asks to tag or publish a release:
+
+- Read the commits since the previous `vX.Y.Z` tag. Summarize only changes a
+  person using Atrium would notice. Leave out formatting, CI, refactors, and
+  other internal commits. Do not copy commit subjects into the summary.
+- Write that summary twice: once in English, once in Chinese. Prose is enough.
+  Do not add Added, Fixed, or Removed headings unless the user asks.
+- Show both summaries to the user before creating the tag.
+- Create an annotated tag with
+  `node scripts/tag-release.mjs vX.Y.Z --en-file notes.en.txt --zh-file notes.zh.txt`.
+  The script inserts the `atrium:notes:en` and `atrium:notes:zh` markers.
+  Do not create a lightweight tag, and do not write the macOS `xattr` command
+  into the summary. The release script appends that command outside the markers.
+- Do not push the tag unless the user asks. The release workflow rejects a tag
+  whose message is missing either language section.
+
 <!-- BEGIN ATRIUM MANAGED RULES -->
 
 Atrium guidance revision: 4

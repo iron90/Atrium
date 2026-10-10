@@ -164,31 +164,36 @@ describe("settings detail-card switches", () => {
     );
   });
 
-  it("shows the english release notes in both interface languages", () => {
+  it("shows the release notes for the selected interface language", () => {
     const notes = [
-      "从下方资产下载对应平台的安装包。在终端执行一次：xattr -rd com.apple.quarantine /Applications/Atrium.app",
+      "<!-- atrium:notes:en -->",
+      "Settings on macOS can install a newer version from the version card.",
+      "<!-- /atrium:notes:en -->",
       "",
-      "---",
+      "<!-- atrium:notes:zh -->",
+      "macOS 的设置页可以在版本卡片里安装更新的版本。",
+      "<!-- /atrium:notes:zh -->",
       "",
-      "Download the installer for your platform from the assets below. Run once: xattr -rd com.apple.quarantine /Applications/Atrium.app",
+      "xattr -rd com.apple.quarantine /Applications/Atrium.app",
     ].join("\n");
     const update = makeUpdateController({
       phase: "available",
-      info: { version: "0.3.2", notes, date: "" },
+      info: { version: "0.3.6", notes, date: "" },
     });
 
     const { rerender } = render(
       <SettingsPanel {...baseProps()} language="zh" update={update} />,
     );
 
-    expect(screen.getByText(/Download the installer/)).toBeInTheDocument();
-    expect(screen.queryByText(/从下方资产下载/)).not.toBeInTheDocument();
-    expect(screen.getByText(/xattr -rd/)).toBeInTheDocument();
+    expect(screen.getByText(/版本卡片/)).toBeInTheDocument();
+    expect(screen.queryByText(/version card/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/xattr -rd/)).not.toBeInTheDocument();
 
     rerender(<SettingsPanel {...baseProps()} language="en" update={update} />);
 
-    expect(screen.getByText(/Download the installer/)).toBeInTheDocument();
-    expect(screen.queryByText(/从下方资产下载/)).not.toBeInTheDocument();
+    expect(screen.getByText(/version card/)).toBeInTheDocument();
+    expect(screen.queryByText(/版本卡片/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/xattr -rd/)).not.toBeInTheDocument();
   });
 
   it("toggles the startup update check", () => {

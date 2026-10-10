@@ -1,5 +1,8 @@
 import type { Language } from "../i18n";
 
+const NOTE_SECTION =
+  /<!--\s*atrium:notes:(en|zh)\s*-->([\s\S]*?)<!--\s*\/atrium:notes:\1\s*-->/g;
+
 export const fill = (value: string, key: string, replacement: string): string =>
   value.replace(`{${key}}`, replacement);
 
@@ -11,14 +14,26 @@ export const formatTime = (timestamp: number, language: Language): string =>
     minute: "2-digit",
   }).format(new Date(timestamp));
 
-// Older release bodies put Chinese before a dash line and English after it.
-// Commit subjects are English, so both interface languages render that English
-// half. A body without the separator is shown whole.
-export const localizedReleaseNotes = (notes: string): string => {
-  const parts = notes
-    .replace(/\r\n/g, "\n")
-    .split(/\n[ \t]*-{3,}[ \t]*(?:\n|$)/);
-  if (parts.length < 2) return notes.trim();
+// Marked release bodies keep each language inside an HTML comment. The app
+// shows only that section, so the macOS install command outside the markers
+// stays on the GitHub release page. Older bodies put Chinese before a dash
+// line and English after it; a body with neither form is shown whole.
+export const localizedReleaseNotes = (
+  notes: string,
+  language: Language = "en",
+): string => {
+  const normalized = notes.replace(/\r\n/g, "\n");
+  const sections = new Map<string, string>();
+  for (const match of normalized.matchAll(NOTE_SECTION)) {
+    const text = match[2].trim();
+    if (text) sections.set(match[1], text);
+  }
+  if (sections.size > 0) {
+    return sections.get(language) ?? sections.get("en") ?? "";
+  }
+  const parts = normalized.split(/\n[ \t]*-{3,}[ \t]*(?:\n|$)/);
+  if (parts.length < 2) return normalized.trim();
+  if (language === "zh") return parts[0].trim();
   return parts.slice(1).join("\n---\n").trim();
 };
 
@@ -46,8 +61,11 @@ const splitCommand = (paragraph: string): ReleaseNoteBlock[] => {
   ];
 };
 
-export const releaseNoteBlocks = (notes: string): ReleaseNoteBlock[] =>
-  localizedReleaseNotes(notes)
+export const releaseNoteBlocks = (
+  notes: string,
+  language: Language = "en",
+): ReleaseNoteBlock[] =>
+  localizedReleaseNotes(notes, language)
     .split(/\n{2,}/)
     .flatMap((paragraph) => {
       const trimmed = paragraph.trim();

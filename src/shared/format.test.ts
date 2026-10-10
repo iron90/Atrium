@@ -15,10 +15,39 @@ const bilingualNotes = [
   "Download the installer for your platform from the assets below.",
 ].join("\n");
 
+const markedNotes = [
+  "<!-- atrium:notes:en -->",
+  "Settings on macOS now includes Update now.",
+  "<!-- /atrium:notes:en -->",
+  "",
+  "<!-- atrium:notes:zh -->",
+  "macOS 的设置页现在也会显示「立即更新」。",
+  "<!-- /atrium:notes:zh -->",
+  "",
+  "macOS 首次打开若提示「已损坏」，在终端执行：",
+  "",
+  "xattr -rd com.apple.quarantine /Applications/Atrium.app",
+].join("\n");
+
 describe("localizedReleaseNotes", () => {
   it("returns the english half of a bilingual body", () => {
-    expect(localizedReleaseNotes(bilingualNotes)).toBe(
+    expect(localizedReleaseNotes(bilingualNotes, "en")).toBe(
       "Download the installer for your platform from the assets below.",
+    );
+  });
+
+  it("returns the chinese half of an older bilingual body", () => {
+    expect(localizedReleaseNotes(bilingualNotes, "zh")).toBe(
+      "从下方资产下载对应平台的安装包。macOS 首次打开若提示“已损坏”，执行一次 xattr。",
+    );
+  });
+
+  it("returns the marked section for the interface language", () => {
+    expect(localizedReleaseNotes(markedNotes, "en")).toBe(
+      "Settings on macOS now includes Update now.",
+    );
+    expect(localizedReleaseNotes(markedNotes, "zh")).toBe(
+      "macOS 的设置页现在也会显示「立即更新」。",
     );
   });
 
@@ -64,6 +93,21 @@ describe("releaseNoteBlocks", () => {
   it("leaves ordinary sentences as paragraphs", () => {
     expect(releaseNoteBlocks("Bug fixes and a note: read the guide")).toEqual([
       { type: "paragraph", text: "Bug fixes and a note: read the guide" },
+    ]);
+  });
+
+  it("hides the macOS install command outside the language markers", () => {
+    expect(releaseNoteBlocks(markedNotes, "zh")).toEqual([
+      {
+        type: "paragraph",
+        text: "macOS 的设置页现在也会显示「立即更新」。",
+      },
+    ]);
+    expect(releaseNoteBlocks(markedNotes, "en")).toEqual([
+      {
+        type: "paragraph",
+        text: "Settings on macOS now includes Update now.",
+      },
     ]);
   });
 });

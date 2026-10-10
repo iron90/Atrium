@@ -70,7 +70,7 @@ export const SettingsPanel = memo(function SettingsPanel({
   const { state: updateState } = appUpdate;
   const noteBlocks =
     updateState.phase === "available" && updateState.info?.notes
-      ? releaseNoteBlocks(updateState.info.notes)
+      ? releaseNoteBlocks(updateState.info.notes, language)
       : [];
 
   return (
