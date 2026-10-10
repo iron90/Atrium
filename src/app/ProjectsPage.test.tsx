@@ -32,6 +32,7 @@ const inspector = {
   onCancelCleanup: () => undefined,
   onConfirmCleanup: () => undefined,
   onOpenArtifact: () => undefined,
+  onOpenWebService: () => undefined,
   onOpenProjectAction: () => undefined,
 } satisfies ProjectInspectorProps;
 

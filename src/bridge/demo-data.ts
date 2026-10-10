@@ -30,7 +30,10 @@ const buildProfile = (
   platform: Facet,
   channel: Facet,
   commands: Partial<
-    Pick<BuildProfile, "checkCommandId" | "buildCommandId" | "runCommandId">
+    Pick<
+      BuildProfile,
+      "checkCommandId" | "buildCommandId" | "runCommandId" | "serviceUrl"
+    >
   >,
 ): BuildProfile => ({
   id,
@@ -40,6 +43,7 @@ const buildProfile = (
   checkCommandId: commands.checkCommandId ?? null,
   buildCommandId: commands.buildCommandId ?? null,
   runCommandId: commands.runCommandId ?? null,
+  serviceUrl: commands.serviceUrl ?? null,
   hostRequirements: {
     check: null,
     build: null,
@@ -125,16 +129,9 @@ const demoIconConformance = (
 
 const demoProjectDefaults: Pick<
   ProjectSnapshot,
-  | "tools"
-  | "links"
-  | "cleanup"
-  | "storage"
-  | "artifacts"
-  | "guidance"
-  | "modifiedAt"
+  "tools" | "cleanup" | "storage" | "artifacts" | "guidance" | "modifiedAt"
 > = {
   tools: { terminal: null },
-  links: [],
   cleanup: { cache: [], build: [] },
   storage: null,
   artifacts: null,
@@ -208,14 +205,6 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
       ),
     ],
     tools: { terminal: null },
-    links: [
-      {
-        id: "preview",
-        label: "Local preview",
-        url: "http://127.0.0.1:3000",
-        kind: "preview",
-      },
-    ],
     repo: {
       branch: "main",
       isClean: true,
@@ -598,14 +587,27 @@ const demoProjects = (rootPath: string): ProjectSnapshot[] => [
     description: "A personal portfolio and content site.",
     icon: null,
     iconConformance: demoIconConformance("missing"),
-    protocol: protocolStatus("missing", {}),
+    protocol: protocolStatus("configured", {
+      identity: "configured",
+      context: "configured",
+      build_profiles: "configured",
+      cleanup: "configured",
+    }),
     platforms: [configuredFacet("web", "Web")],
-    channels: [],
-    buildProfiles: [],
+    channels: [configuredFacet("direct", "Direct")],
+    buildProfiles: [
+      buildProfile(
+        "web-direct",
+        "Web · Direct",
+        configuredFacet("web", "Web"),
+        configuredFacet("direct", "Direct"),
+        { serviceUrl: "http://127.0.0.1:3000" },
+      ),
+    ],
     configuration: {
-      status: "missing",
+      status: "configured",
       manifestPath: ".atrium/manifest.toml",
-      issues: [".atrium/manifest.toml is not present."],
+      issues: [],
     },
     commands: [
       command(

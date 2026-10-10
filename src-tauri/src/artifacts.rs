@@ -27,6 +27,7 @@ mod tests {
             run_command_id: None,
             check_command_id: None,
             build_command_id: Some("build".to_string()),
+            service_url: None,
             host_requirements: Default::default(),
             verification: Default::default(),
             host_mismatch_actions: vec![],

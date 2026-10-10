@@ -13,6 +13,7 @@ import {
   openProjectAction,
   type ProjectAction,
 } from "./features/projects/project-actions";
+import { openRunningWebService } from "./features/projects/web-service";
 import { useProjectInspectorActions } from "./features/projects/use-project-inspector-actions";
 import { emptySnapshot } from "./features/projects/workspace-snapshot";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
@@ -252,18 +253,41 @@ export default function App() {
   } = useProjectListViewState(snapshot.projects, projectMeta);
 
   const handleOpenProjectAction = useCallback(
-    async (
-      action: ProjectAction,
-      project: ProjectSnapshot,
-      linkId?: string,
-    ) => {
+    async (action: ProjectAction, project: ProjectSnapshot) => {
       try {
-        await openProjectAction(action, project, linkId);
+        await openProjectAction(action, project);
       } catch (openError) {
         setError(errorMessage(openError));
       }
     },
     [],
+  );
+
+  const handleOpenWebService = useCallback(
+    (projectPath: string, profileId: string) => {
+      const project =
+        inspectorProject?.path === projectPath
+          ? inspectorProject
+          : snapshot.projects.find(
+              (candidate) => candidate.path === projectPath,
+            );
+      const serviceUrl = project?.buildProfiles.find(
+        (profile) => profile.id === profileId,
+      )?.serviceUrl;
+      void (async () => {
+        try {
+          if (isTauriRuntime()) {
+            await bridge.openWebProfile(projectPath, profileId);
+            return;
+          }
+          if (!serviceUrl) return;
+          await openRunningWebService(serviceUrl);
+        } catch (openError) {
+          setError(errorMessage(openError));
+        }
+      })();
+    },
+    [inspectorProject, snapshot.projects],
   );
 
   const handleOpenArtifact = useCallback(
@@ -405,8 +429,8 @@ export default function App() {
     [confirmCleanup],
   );
   const handleInspectorProjectAction = useCallback(
-    (action: ProjectAction, project: ProjectSnapshot, linkId?: string) =>
-      void handleOpenProjectAction(action, project, linkId),
+    (action: ProjectAction, project: ProjectSnapshot) =>
+      void handleOpenProjectAction(action, project),
     [handleOpenProjectAction],
   );
   const handleScanWorkspace = useCallback(
@@ -452,6 +476,7 @@ export default function App() {
       onCancelCleanup: cancelCleanup,
       onConfirmCleanup: handleInspectorConfirmCleanup,
       onOpenArtifact: handleOpenArtifact,
+      onOpenWebService: handleOpenWebService,
       onOpenProjectAction: handleInspectorProjectAction,
       hiddenInspectorSections,
     }),
@@ -472,6 +497,7 @@ export default function App() {
       handleInspectorRun,
       handleInspectorStop,
       handleOpenArtifact,
+      handleOpenWebService,
       handleWorkspaceError,
       hiddenInspectorSections,
       inspectorProject,

@@ -21,8 +21,8 @@ export const nativeToolMethods = {
   openProjectRemote: async (remote: string): Promise<void> =>
     invoke<void>("open_project_remote_command", { remote }),
 
-  openProjectLink: async (projectPath: string, linkId: string): Promise<void> =>
-    invoke<void>("open_project_link_command", { projectPath, linkId }),
+  openWebProfile: async (projectPath: string, profileId: string): Promise<void> =>
+    invoke<void>("open_web_profile_command", { projectPath, profileId }),
 };
 
 export const previewToolMethods = {
@@ -30,5 +30,5 @@ export const previewToolMethods = {
   openProjectDirectory: async (): Promise<void> => undefined,
   openProjectTerminal: async (): Promise<void> => undefined,
   openProjectRemote: async (): Promise<void> => undefined,
-  openProjectLink: async (): Promise<void> => undefined,
+  openWebProfile: async (): Promise<void> => undefined,
 };

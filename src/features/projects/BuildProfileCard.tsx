@@ -28,6 +28,7 @@ export function BuildProfileCard({
   activeRun,
   canExecute,
   onRun,
+  onOpenWebService,
   onOpenArtifact,
 }: {
   profile: BuildProfile;
@@ -41,6 +42,7 @@ export function BuildProfileCard({
     profileId?: string,
     profileAction?: ProfileAction,
   ) => void;
+  onOpenWebService: (profileId: string) => void;
   onOpenArtifact: (
     projectPath: string,
     profileId: string,
@@ -103,8 +105,11 @@ export function BuildProfileCard({
       </div>
       <div className="profile-actions">
         {actions.map((action) => {
-          const command = commandForProfile(profile, action, commands);
-          if (!command) return null;
+          const serviceUrl = action === "run" ? profile.serviceUrl : null;
+          const command = serviceUrl
+            ? undefined
+            : commandForProfile(profile, action, commands);
+          if (!command && !serviceUrl) return null;
           const runBlockedUntilBuild =
             action === "run" && profileReady && requiresBuildBeforeRun;
           const hostMismatch = profile.hostMismatchActions.includes(action);
@@ -141,7 +146,7 @@ export function BuildProfileCard({
                     ? profileVerificationMessage
                     : runBlockedUntilBuild
                       ? t("buildRequiredToRun")
-                      : command.displayCommand;
+                      : (serviceUrl ?? command?.displayCommand ?? "");
           // Disabled buttons expose their reason through the card-level
           // visible issue text (below), linked via aria-describedby.
           const issueHintId = `profile-issue-${profile.id.replace(/\s+/g, "-")}`;
@@ -150,7 +155,11 @@ export function BuildProfileCard({
               className={`profile-action command-${action}`}
               type="button"
               key={action}
-              onClick={() => onRun(command, profile.id, action)}
+              onClick={() =>
+                serviceUrl
+                  ? onOpenWebService(profile.id)
+                  : command && onRun(command, profile.id, action)
+              }
               disabled={actionDisabled}
               title={actionTitle}
               aria-describedby={

@@ -5,7 +5,7 @@ use crate::manifest_projection;
 use crate::manifest_schema;
 use crate::model::{
     BuildProfile, CleanupDeclaration, Facet, ProjectCommand, ProjectConfiguration,
-    ProjectConfigurationStatus, ProjectLink, ProjectTools,
+    ProjectConfigurationStatus, ProjectTools,
 };
 use crate::project_path::read_project_text_file;
 
@@ -16,7 +16,6 @@ pub struct ProjectConfigurationInspection {
     pub build_profiles: Vec<BuildProfile>,
     pub cleanup: CleanupDeclaration,
     pub tools: ProjectTools,
-    pub links: Vec<ProjectLink>,
     pub manifest_status: ProjectConfigurationStatus,
     pub manifest_schema: Option<u32>,
     pub cleanup_issues: Vec<String>,
@@ -90,7 +89,6 @@ fn unavailable_configuration(
         build_profiles: Vec::new(),
         cleanup: CleanupDeclaration::default(),
         tools: ProjectTools::default(),
-        links: Vec::new(),
         manifest_status: status,
         manifest_schema,
         cleanup_issues: Vec::new(),
@@ -997,6 +995,161 @@ build = "package.json#scripts.build"
             },
         );
         assert!(protocol.needs_update);
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    fn write_manifest(name: &str, body: &str) -> std::path::PathBuf {
+        let root =
+            std::env::temp_dir().join(format!("atrium-manifest-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
+        fs::write(root.join(".atrium/manifest.toml"), body).expect("write manifest");
+        root
+    }
+
+    #[test]
+    fn web_profile_run_is_the_service_url() {
+        let root = write_manifest(
+            "web-service",
+            r#"schema = 2
+
+[[platforms]]
+id = "web"
+label = "Web"
+
+[[channels]]
+id = "direct"
+label = "Direct"
+
+[[build_profiles]]
+id = "web-direct"
+platform = "web"
+channel = "direct"
+service_url = "http://127.0.0.1:3000"
+
+[build_profiles.commands]
+check = "package.json#scripts.test"
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[command(
+                "npm:test",
+                "package.json#scripts.test",
+                CommandKind::Check,
+            )],
+        );
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(
+            result.build_profiles[0].service_url.as_deref(),
+            Some("http://127.0.0.1:3000")
+        );
+        assert_eq!(result.build_profiles[0].run_command_id, None);
+        assert!(
+            result.build_profiles[0]
+                .action_binding_key(&CommandKind::Run)
+                .as_deref()
+                == Some("http://127.0.0.1:3000")
+        );
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn rejects_links_and_a_web_profile_that_binds_a_run_command() {
+        let root = write_manifest(
+            "web-links",
+            r#"schema = 2
+
+[[platforms]]
+id = "web"
+label = "Web"
+
+[[channels]]
+id = "direct"
+label = "Direct"
+
+[[build_profiles]]
+id = "web-direct"
+platform = "web"
+channel = "direct"
+service_url = "http://127.0.0.1:3000"
+
+[build_profiles.commands]
+run = "package.json#scripts.dev"
+
+[[links]]
+id = "preview"
+label = "Local preview"
+url = "http://127.0.0.1:3000"
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[command(
+                "npm:dev",
+                "package.json#scripts.dev",
+                CommandKind::Run,
+            )],
+        );
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(result
+            .configuration
+            .issues
+            .iter()
+            .any(|issue| issue.contains("[[links]]")));
+        assert!(result
+            .configuration
+            .issues
+            .iter()
+            .any(|issue| issue.contains("must not bind commands.run")));
+        assert_eq!(result.build_profiles[0].run_command_id, None);
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn rejects_a_service_url_on_a_desktop_profile() {
+        let root = write_manifest(
+            "desktop-service",
+            r#"schema = 2
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "direct"
+label = "Direct"
+
+[[build_profiles]]
+id = "macos-direct"
+platform = "macos"
+channel = "direct"
+service_url = "http://127.0.0.1:3000"
+"#,
+        );
+        let result = scan_project_configuration(&root, &[]);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(result
+            .configuration
+            .issues
+            .iter()
+            .any(|issue| issue.contains("only valid when platform is web")));
+        assert_eq!(result.build_profiles[0].service_url, None);
 
         fs::remove_dir_all(root).expect("remove manifest directory");
     }

@@ -59,10 +59,10 @@ export interface ProjectInspectorProps {
     profileId: string,
     relativePath: string,
   ) => void;
+  onOpenWebService: (projectPath: string, profileId: string) => void;
   onOpenProjectAction: (
     action: ProjectAction,
     project: ProjectSnapshot,
-    linkId?: string,
   ) => void;
   hiddenInspectorSections?: InspectorSectionId[];
 }
@@ -95,6 +95,7 @@ export function ProjectInspector({
   onCancelCleanup,
   onConfirmCleanup,
   onOpenArtifact,
+  onOpenWebService,
   onOpenProjectAction,
   hiddenInspectorSections,
 }: ProjectInspectorProps) {
@@ -188,6 +189,7 @@ export function ProjectInspector({
           project={inspectedProject}
           protocolReady={protocolReady}
           onRun={onRun}
+          onOpenWebService={onOpenWebService}
           onOpenArtifact={onOpenArtifact}
         />
       ) : null}

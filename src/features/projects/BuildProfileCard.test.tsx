@@ -23,6 +23,7 @@ const profile: BuildProfile = {
   checkCommandId: "npm:check",
   buildCommandId: "npm:build:macos",
   runCommandId: "npm:dev",
+  serviceUrl: null,
   hostRequirements: {
     check: null,
     build: null,
@@ -100,6 +101,7 @@ const renderCard = (
       projectPath="/workspace/SnapCutout"
       canExecute
       onRun={vi.fn()}
+      onOpenWebService={vi.fn()}
       onOpenArtifact={vi.fn()}
     />,
   );
@@ -133,6 +135,38 @@ describe("build profile card", () => {
     renderCard([availableArtifact]);
 
     expect(screen.getByRole("button", { name: "Run" })).toBeEnabled();
+  });
+
+  it("opens a web service from run instead of a project command", () => {
+    const onOpenWebService = vi.fn();
+    const onRun = vi.fn();
+    render(
+      <BuildProfileCard
+        profile={{
+          ...profile,
+          platform: { ...profile.platform, key: "web", label: "Web" },
+          runCommandId: null,
+          serviceUrl: "http://127.0.0.1:3000",
+          artifacts: [],
+        }}
+        commands={commands}
+        artifacts={[]}
+        projectPath="/workspace/PortfolioSite"
+        canExecute
+        onRun={onRun}
+        onOpenWebService={onOpenWebService}
+        onOpenArtifact={vi.fn()}
+      />,
+    );
+
+    screen.getByRole("button", { name: "Run" }).click();
+
+    expect(onOpenWebService).toHaveBeenCalledWith(profile.id);
+    expect(onRun).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Run" })).toHaveAttribute(
+      "title",
+      "http://127.0.0.1:3000",
+    );
   });
 
   it("enables run when the profile declares no artifacts", () => {

@@ -32,7 +32,6 @@ const snapshot = (rootPath: string, projectId: string): WorkspaceSnapshot => ({
       },
       repo: null,
       tools: { terminal: null },
-      links: [],
       platforms: [],
       channels: [],
       buildProfiles: [],

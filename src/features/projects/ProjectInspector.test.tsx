@@ -33,6 +33,7 @@ const baseProps = {
   onCancelCleanup: () => undefined,
   onConfirmCleanup: () => undefined,
   onOpenArtifact: () => undefined,
+  onOpenWebService: () => undefined,
   onOpenProjectAction: () => undefined,
 } satisfies ProjectInspectorProps;
 

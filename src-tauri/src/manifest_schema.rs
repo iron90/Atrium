@@ -48,6 +48,8 @@ pub(crate) struct ManifestBuildProfile {
     pub(crate) region: Option<String>,
     pub(crate) payment: Option<String>,
     pub(crate) artifacts: Option<Vec<String>>,
+    /// Address of a running web site. Valid only when `platform` is `web`.
+    pub(crate) service_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,6 +89,9 @@ pub(crate) struct ManifestTools {
     pub(crate) terminal: Option<String>,
 }
 
+// Older manifests may still contain `[[links]]`. The field stays deserializable
+// so the rest of the file can be read; projection rejects the section.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ManifestLink {

@@ -17,13 +17,6 @@ export interface ProjectTools {
   terminal: string | null;
 }
 
-export interface ProjectLink {
-  id: string;
-  label: string;
-  url: string;
-  kind: string | null;
-}
-
 export interface ProjectCommand {
   id: string;
   kind: CommandKind;
@@ -67,6 +60,7 @@ export interface BuildProfile {
   checkCommandId: string | null;
   buildCommandId: string | null;
   runCommandId: string | null;
+  serviceUrl: string | null;
   hostRequirements: BuildHostRequirements;
   verification: BuildHostRequirements;
   hostMismatchActions: ProfileAction[];
@@ -98,7 +92,6 @@ export interface ProjectSnapshot {
   guidance: GuidanceStatus;
   repo: GitSnapshot | null;
   tools: ProjectTools;
-  links: ProjectLink[];
   platforms: Facet[];
   channels: Facet[];
   buildProfiles: BuildProfile[];

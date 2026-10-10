@@ -11,7 +11,6 @@ const REQUIRED_PROJECT_KEYS: (keyof ProjectSnapshot)[] = [
   "guidance",
   "repo",
   "tools",
-  "links",
   "platforms",
   "channels",
   "buildProfiles",

@@ -158,11 +158,15 @@ The command roles are framework-neutral, in workflow order:
   A target host mismatch is deferred verification and must not be treated as a
   failure; a matching-host command or environment failure remains a blocker
   and must not be acknowledged in guidance-sync.
-- `run` points to the project's primary local runtime entry. A web development
-  server is valid for a web target; desktop, CLI, game, and mobile targets use
-  their existing project-owned run entry. It must not point only to a
-  subordinate service required by another runtime. If no reliable entry exists,
-  the field is omitted rather than guessed.
+- `run` for platform `web` is not a project command. The profile declares
+  `service_url` as an absolute `http://` or `https://` address with no
+  embedded credentials. Run checks that this service is accepting connections
+  and then opens it in the browser. Atrium does not start the server. If the
+  project has no such address, omit `service_url`. For every other platform,
+  `run` points to the project's primary local runtime entry. Desktop, CLI,
+  game, and mobile targets use their existing project-owned run entry. It must
+  not point only to a subordinate service required by another runtime. If no
+  reliable entry exists, the field is omitted rather than guessed.
 
 The target platform and the operating system that executes a command are
 separate facts. A profile declares compatible execution hosts and records
@@ -276,9 +280,32 @@ framework-specific output directories. An artifact can be opened from the
 board only when the declared path currently exists and stays inside the
 repository.
 
-## Project tools and links
+## Web service URL
 
-The optional project-owned tool declarations let Atrium provide a terminal
+A build profile whose platform is `web` may declare the address of the running
+site. Run for that profile checks that the address is accepting connections and
+then opens it. Check and Build stay project-owned commands. `commands.run` is
+not valid on a web profile, and `service_url` is not valid on any other platform.
+
+```toml
+[[build_profiles]]
+id = "web-direct"
+platform = "web"
+channel = "direct"
+service_url = "http://127.0.0.1:3000"
+```
+
+`service_url` must be an absolute `http://` or `https://` URL with a host and
+without embedded credentials. Atrium does not start the server. If nothing is
+accepting connections, Run fails and leaves the browser closed. Host
+requirements and verification apply to this Run the same way they apply to a
+command: the current host must be allowed and recorded before the button is
+enabled. `[[links]]` is not part of the protocol. A manifest that still
+contains it is invalid until the section is removed.
+
+## Project tools
+
+The optional project-owned tool declaration lets Atrium provide a terminal
 launcher without guessing tools from the project structure. Editor launchers
 are intentionally not part of the current protocol while Atrium defines a
 project-specific multi-tool model:
@@ -286,22 +313,12 @@ project-specific multi-tool model:
 ```toml
 [tools]
 terminal = ""
-
-[[links]]
-id = "preview"
-label = "Local preview"
-url = "http://127.0.0.1:3000"
-kind = "preview"
 ```
 
 `terminal` is a single executable value, not a shell pipeline or argument
 string. Atrium passes the project path as the current directory. An empty or
 missing declaration uses the operating-system default terminal; Atrium does not
-ask users to enter a terminal command. Links must be absolute `http://`,
-`https://`, or `file://` URLs with a host/path as appropriate; embedded
-credentials, malformed URLs, duplicate IDs, and unsupported schemes are invalid
-manifest entries. These declarations are convenience actions and do not become
-platform, channel, payment, or build facts.
+ask users to enter a terminal command.
 
 Only a valid build profile can execute a target-specific action. The repository
 command browser is a separate execution path: it deterministically discovers

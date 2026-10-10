@@ -73,7 +73,7 @@ When the user asks to tag or publish a release:
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
 
-Atrium guidance revision: 4
+Atrium guidance revision: 5
 
 ## Check / Build / Run command bindings
 
@@ -81,7 +81,7 @@ Each build profile must reference commands already owned by the project:
 
 - `check`: an existing project quality-validation entry such as tests, lint, typecheck, or another command that reports success or failure through its exit code.
 - `build`: an existing project build entry that produces the profile's declared distributable artifacts. Build must not silently install, replace, or open an application; installation is a separate, explicit user action.
-- `run`: a command that starts or provides the primary target. First identify the profile's primary local runtime entry and its existing local entry point. A web development server is valid for a web target; a desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.
+- `run`: for platform `web`, do not bind a project command. Declare `service_url` as the absolute `http://` or `https://` address of the site, without embedded credentials. Run checks that this service is accepting connections and then opens it in the browser. Atrium does not start the server. If the project has no such address, omit `service_url`. For every other platform, `run` is a command that starts or provides the primary target. First identify the profile's primary local runtime entry and its existing local entry point. A desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.
 
 These rules are framework-neutral. A framework command such as `tauri dev` is only an example when the repository actually uses Tauri. Atrium does not invent or wrap project commands.
 
@@ -95,7 +95,7 @@ For every profile action and candidate host, inspect the actual program, args, w
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `check` | The complete command finishes with exit code `0`.                                                                                                                                                                               |
 | `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |
-| `run`   | The primary target starts and passes an available readiness or smoke check; process spawn alone is not enough.                                                                                                                  |
+| `run`   | For a web profile, the service at `service_url` accepts a connection and opens in the browser. For every other profile, the primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |
 
 Add a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
@@ -112,6 +112,8 @@ Audit every existing profile's run binding, even when its host requirement or ve
 Verify the running application's platform, channel configuration, and readiness, and record this evidence in the verification matrix and `[build_profiles.verification]`. `host_requirements` declares where the target may run; `verification` records where it actually passed. Only list a host in verification after running on that host. Atrium requires matching host and target systems for Run on macos, windows, and linux desktop profiles. Cross-system desktop Run is not supported, including through compatibility layers or remote launchers. Other targets use their declared host requirements. Being able to build Windows artifacts on macOS does not prove that Windows Run works there. Check and Build retain independent host requirements.
 
 If no matching project-owned run entry exists, omit Run and explain why. If an entry exists but its target host does not match the current host, preserve the binding and record the verification as deferred. If the target host matches but the command or environment cannot be verified, declare the blocker in the manifest with the exact reason and report it. Do not replace a target-specific entry with a generic local dev command just to pass verification.
+
+A web profile's Run target is its declared `service_url`, not a development server. A command that starts a local server does not verify web Run, and Atrium does not start that server.
 
 ## Validation blockers and completion
 

@@ -29,7 +29,6 @@ pub struct ProjectSnapshot {
     pub guidance: GuidanceStatus,
     pub repo: Option<GitSnapshot>,
     pub tools: ProjectTools,
-    pub links: Vec<ProjectLink>,
     pub platforms: Vec<Facet>,
     pub channels: Vec<Facet>,
     pub build_profiles: Vec<BuildProfile>,
@@ -67,6 +66,8 @@ pub struct BuildProfile {
     pub check_command_id: Option<String>,
     pub build_command_id: Option<String>,
     pub run_command_id: Option<String>,
+    /// Set only for a web profile. Run checks this address and then opens it.
+    pub service_url: Option<String>,
     pub host_requirements: BuildHostRequirements,
     pub verification: BuildHostRequirements,
     pub host_mismatch_actions: Vec<CommandKind>,
@@ -105,6 +106,20 @@ impl BuildProfile {
             CommandKind::Check => self.check_command_id.as_deref(),
             CommandKind::Build => self.build_command_id.as_deref(),
             CommandKind::Run => self.run_command_id.as_deref(),
+            CommandKind::Other => None,
+        }
+    }
+
+    /// Identity of a bound profile action. Check and build use the project
+    /// command. Web run uses the service URL; other platforms use the run command.
+    pub fn action_binding_key(&self, action: &CommandKind) -> Option<String> {
+        match action {
+            CommandKind::Check => self.check_command_id.clone(),
+            CommandKind::Build => self.build_command_id.clone(),
+            CommandKind::Run => self
+                .service_url
+                .clone()
+                .or_else(|| self.run_command_id.clone()),
             CommandKind::Other => None,
         }
     }
@@ -224,15 +239,6 @@ pub enum FacetSource {
 #[serde(rename_all = "camelCase")]
 pub struct ProjectTools {
     pub terminal: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectLink {
-    pub id: String,
-    pub label: String,
-    pub url: String,
-    pub kind: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

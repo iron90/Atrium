@@ -62,7 +62,6 @@ pub fn scan_project_with_storage(
         guidance: inspect_guidance_status(&path),
         repo,
         tools: configuration.tools,
-        links: configuration.links,
         platforms: configuration.platforms,
         channels: configuration.channels,
         build_profiles,

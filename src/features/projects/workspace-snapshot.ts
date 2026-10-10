@@ -25,7 +25,6 @@ const projectFingerprintData = (project: ProjectSnapshot) => ({
       }
     : null,
   tools: project.tools,
-  links: project.links,
   platforms: project.platforms.map((facet) => [
     facet.key,
     facet.label,
@@ -43,6 +42,7 @@ const projectFingerprintData = (project: ProjectSnapshot) => ({
     check: profile.checkCommandId,
     build: profile.buildCommandId,
     run: profile.runCommandId,
+    serviceUrl: profile.serviceUrl,
     hostRequirements: profile.hostRequirements,
     verification: profile.verification,
     hostMismatchActions: profile.hostMismatchActions,

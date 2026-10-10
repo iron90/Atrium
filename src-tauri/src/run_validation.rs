@@ -230,6 +230,7 @@ mod tests {
             run_command_id: run_command_id.map(str::to_string),
             check_command_id: None,
             build_command_id: None,
+            service_url: None,
             host_requirements: BuildHostRequirements::default(),
             verification: BuildHostRequirements {
                 run: Some(vec![current]),
@@ -276,7 +277,6 @@ mod tests {
             },
             repo: None,
             tools: ProjectTools::default(),
-            links: vec![],
             platforms: vec![],
             channels: vec![],
             build_profiles: profiles,

@@ -36,7 +36,15 @@ pub(crate) fn project(
     let cleanup = cleanup::parse_cleanup(document.cleanup, &mut issues);
     let cleanup_issues = issues[cleanup_issue_start..].to_vec();
     let tools = links::parse_tools(document.tools);
-    let links = links::parse_links(document.links.unwrap_or_default(), &mut issues);
+    if document
+        .links
+        .as_ref()
+        .is_some_and(|links| !links.is_empty())
+    {
+        issues.push(
+            "[[links]] is not part of the protocol. Remove it. A web project declares service_url on its web build profile; Run checks that service and opens it.".to_string(),
+        );
+    }
     let build_profiles = profiles::parse_build_profiles(
         document.build_profiles.unwrap_or_default(),
         &platform_map,
@@ -63,7 +71,6 @@ pub(crate) fn project(
         build_profiles,
         cleanup,
         tools,
-        links,
         manifest_status: ProjectConfigurationStatus::Configured,
         manifest_schema: Some(manifest_schema),
         cleanup_issues,

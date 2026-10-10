@@ -11,7 +11,6 @@ export function ProjectToolsSection({
   onOpenProjectAction: (
     action: ProjectAction,
     project: ProjectSnapshot,
-    linkId?: string,
   ) => void;
 }) {
   const { t } = useI18n();
@@ -40,19 +39,6 @@ export function ProjectToolsSection({
           </button>
         ) : null}
       </div>
-      {project.links.length ? (
-        <div className="project-links">
-          {project.links.map((link) => (
-            <button
-              type="button"
-              key={link.id}
-              onClick={() => onOpenProjectAction("link", project, link.id)}
-            >
-              {link.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
     </InspectorSection>
   );
 }

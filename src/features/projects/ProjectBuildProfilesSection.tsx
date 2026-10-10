@@ -13,6 +13,7 @@ export function ProjectBuildProfilesSection({
   project,
   protocolReady,
   onRun,
+  onOpenWebService,
   onOpenArtifact,
 }: {
   project: ProjectSnapshot;
@@ -22,6 +23,7 @@ export function ProjectBuildProfilesSection({
     profileId?: string,
     profileAction?: ProfileAction,
   ) => void;
+  onOpenWebService: (projectPath: string, profileId: string) => void;
   onOpenArtifact: (
     projectPath: string,
     profileId: string,
@@ -64,6 +66,9 @@ export function ProjectBuildProfilesSection({
                 activeRun={activeRun}
                 canExecute={canExecuteProfiles}
                 onRun={onRun}
+                onOpenWebService={(profileId) =>
+                  onOpenWebService(project.path, profileId)
+                }
                 onOpenArtifact={onOpenArtifact}
               />
             ))}

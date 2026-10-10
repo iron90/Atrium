@@ -52,8 +52,14 @@ pub(super) fn parse_build_profiles(
             resolve_command_reference(bindings.check.as_deref(), commands, &mut profile_issues);
         let build_command_id =
             resolve_command_reference(bindings.build.as_deref(), commands, &mut profile_issues);
-        let run_command_id =
+        let mut run_command_id =
             resolve_command_reference(bindings.run.as_deref(), commands, &mut profile_issues);
+        let service_url = resolve_service_url(
+            &manifest_profile.platform,
+            &mut run_command_id,
+            manifest_profile.service_url,
+            &mut profile_issues,
+        );
         let host_requirements =
             parse_host_requirements(manifest_profile.host_requirements, &id, &mut profile_issues);
         let verification =
@@ -66,7 +72,7 @@ pub(super) fn parse_build_profiles(
                 .unwrap_or(&[]),
             &check_command_id,
             &build_command_id,
-            &run_command_id,
+            service_url.is_some() || run_command_id.is_some(),
             &host_requirements,
             &verification,
             &id,
@@ -93,7 +99,7 @@ pub(super) fn parse_build_profiles(
         let action_is_bound = |action: CommandKind| match action {
             CommandKind::Check => check_command_id.is_some(),
             CommandKind::Build => build_command_id.is_some(),
-            CommandKind::Run => run_command_id.is_some(),
+            CommandKind::Run => service_url.is_some() || run_command_id.is_some(),
             CommandKind::Other => false,
         };
         let host_mismatch_actions = CommandKind::PROFILE_ACTIONS
@@ -132,6 +138,7 @@ pub(super) fn parse_build_profiles(
             check_command_id,
             build_command_id,
             run_command_id,
+            service_url,
             host_requirements,
             verification,
             host_mismatch_actions,
@@ -176,10 +183,10 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
             }
         }
         for blocker in &profile.verification_blockers {
-            let Some(command_id) = profile.command_id_for_action(&blocker.action) else {
+            let Some(binding) = profile.action_binding_key(&blocker.action) else {
                 continue;
             };
-            let key = (command_id.to_string(), blocker.action, blocker.host);
+            let key = (binding, blocker.action, blocker.host);
             if attested.contains(&key) {
                 issues.push(format!(
                     "Build profile {} declares a verification blocker for {} on host {}, but the same command is recorded as verified there; remove one of the conflicting records.",
@@ -196,10 +203,8 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
         let pending: Vec<CommandKind> = profile.unverified_actions.to_vec();
         let kept: Vec<CommandKind> = pending
             .into_iter()
-            .filter(|action| match profile.command_id_for_action(action) {
-                Some(command_id) => {
-                    !attested.contains(&(command_id.to_string(), *action, current_host))
-                }
+            .filter(|action| match profile.action_binding_key(action) {
+                Some(binding) => !attested.contains(&(binding, *action, current_host)),
                 None => true,
             })
             .collect();
@@ -207,9 +212,9 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
 
         let blocked_actions = bound_actions(profile)
             .into_iter()
-            .filter_map(|(action, command_id)| {
-                let command_id = command_id?;
-                let reason = blocked.get(&(command_id, action, current_host))?;
+            .filter_map(|(action, binding)| {
+                let binding = binding?;
+                let reason = blocked.get(&(binding, action, current_host))?;
                 Some(BlockedAction {
                     action,
                     reason: reason.clone(),
@@ -221,12 +226,41 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
 }
 
 fn bound_actions(profile: &BuildProfile) -> [(CommandKind, Option<String>); 3] {
-    CommandKind::PROFILE_ACTIONS.map(|action| {
-        (
-            action,
-            profile.command_id_for_action(&action).map(str::to_string),
-        )
-    })
+    CommandKind::PROFILE_ACTIONS.map(|action| (action, profile.action_binding_key(&action)))
+}
+
+fn resolve_service_url(
+    platform: &str,
+    run_command_id: &mut Option<String>,
+    declared: Option<String>,
+    issues: &mut Vec<String>,
+) -> Option<String> {
+    let declared = declared
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let platform_is_web = platform.trim() == "web";
+    if platform_is_web {
+        if run_command_id.is_some() {
+            issues.push(
+                "A web profile must not bind commands.run. Declare service_url; Run checks that service and opens it.".to_string(),
+            );
+            *run_command_id = None;
+        }
+        let Some(url) = declared else {
+            return None;
+        };
+        return match crate::url_policy::validate_service_url(&url) {
+            Ok(()) => Some(url),
+            Err(error) => {
+                issues.push(format!("service_url {error}."));
+                None
+            }
+        };
+    }
+    if declared.is_some() {
+        issues.push("service_url is only valid when platform is web.".to_string());
+    }
+    None
 }
 
 fn action_label(action: CommandKind) -> &'static str {
@@ -243,7 +277,7 @@ fn parse_verification_blockers(
     declarations: &[ManifestVerificationBlocker],
     check_command_id: &Option<String>,
     build_command_id: &Option<String>,
-    run_command_id: &Option<String>,
+    run_bound: bool,
     host_requirements: &BuildHostRequirements,
     verification: &BuildHostRequirements,
     profile_id: &str,
@@ -267,12 +301,12 @@ fn parse_verification_blockers(
         let command_bound = match action {
             CommandKind::Check => check_command_id.is_some(),
             CommandKind::Build => build_command_id.is_some(),
-            CommandKind::Run => run_command_id.is_some(),
+            CommandKind::Run => run_bound,
             CommandKind::Other => false,
         };
         if !command_bound {
             issues.push(format!(
-                "Build profile {profile_id} declares a verification blocker for {}, which has no bound command.",
+                "Build profile {profile_id} declares a verification blocker for {}, which is not bound.",
                 action_label(action)
             ));
             continue;

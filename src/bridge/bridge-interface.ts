@@ -50,7 +50,7 @@ export interface AtriumBridge {
   openProjectDirectory(projectPath: string): Promise<void>;
   openProjectTerminal(projectPath: string): Promise<void>;
   openProjectRemote(remote: string): Promise<void>;
-  openProjectLink(projectPath: string, linkId: string): Promise<void>;
+  openWebProfile(projectPath: string, profileId: string): Promise<void>;
   getAppVersion(): Promise<string>;
   checkForAppUpdate(): Promise<AppUpdateInfo | null>;
   downloadAndInstallAppUpdate(

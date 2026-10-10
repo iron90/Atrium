@@ -30,6 +30,7 @@ mod storage;
 mod time;
 mod tool_commands;
 mod url_policy;
+mod web_service;
 mod workspace_commands;
 mod workspace_membership;
 mod workspace_policy;
@@ -59,7 +60,7 @@ pub fn run() {
             tool_commands::project::open_project_directory_command,
             tool_commands::project::open_project_terminal_command,
             tool_commands::external::open_project_remote_command,
-            tool_commands::external::open_project_link_command,
+            tool_commands::external::open_web_profile_command,
             tool_commands::external::open_release_page_command
         ])
         .build(tauri::generate_context!())

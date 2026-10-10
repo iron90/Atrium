@@ -21,7 +21,7 @@ The Projects page lists every repository discovered in your workspaces:
 
 - Search, filter by platform or channel, and sort by name, Git state, recency, or storage size.
 - Favorite and hide projects; hiding only affects the board, never the files.
-- Open a project's folder, terminal, remote, and declared links from its row.
+- Open a project's folder, terminal, and remote from its row.
 - Workspaces refresh automatically every 10 seconds, and the list updates only when something changed; the selected project can also be refreshed on demand.
 
 Selecting a project opens the project detail card, top to bottom:
@@ -30,7 +30,7 @@ Selecting a project opens the project detail card, top to bottom:
 - **Atrium protocol** — capability status read from `.atrium/manifest.toml`, plus one-click guidance files and a copyable prompt for the project's development agent.
 - **Declared context** — the platforms and channels the project declares.
 - **Storage** — project size and cleanable entries with per-entry selection; cleanup only ever touches directories the manifest declares.
-- **Build profiles** — the project's own Check / Build / Run bindings, with inspection of the build artifacts each profile explicitly declares.
+- **Build profiles** — the project's own Check / Build / Run bindings, with inspection of the build artifacts each profile explicitly declares. A web profile's Run checks that its declared service is accepting connections and then opens it.
 - **Discovered repository commands** — commands found in the repository itself, shown only after explicit confirmation.
 - **Live output** — start a bound action and watch its output and final result here.
 - **Persistent run history** — finished runs are recorded locally with project, profile, platform, channel, and Git context; logs stay openable and copyable.

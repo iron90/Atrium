@@ -1,5 +1,14 @@
 use url::Url;
 
+pub(crate) fn validate_service_url(value: &str) -> Result<(), String> {
+    validate_browsable_url(value)?;
+    let url = Url::parse(value.trim()).map_err(|_| "must be a valid absolute URL".to_string())?;
+    if url.scheme() == "file" {
+        return Err("must use http:// or https://".to_string());
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_browsable_url(value: &str) -> Result<(), String> {
     let value = value.trim();
     if value
@@ -27,13 +36,21 @@ pub(crate) fn validate_browsable_url(value: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_browsable_url;
+    use super::{validate_browsable_url, validate_service_url};
 
     #[test]
     fn accepts_supported_absolute_urls() {
         assert!(validate_browsable_url("https://example.com/preview").is_ok());
         assert!(validate_browsable_url("http://127.0.0.1:3000").is_ok());
         assert!(validate_browsable_url("file:///tmp/preview.html").is_ok());
+    }
+
+    #[test]
+    fn accepts_web_service_urls_and_rejects_files() {
+        assert!(validate_service_url("http://127.0.0.1:3000").is_ok());
+        assert!(validate_service_url("https://example.com").is_ok());
+        assert!(validate_service_url("file:///tmp/preview.html").is_err());
+        assert!(validate_service_url("https://user:secret@example.com").is_err());
     }
 
     #[test]

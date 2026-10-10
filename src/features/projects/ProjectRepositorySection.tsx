@@ -34,7 +34,6 @@ export function ProjectRepositorySection({
   onOpenProjectAction: (
     action: ProjectAction,
     project: ProjectSnapshot,
-    linkId?: string,
   ) => void;
 }) {
   const { language, t } = useI18n();
@@ -43,7 +42,6 @@ export function ProjectRepositorySection({
   const branchRowRef = useRef<HTMLDivElement | null>(null);
   const repo = inspectedProject.repo;
   const localPath = normalizeWindowsPath(project.path);
-  const links = inspectedProject.links;
 
   // A keyboard-driven project switch bypasses the outside-click handler, so
   // the menu reset is tied to the project identity during render.
@@ -94,19 +92,6 @@ export function ProjectRepositorySection({
               >
                 {t("openTerminal")}
               </button>
-              {!repo?.remote
-                ? links.map((link) => (
-                    <button
-                      type="button"
-                      key={link.id}
-                      onClick={() =>
-                        onOpenProjectAction("link", inspectedProject, link.id)
-                      }
-                    >
-                      {link.label}
-                    </button>
-                  ))
-                : null}
             </div>
           </div>
           <div className="repo-path">
@@ -127,17 +112,6 @@ export function ProjectRepositorySection({
                 >
                   {t("openRemote")}
                 </button>
-                {links.map((link) => (
-                  <button
-                    type="button"
-                    key={link.id}
-                    onClick={() =>
-                      onOpenProjectAction("link", inspectedProject, link.id)
-                    }
-                  >
-                    {link.label}
-                  </button>
-                ))}
               </div>
             </div>
             <div className="repo-path remote-path">

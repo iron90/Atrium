@@ -61,7 +61,7 @@ React UI
   │  ├─ workspace-snapshot  Workspace snapshot fingerprints, merging, and empty snapshots
   │  ├─ ProjectInspector    Detail page section composition root
   │  │  ├─ ProjectRepositorySection      Repository facts
-  │  │  ├─ ProjectToolsSection           Project tools and links
+  │  │  ├─ ProjectToolsSection           Project tools
   │  │  ├─ ProjectStorageSection         Storage and cleanup
   │  │  ├─ ProjectContextSection         Platform and channel context
   │  │  ├─ ProjectBuildProfilesSection   Build profiles and actions
@@ -119,7 +119,7 @@ Rust native core
   ├─ tool_commands          Adapter facade for project tool commands
   │  ├─ artifact            Opening declared artifacts
   │  ├─ project             Opening project directories and terminals
-  │  └─ external            Opening remote repositories and manifest links
+  │  └─ external            Opening remote repositories and web profile services
   ├─ model                  Facade of serialized domain DTOs shared between frontend and backend
   │  ├─ project             Project and workspace contracts
   │  ├─ protocol            Protocol status and report contracts
@@ -152,7 +152,7 @@ Rust native core
   │  ├─ facets              Platform/channel declarations
   │  ├─ profiles            Build profiles and command bindings
   │  ├─ cleanup             Cleanup directory declarations
-  │  ├─ links               Tool and project link declarations
+  │  ├─ links               Optional terminal declaration
   │  └─ path_policy         Manifest-relative path and protected path rules
   ├─ protocol               Protocol capability status evaluation
   ├─ guidance               Agent guidance file and report generation facade
@@ -219,7 +219,6 @@ ProjectSnapshot
   guidance: GuidanceStatus (guidance revision with needsUpdate/needsSync)
   repo: GitSnapshot?
   tools: ProjectTools
-  links: ProjectLink[]
   platforms: Facet[]
   channels: Facet[]
   buildProfiles: BuildProfile[]
@@ -523,13 +522,15 @@ jpeg, webp, and ico files smaller than 8 MiB are read, and compatibility discove
 keeps at most 64 candidates, so large build artifacts are not pulled into the
 snapshot during scanning.
 
-Project tools and links come only from structured manifest fields. Opening
-directories, terminals, remote repositories, or declared links is performed by Rust
-native commands; when no project terminal is declared, the operating system's
-default terminal is used directly. Atrium provides no setting that lets users enter
-a terminal command, and an editor entry point is not provided yet. The UI does not
-concatenate shell text. A cleanup selection is intersected with the manifest
-declarations again on the Rust side before deletion is allowed.
+Project tools come only from structured manifest fields. Opening directories,
+terminals, and remote repositories is performed by Rust native commands; when no
+project terminal is declared, the operating system's default terminal is used
+directly. A web build profile may declare `service_url`. Its Run action checks that
+the address is accepting connections and then opens it; Atrium does not start the
+server, and `[[links]]` is not a protocol section. Atrium provides no setting that
+lets users enter a terminal command, and an editor entry point is not provided yet.
+The UI does not concatenate shell text. A cleanup selection is intersected with the
+manifest declarations again on the Rust side before deletion is allowed.
 
 ## 6. Git Boundary
 

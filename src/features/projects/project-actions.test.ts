@@ -23,57 +23,18 @@ describe("project actions", () => {
     openTerminal.mockRestore();
   });
 
-  it("does not invoke optional actions without their required facts", async () => {
-    const projectWithoutOptionalFacts = {
+  it("does not open a remote when the project has none", async () => {
+    const projectWithoutRemote = {
       ...project,
       repo: null,
-      links: [],
     };
     const openRemote = vi
       .spyOn(bridge, "openProjectRemote")
       .mockResolvedValue(undefined);
-    const openLink = vi
-      .spyOn(bridge, "openProjectLink")
-      .mockResolvedValue(undefined);
 
-    await openProjectAction("remote", projectWithoutOptionalFacts);
-    await openProjectAction("link", projectWithoutOptionalFacts);
+    await openProjectAction("remote", projectWithoutRemote);
 
     expect(openRemote).not.toHaveBeenCalled();
-    expect(openLink).not.toHaveBeenCalled();
     openRemote.mockRestore();
-    openLink.mockRestore();
-  });
-
-  it("requires confirmation before opening a file:// link", async () => {
-    const windowConfirm = vi
-      .spyOn(window, "confirm")
-      .mockImplementation(() => false);
-    const openLink = vi
-      .spyOn(bridge, "openProjectLink")
-      .mockResolvedValue(undefined);
-    const fileProject = {
-      ...project,
-      links: [
-        {
-          id: "local-file",
-          label: "Local file",
-          url: "file:///tmp/report.html",
-          kind: null,
-        },
-      ],
-    };
-
-    await openProjectAction("link", fileProject, "local-file");
-
-    expect(windowConfirm).toHaveBeenCalled();
-    expect(openLink).not.toHaveBeenCalled();
-
-    windowConfirm.mockImplementation(() => true);
-    await openProjectAction("link", fileProject, "local-file");
-    expect(openLink).toHaveBeenCalledWith(fileProject.path, "local-file");
-
-    windowConfirm.mockRestore();
-    openLink.mockRestore();
   });
 });

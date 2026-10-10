@@ -7,6 +7,7 @@ use crate::os_open;
 use crate::scanner::scan_project;
 use crate::state::AppState;
 use crate::url_policy::validate_browsable_url;
+use crate::web_service::{ensure_service_accepting, resolve_web_service_url};
 
 #[tauri::command]
 pub async fn open_project_remote_command(remote: String) -> Result<(), String> {
@@ -15,23 +16,20 @@ pub async fn open_project_remote_command(remote: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn open_project_link_command(
+pub async fn open_web_profile_command(
     state: State<'_, AppState>,
     project_path: String,
-    link_id: String,
+    profile_id: String,
 ) -> Result<(), String> {
     state
         .inner()
         .ensure_project_in_workspace(Path::new(&project_path))?;
-    run_blocking("Open project link", move || {
+    run_blocking("Open web profile", move || {
         let project = scan_project(Path::new(&project_path))
             .ok_or_else(|| "Project path cannot be scanned".to_string())?;
-        let link = project
-            .links
-            .iter()
-            .find(|link| link.id == link_id)
-            .ok_or_else(|| "Project link is not declared in the manifest".to_string())?;
-        open_external(&link.url)
+        let url = resolve_web_service_url(&project, &profile_id)?;
+        ensure_service_accepting(&url)?;
+        open_external(&url)
     })
     .await
 }
