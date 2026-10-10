@@ -202,4 +202,75 @@ describe("workspace scan lifecycle", () => {
       vi.useRealTimers();
     }
   });
+
+  it("waits for the selected refresh interval before scanning again", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSnapshot = emptySnapshot("/workspace");
+      const scanWorkspacesFn = vi.fn(async () => initialSnapshot);
+
+      renderHook(() =>
+        useWorkspaceScanLifecycle({
+          nativeRuntime: true,
+          preferences: { workspaces: ["/workspace"] },
+          initialRootPath: "/workspace",
+          initialWorkspacePaths: ["/workspace"],
+          initialSnapshot,
+          snapshot: initialSnapshot,
+          excludeNames: [],
+          language: "en",
+          workspaceRefreshMs: 30_000,
+          onError: noop,
+          onApplySnapshot: noop,
+          onSnapshotTimestamp: noop,
+          scanWorkspacesFn,
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not poll when automatic refresh is off", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSnapshot = emptySnapshot("/workspace");
+      const scanWorkspacesFn = vi.fn(async () => initialSnapshot);
+
+      renderHook(() =>
+        useWorkspaceScanLifecycle({
+          nativeRuntime: true,
+          preferences: { workspaces: ["/workspace"] },
+          initialRootPath: "/workspace",
+          initialWorkspacePaths: ["/workspace"],
+          initialSnapshot,
+          snapshot: initialSnapshot,
+          excludeNames: [],
+          language: "en",
+          workspaceRefreshMs: 0,
+          onError: noop,
+          onApplySnapshot: noop,
+          onSnapshotTimestamp: noop,
+          scanWorkspacesFn,
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

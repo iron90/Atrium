@@ -6,6 +6,7 @@ import {
   useWorkspaceScanLifecycle,
   type WorkspacePreferences,
 } from "./use-workspace-scan-lifecycle";
+import type { WorkspaceRefreshMs } from "./workspace-refresh";
 
 export type { WorkspacePreferences } from "./use-workspace-scan-lifecycle";
 
@@ -17,6 +18,7 @@ export interface UseProjectWorkspaceOptions {
   initialSnapshot: WorkspaceSnapshot;
   excludeNames: string[];
   language: Language;
+  workspaceRefreshMs: WorkspaceRefreshMs;
   onError: (message: string | null) => void;
   onProjectSelected: () => void;
   onSnapshotApplied: (snapshot: WorkspaceSnapshot) => void;
@@ -51,6 +53,7 @@ export function useProjectWorkspace({
   initialSnapshot,
   excludeNames,
   language,
+  workspaceRefreshMs,
   onError,
   onProjectSelected,
   onSnapshotApplied,
@@ -149,6 +152,7 @@ export function useProjectWorkspace({
     snapshot,
     excludeNames,
     language,
+    workspaceRefreshMs,
     onError,
     onApplySnapshot: applyWorkspaceSnapshot,
     onSnapshotTimestamp: handleSnapshotTimestamp,

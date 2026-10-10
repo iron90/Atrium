@@ -10,6 +10,10 @@ import {
 import { snapshotFingerprint } from "./workspace-snapshot";
 import { scanWorkspaces } from "./workspace-scan";
 import { LatestRequestGate } from "./scan-request-gate";
+import {
+  WORKSPACE_REFRESH_DEFAULT_MS,
+  type WorkspaceRefreshMs,
+} from "./workspace-refresh";
 
 export interface WorkspacePreferences {
   rootPath?: string;
@@ -28,6 +32,7 @@ export interface UseWorkspaceScanLifecycleOptions {
   onError: (message: string | null) => void;
   onApplySnapshot: (snapshot: WorkspaceSnapshot) => void;
   onSnapshotTimestamp: (scannedAt: number) => void;
+  workspaceRefreshMs?: WorkspaceRefreshMs;
   scanWorkspacesFn?: typeof scanWorkspaces;
 }
 
@@ -51,6 +56,7 @@ export function useWorkspaceScanLifecycle({
   onError,
   onApplySnapshot,
   onSnapshotTimestamp,
+  workspaceRefreshMs = WORKSPACE_REFRESH_DEFAULT_MS,
   scanWorkspacesFn = scanWorkspaces,
 }: UseWorkspaceScanLifecycleOptions): UseWorkspaceScanLifecycleResult {
   const [rootPath, setRootPath] = useState(initialRootPath);
@@ -58,8 +64,9 @@ export function useWorkspaceScanLifecycle({
   const [isScanning, setIsScanning] = useState(false);
   const workspaceFingerprintRef = useRef(snapshotFingerprint(initialSnapshot));
   const [scanRequests] = useState(() => new LatestRequestGate());
-  // Background scans retry every 10s; a transient failure that self-heals on
-  // the next attempt is noise, so only consecutive failures surface.
+  // Background scans retry on the chosen interval. A transient failure that
+  // self-heals on the next attempt is noise, so only consecutive failures
+  // surface.
   const backgroundScanFailures = useRef(0);
   const languageRef = useRef(language);
 
@@ -140,16 +147,21 @@ export function useWorkspaceScanLifecycle({
   }, [nativeRuntime, scanRequests, scanWorkspacesFn]);
 
   useEffect(() => {
-    if (!nativeRuntime || !workspacePaths.some((path) => path.trim()))
+    if (
+      !nativeRuntime ||
+      workspaceRefreshMs === 0 ||
+      !workspacePaths.some((path) => path.trim())
+    ) {
       return undefined;
+    }
 
     let disposed = false;
     const refreshWorkspace = async () => {
       if (disposed || scanRequests.isBusy) return;
       const requestId = scanRequests.begin();
-      // Background polls stay silent: announcing them would overwrite the
-      // status banner every 10 seconds and bury messages the user should
-      // read. Only real changes and failures are reported.
+      // Background polls stay silent: announcing each one would overwrite the
+      // status banner and bury messages the user should read. Only real
+      // changes and failures are reported.
       try {
         const nextSnapshot = await withTimeout(
           scanWorkspacesFn({
@@ -183,7 +195,10 @@ export function useWorkspaceScanLifecycle({
       }
     };
 
-    const interval = window.setInterval(() => void refreshWorkspace(), 10_000);
+    const interval = window.setInterval(
+      () => void refreshWorkspace(),
+      workspaceRefreshMs,
+    );
     return () => {
       disposed = true;
       window.clearInterval(interval);
@@ -196,6 +211,7 @@ export function useWorkspaceScanLifecycle({
     scanWorkspacesFn,
     scanRequests,
     workspacePaths,
+    workspaceRefreshMs,
   ]);
 
   const updateWorkspacePaths = useCallback((nextPaths: string[]) => {

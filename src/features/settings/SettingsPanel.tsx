@@ -14,6 +14,12 @@ import {
   INSPECTOR_SECTION_IDS,
   type InspectorSectionId,
 } from "../projects/inspector-section-visibility";
+import {
+  WORKSPACE_REFRESH_LABEL_KEYS,
+  WORKSPACE_REFRESH_OPTIONS,
+  isWorkspaceRefreshMs,
+  type WorkspaceRefreshMs,
+} from "../projects/workspace-refresh";
 
 // The switch rows reuse the detail-card section headings so the settings
 // labels always match what the card actually shows.
@@ -48,6 +54,8 @@ export const SettingsPanel = memo(function SettingsPanel({
   update: appUpdate,
   autoCheckUpdates,
   onAutoCheckUpdatesChange,
+  workspaceRefreshMs,
+  onWorkspaceRefreshMsChange,
 }: {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
@@ -65,6 +73,8 @@ export const SettingsPanel = memo(function SettingsPanel({
   update: AppUpdateController;
   autoCheckUpdates: boolean;
   onAutoCheckUpdatesChange: (enabled: boolean) => void;
+  workspaceRefreshMs: WorkspaceRefreshMs;
+  onWorkspaceRefreshMsChange: (intervalMs: WorkspaceRefreshMs) => void;
 }) {
   const { t } = useI18n();
   const { state: updateState } = appUpdate;
@@ -242,6 +252,27 @@ export const SettingsPanel = memo(function SettingsPanel({
           >
             {t("addExcludedFolder")}
           </button>
+          <label
+            className="settings-control"
+            htmlFor="settings-workspace-refresh"
+          >
+            <span>{t("workspaceRefresh")}</span>
+          </label>
+          <DropdownSelect
+            id="settings-workspace-refresh"
+            ariaLabel={t("workspaceRefresh")}
+            value={String(workspaceRefreshMs)}
+            options={WORKSPACE_REFRESH_OPTIONS.map((intervalMs) => ({
+              value: String(intervalMs),
+              label: t(WORKSPACE_REFRESH_LABEL_KEYS[intervalMs]),
+            }))}
+            onChange={(value) => {
+              const intervalMs = Number(value);
+              if (isWorkspaceRefreshMs(intervalMs)) {
+                onWorkspaceRefreshMsChange(intervalMs);
+              }
+            }}
+          />
           <div className="settings-footer">
             <p className="settings-help">
               {t("workspaceExclusionDescription")}

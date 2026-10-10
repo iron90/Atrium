@@ -18,6 +18,11 @@ import { emptySnapshot } from "./features/projects/workspace-snapshot";
 import { useProjectMetaState } from "./features/projects/use-project-meta-state";
 import { useProjectListViewState } from "./features/projects/use-project-list-view-state";
 import { useProjectWorkspace } from "./features/projects/use-project-workspace";
+import {
+  WORKSPACE_REFRESH_DEFAULT_MS,
+  isWorkspaceRefreshMs,
+  type WorkspaceRefreshMs,
+} from "./features/projects/workspace-refresh";
 import { useProjectRunner } from "./features/runs/use-project-runner";
 import {
   RunStreamContext,
@@ -73,6 +78,12 @@ export default function App() {
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(
     preferences.autoCheckUpdates ?? true,
   );
+  const [workspaceRefreshMs, setWorkspaceRefreshMs] =
+    useState<WorkspaceRefreshMs>(
+      isWorkspaceRefreshMs(preferences.workspaceRefreshMs)
+        ? preferences.workspaceRefreshMs
+        : WORKSPACE_REFRESH_DEFAULT_MS,
+    );
   const appUpdate = useAppUpdate(autoCheckUpdates);
   const { projectMeta, ensureProjectMeta, updateProjectMeta } =
     useProjectMetaState(preferences.projectMeta ?? {});
@@ -114,6 +125,7 @@ export default function App() {
     initialSnapshot,
     excludeNames,
     language,
+    workspaceRefreshMs,
     onError: handleWorkspaceError,
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
@@ -189,6 +201,7 @@ export default function App() {
       projectMeta,
       hiddenInspectorSections,
       autoCheckUpdates,
+      workspaceRefreshMs,
     });
   }, [
     autoCheckUpdates,
@@ -199,6 +212,7 @@ export default function App() {
     rootPath,
     theme,
     workspacePaths,
+    workspaceRefreshMs,
   ]);
 
   const handleToggleInspectorSection = useCallback(
@@ -523,6 +537,8 @@ export default function App() {
                         update={appUpdate}
                         autoCheckUpdates={autoCheckUpdates}
                         onAutoCheckUpdatesChange={setAutoCheckUpdates}
+                        workspaceRefreshMs={workspaceRefreshMs}
+                        onWorkspaceRefreshMsChange={setWorkspaceRefreshMs}
                       />
                     ) : page === "git" ? (
                       <GitHistoryView

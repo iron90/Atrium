@@ -62,6 +62,21 @@ describe("local preferences", () => {
     });
   });
 
+  it("round-trips known workspace refresh intervals", () => {
+    const off = parseLocalPreferences(
+      JSON.stringify({ workspaceRefreshMs: 0 }),
+    );
+    expect(off.workspaceRefreshMs).toBe(0);
+
+    const unknown = parseLocalPreferences(
+      JSON.stringify({ workspaceRefreshMs: 1234 }),
+    );
+    expect(unknown.workspaceRefreshMs).toBeUndefined();
+
+    persistLocalPreferences({ workspaceRefreshMs: 30_000 });
+    expect(readLocalPreferences().workspaceRefreshMs).toBe(30_000);
+  });
+
   it("round-trips the startup update check preference", () => {
     const preferences = parseLocalPreferences(
       JSON.stringify({ autoCheckUpdates: false }),

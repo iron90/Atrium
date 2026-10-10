@@ -46,6 +46,29 @@ const baseProps = () => ({
   update: makeUpdateController(),
   autoCheckUpdates: true,
   onAutoCheckUpdatesChange: vi.fn(),
+  workspaceRefreshMs: 10_000 as const,
+  onWorkspaceRefreshMsChange: vi.fn(),
+});
+
+describe("workspace refresh", () => {
+  it("lets the user pick a refresh interval", () => {
+    const onWorkspaceRefreshMsChange = vi.fn();
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        workspaceRefreshMs={10_000}
+        onWorkspaceRefreshMsChange={onWorkspaceRefreshMsChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Automatic refresh" }));
+    fireEvent.click(screen.getByRole("option", { name: "30 seconds" }));
+    expect(onWorkspaceRefreshMsChange).toHaveBeenCalledWith(30_000);
+
+    fireEvent.click(screen.getByRole("button", { name: "Automatic refresh" }));
+    fireEvent.click(screen.getByRole("option", { name: "Off" }));
+    expect(onWorkspaceRefreshMsChange).toHaveBeenCalledWith(0);
+  });
 });
 
 describe("workspace exclusions", () => {

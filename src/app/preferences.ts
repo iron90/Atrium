@@ -5,6 +5,7 @@ import {
   type InspectorSectionId,
 } from "../features/projects/inspector-section-visibility";
 import { isThemeId, type ThemeId } from "../features/settings/model";
+import { isWorkspaceRefreshMs } from "../features/projects/workspace-refresh";
 import { normalizeWindowsPath } from "../shared/windows-path";
 
 export const PREFERENCES_STORAGE_KEY = "atrium.preferences.v1";
@@ -23,6 +24,7 @@ export interface LocalPreferences {
   projectMeta?: Record<string, ProjectMeta>;
   hiddenInspectorSections?: InspectorSectionId[];
   autoCheckUpdates?: boolean;
+  workspaceRefreshMs?: number;
 }
 
 const isLanguage = (value: unknown): value is Language =>
@@ -108,6 +110,9 @@ export const parseLocalPreferences = (raw: string | null): LocalPreferences => {
         typeof preferences.autoCheckUpdates === "boolean"
           ? preferences.autoCheckUpdates
           : undefined,
+      workspaceRefreshMs: isWorkspaceRefreshMs(preferences.workspaceRefreshMs)
+        ? preferences.workspaceRefreshMs
+        : undefined,
     };
   } catch {
     return {};
