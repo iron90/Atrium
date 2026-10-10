@@ -32,9 +32,9 @@ describe("releaseNotesBody", () => {
   it("groups each language with its install note and puts English first", () => {
     const body = releaseNotesBody(marked);
     const english = body.indexOf("## English");
-    const englishLaunch = body.indexOf("### After a browser download");
+    const englishLaunch = body.indexOf("### First launch after install");
     const chinese = body.indexOf("## 中文");
-    const chineseLaunch = body.indexOf("### 从浏览器下载后");
+    const chineseLaunch = body.indexOf("### 安装后首次运行");
 
     expect(english).toBeGreaterThanOrEqual(0);
     expect(english).toBeLessThan(body.indexOf("Settings on macOS"));
