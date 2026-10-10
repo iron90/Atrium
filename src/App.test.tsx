@@ -52,7 +52,7 @@ describe("Atrium board", () => {
       projectFilters?.querySelector('[data-icon="eye-off"]'),
     ).toBeInTheDocument();
     expect(
-      document.querySelector('.project-row-actions [data-icon="star"]'),
+      document.querySelector('.project-row-actions [data-icon="pin"]'),
     ).toBeInTheDocument();
     expect(
       document.querySelector('.project-row-actions [data-icon="eye-off"]'),

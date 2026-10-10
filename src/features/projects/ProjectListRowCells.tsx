@@ -3,7 +3,7 @@ import { useI18n, localizedFacetLabel } from "../../i18n";
 import { normalizeWindowsPath } from "../../shared/windows-path";
 import { FacetMark } from "./FacetMark";
 import { facetTitle } from "./facets";
-import { EyeIcon, StarIcon } from "./ProjectActionIcons";
+import { EyeIcon, PinIcon } from "./ProjectActionIcons";
 import type { ProjectMeta } from "./project-list-model";
 import {
   hasTrustedContext,
@@ -120,7 +120,7 @@ export function ProjectRowActions({
         aria-pressed={meta.favorite}
         title={t("favorite")}
       >
-        <StarIcon active={meta.favorite} />
+        <PinIcon active={meta.favorite} />
       </button>
       <button
         type="button"

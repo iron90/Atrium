@@ -1,13 +1,13 @@
-export function StarIcon({ active }: { active: boolean }) {
+export function PinIcon({ active }: { active: boolean }) {
   return (
     <svg
       className="project-action-icon"
-      data-icon={active ? "star-filled" : "star"}
+      data-icon={active ? "pin-filled" : "pin"}
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
       <path
-        d="m12 3.5 2.64 5.35 5.91.86-4.28 4.17 1.01 5.89L12 17l-5.28 2.77 1.01-5.89-4.28-4.17 5.91-.86L12 3.5Z"
+        d="M8 3.25h8v2.4l2.4 2.6v2.1h-4.7v8.4h-2.4V10.35H5.6V8.25L8 5.65V3.25Z"
         fill={active ? "currentColor" : "none"}
         stroke="currentColor"
         strokeWidth="1.6"
