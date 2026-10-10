@@ -7,17 +7,19 @@ import { versionFromTag } from "./stamp-release-version.mjs";
 const SECTION =
   /<!--\s*atrium:notes:(en|zh)\s*-->([\s\S]*?)<!--\s*\/atrium:notes:\1\s*-->/g;
 
-// Kept outside the note markers. GitHub renders it; the app ignores it.
-export const MACOS_INSTALL_NOTE = [
-  "macOS 首次打开若提示「已损坏」，在终端执行：",
-  "",
-  "xattr -rd com.apple.quarantine /Applications/Atrium.app",
-  "",
-  "On macOS, if the first launch says the app is damaged, run:",
-  "",
-  "xattr -rd com.apple.quarantine /Applications/Atrium.app",
-].join("\n");
+const XATTR_COMMAND = "xattr -rd com.apple.quarantine /Applications/Atrium.app";
 
+function markedSection(notes, language) {
+  const pattern = new RegExp(
+    `<!--\\s*atrium:notes:${language}\\s*-->[\\s\\S]*?<!--\\s*\\/atrium:notes:${language}\\s*-->`,
+  );
+  const match = notes.match(pattern);
+  return match ? match[0].trim() : "";
+}
+
+// English block first, then Chinese. Each block keeps the update text inside
+// its marker and the first-launch command outside it, so GitHub shows them
+// together while the app still reads only the marker.
 export function releaseNotesBody(tagMessage) {
   const notes = String(tagMessage ?? "")
     .replace(/\r\n/g, "\n")
@@ -33,10 +35,36 @@ export function releaseNotesBody(tagMessage) {
       );
     }
   }
-  if (notes.includes("xattr -rd com.apple.quarantine")) {
-    return `${notes}\n`;
-  }
-  return `${notes}\n\n${MACOS_INSTALL_NOTE}\n`;
+  return [
+    "## English",
+    "",
+    "### Updates",
+    "",
+    markedSection(notes, "en"),
+    "",
+    "### First launch",
+    "",
+    "On macOS, if the first launch says the app is damaged, run:",
+    "",
+    "```sh",
+    XATTR_COMMAND,
+    "```",
+    "",
+    "## 中文",
+    "",
+    "### 更新说明",
+    "",
+    markedSection(notes, "zh"),
+    "",
+    "### 首次打开",
+    "",
+    "macOS 首次打开若提示「已损坏」，在终端执行：",
+    "",
+    "```sh",
+    XATTR_COMMAND,
+    "```",
+    "",
+  ].join("\n");
 }
 
 function git(root, args) {

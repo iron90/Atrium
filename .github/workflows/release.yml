@@ -33,7 +33,9 @@ jobs:
       # Notes come from the annotated tag message. Checkout may leave a
       # lightweight tag at the same name, so the script fetches the tag from
       # origin before reading it. A message missing either language marker
-      # fails the release. The macOS xattr hint is appended outside the markers.
+      # fails the release. English is published first, then Chinese. Each
+      # language keeps its update text and its macOS xattr hint together, and
+      # the hint stays outside the note markers.
       - name: Collect release notes
         id: notes
         env:

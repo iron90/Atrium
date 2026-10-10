@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   collectReleaseNotes,
-  MACOS_INSTALL_NOTE,
   releaseNotesBody,
 } from "./collect-release-notes.mjs";
 import { createReleaseTag, formatTagMessage } from "./tag-release.mjs";
@@ -30,17 +29,26 @@ const marked = formatTagMessage(
 );
 
 describe("releaseNotesBody", () => {
-  it("keeps both language sections and appends the macOS install command", () => {
+  it("groups each language with its install note and puts English first", () => {
     const body = releaseNotesBody(marked);
-    expect(body).toContain("<!-- atrium:notes:en -->");
-    expect(body).toContain("Settings on macOS now includes Update now.");
-    expect(body).toContain("<!-- atrium:notes:zh -->");
-    expect(body).toContain("macOS 的设置页现在也会显示「立即更新」。");
-    expect(body).toContain(MACOS_INSTALL_NOTE);
+    const english = body.indexOf("## English");
+    const englishLaunch = body.indexOf("### First launch");
+    const chinese = body.indexOf("## 中文");
+    const chineseLaunch = body.indexOf("### 首次打开");
+
+    expect(english).toBeGreaterThanOrEqual(0);
+    expect(english).toBeLessThan(body.indexOf("Settings on macOS"));
+    expect(body.indexOf("Settings on macOS")).toBeLessThan(englishLaunch);
+    expect(englishLaunch).toBeLessThan(chinese);
+    expect(chinese).toBeLessThan(body.indexOf("设置页现在也会显示"));
+    expect(body.indexOf("设置页现在也会显示")).toBeLessThan(chineseLaunch);
+    expect(body.match(/xattr -rd com\.apple\.quarantine/g)).toHaveLength(2);
   });
 
-  it("does not append the install command twice", () => {
-    const body = releaseNotesBody(`${marked}\n\n${MACOS_INSTALL_NOTE}`);
+  it("does not repeat an install command that was already in the tag message", () => {
+    const body = releaseNotesBody(
+      `${marked}\n\nxattr -rd com.apple.quarantine /Applications/Atrium.app\n`,
+    );
     expect(body.match(/xattr -rd com\.apple\.quarantine/g)).toHaveLength(2);
   });
 
