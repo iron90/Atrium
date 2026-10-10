@@ -30,9 +30,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
-      # Notes come from the annotated tag message. The script rejects a
-      # lightweight tag or a message missing either language marker, then
-      # appends the macOS xattr hint outside those markers.
+      # Notes come from the annotated tag message. Checkout may leave a
+      # lightweight tag at the same name, so the script fetches the tag from
+      # origin before reading it. A message missing either language marker
+      # fails the release. The macOS xattr hint is appended outside the markers.
       - name: Collect release notes
         id: notes
         env:

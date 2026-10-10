@@ -81,6 +81,33 @@ describe("collectReleaseNotes", () => {
     expect(body).not.toContain("fix: second");
   });
 
+  it("recovers the annotated message when checkout left a lightweight tag", () => {
+    const origin = mkdtempSync(join(tmpdir(), "atrium-notes-origin-"));
+    git(origin, ["init", "-b", "main"]);
+    git(origin, ["config", "user.email", "notes@example.com"]);
+    git(origin, ["config", "user.name", "Notes"]);
+    writeFileSync(join(origin, "file.txt"), "one\n");
+    git(origin, ["add", "file.txt"]);
+    git(origin, ["commit", "-m", "feat: first"], "2026-01-01T00:00:00Z");
+    createReleaseTag(
+      origin,
+      "v0.1.0",
+      "The first public build.",
+      "第一个公开发布的版本。",
+    );
+
+    const clone = mkdtempSync(join(tmpdir(), "atrium-notes-clone-"));
+    git(clone, ["clone", origin, "."]);
+    git(clone, ["tag", "-d", "v0.1.0"]);
+    git(clone, ["tag", "v0.1.0"]);
+
+    const body = collectReleaseNotes(clone, "v0.1.0");
+
+    expect(body).toContain("The first public build.");
+    expect(body).toContain("第一个公开发布的版本。");
+    expect(body).not.toContain("feat: first");
+  });
+
   it("rejects a lightweight tag", () => {
     const root = mkdtempSync(join(tmpdir(), "atrium-notes-"));
     git(root, ["init", "-b", "main"]);

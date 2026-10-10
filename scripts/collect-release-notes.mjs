@@ -46,18 +46,40 @@ function git(root, args) {
   });
 }
 
+function tagObjectType(root, ref) {
+  return git(root, ["for-each-ref", ref, "--format=%(objecttype)"]).trim();
+}
+
+// actions/checkout leaves a lightweight tag at the same name, which hides the
+// annotated message. Replace that local ref with the tag from origin.
+function refreshAnnotatedTag(root, ref) {
+  try {
+    execFileSync("git", ["fetch", "--force", "origin", `${ref}:${ref}`], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return;
+  }
+}
+
 export function collectReleaseNotes(root, tag) {
   versionFromTag(tag);
   const ref = `refs/tags/${tag}`;
-  const listed = git(root, ["tag", "--list", tag]).trim();
+  let listed = git(root, ["tag", "--list", tag]).trim();
+  if (!listed) {
+    refreshAnnotatedTag(root, ref);
+    listed = git(root, ["tag", "--list", tag]).trim();
+  }
   if (!listed) {
     throw new Error(`Tag ${tag} does not exist.`);
   }
-  const objectType = git(root, [
-    "for-each-ref",
-    ref,
-    "--format=%(objecttype)",
-  ]).trim();
+  let objectType = tagObjectType(root, ref);
+  if (objectType !== "tag") {
+    refreshAnnotatedTag(root, ref);
+    objectType = tagObjectType(root, ref);
+  }
   if (objectType !== "tag") {
     throw new Error(
       `Tag ${tag} is lightweight. Create an annotated tag with: node scripts/tag-release.mjs ${tag} --en-file notes.en.txt --zh-file notes.zh.txt`,
