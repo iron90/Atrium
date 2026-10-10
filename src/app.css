@@ -123,6 +123,18 @@ button[aria-busy="true"] {
   --control-height: 32px;
   --control-radius: 7px;
   --control-padding-x: 10px;
+  /* Reading scale. The page title is the only display size. A title names
+     the current subject. Labels match the body size and use weight, so they
+     lead a block without outgrowing the text under them. Caption is the only
+     reading size smaller than body. Mono is for machine values (paths,
+     branches, hashes, versions, commands, console). Icon marks fitted inside
+     a fixed box are not reading text. */
+  --type-page: clamp(22px, 1.8vw, 26px);
+  --type-title: 13px;
+  --type-subtitle: 11px;
+  --type-body: 11px;
+  --type-caption: 10px;
+  --font-mono: "DM Mono", ui-monospace, monospace;
   --motion-fast: 180ms;
   --motion-base: 300ms;
   --motion-nav: 460ms;
@@ -130,6 +142,8 @@ button[aria-busy="true"] {
   --motion-slow: 420ms;
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-emphasized: cubic-bezier(0.2, 1, 0.3, 1);
+  font-size: var(--type-body);
+  line-height: 1.45;
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   height: 100vh;
@@ -161,7 +175,7 @@ button[aria-busy="true"] {
   color: var(--text);
   background: var(--panel);
   font:
-    10px "Avenir Next",
+    var(--type-body) "Avenir Next",
     "Segoe UI",
     ui-sans-serif,
     system-ui,
@@ -287,18 +301,19 @@ button[aria-busy="true"] {
 }
 .brand-name {
   letter-spacing: 0.01em;
-  font-size: 20px;
+  font-size: var(--type-title);
+  font-weight: 600;
+  line-height: 1.2;
 }
 .brand-subtitle,
 .eyebrow {
   color: var(--muted);
-  font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  font-size: var(--type-caption);
+  font-weight: 500;
+  line-height: 1.35;
 }
 .brand-subtitle {
   margin-top: 2px;
-  font-size: 8px;
   color: var(--faint);
 }
 .brand-version {
@@ -307,11 +322,8 @@ button[aria-busy="true"] {
   gap: 6px;
   margin-top: 5px;
   color: var(--muted);
-  font:
-    8px "DM Mono",
-    ui-monospace,
-    monospace;
-  letter-spacing: 0.08em;
+  font: var(--type-caption) var(--font-mono);
+  line-height: 1.35;
 }
 .sidebar-update-badge {
   display: grid;
@@ -371,6 +383,8 @@ button[aria-busy="true"] {
   border: 1px solid transparent;
   border-radius: 8px;
   color: var(--muted);
+  font-size: var(--type-subtitle);
+  font-weight: 500;
   text-align: left;
   background: transparent;
 }
@@ -520,15 +534,16 @@ button[aria-busy="true"] {
   margin: 0 auto;
 }
 .page-heading h1 {
-  margin: 9px 0 6px;
-  font-size: clamp(28px, 3vw, 42px);
-  letter-spacing: -0.035em;
-  line-height: 1;
+  margin: 4px 0 6px;
+  font-size: var(--type-page);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 .page-heading p {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body);
 }
 .workspace-path input {
   min-width: 135px;
@@ -563,7 +578,7 @@ button[aria-busy="true"] {
   gap: 9px;
   flex: 1;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-body);
 }
 .path-icon {
   color: var(--accent);
@@ -577,9 +592,7 @@ button[aria-busy="true"] {
   border-color: transparent;
   background: transparent;
   color: var(--text);
-  font:
-    11px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
 }
 .scan-button,
 .activity-card button {
@@ -590,7 +603,7 @@ button[aria-busy="true"] {
   border-radius: 7px;
   color: var(--bg);
   background: var(--accent);
-  font-size: 12px;
+  font-size: var(--type-body);
   font-weight: 600;
 }
 .scan-button {
@@ -623,16 +636,14 @@ button[aria-busy="true"] {
 }
 .board-summary h2 {
   margin: 7px 0 0;
-  font-size: 19px;
-  letter-spacing: -0.02em;
+  font-size: var(--type-title);
+  font-weight: 600;
 }
 .summary-meta {
   display: flex;
   gap: 18px;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .scan-warnings {
   margin: 0 3px 15px;
@@ -640,16 +651,15 @@ button[aria-busy="true"] {
   border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--warning) 8%, transparent);
-  font-size: 12px;
+  font-size: var(--type-body);
   animation: status-enter var(--motion-base) var(--ease-emphasized) both;
 }
 .scan-warnings strong {
   display: block;
   margin-bottom: 6px;
   color: var(--warning);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .scan-warnings ul {
   margin: 0;
@@ -709,7 +719,7 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: var(--panel-soft);
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .project-row-actions button:hover,
 .project-row-actions button:focus-visible,
@@ -740,7 +750,7 @@ button[aria-busy="true"] {
   outline: none;
   color: var(--text);
   background: var(--panel-soft);
-  font-size: 10px;
+  font-size: var(--type-body);
   line-height: 1;
 }
 .project-filters > button {
@@ -810,7 +820,7 @@ button[aria-busy="true"] {
   border-radius: var(--control-radius);
   color: var(--text);
   background: var(--panel-soft);
-  font-size: 10px;
+  font-size: var(--type-body);
   text-align: left;
   cursor: pointer;
 }
@@ -855,7 +865,7 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: transparent;
-  font-size: 10px;
+  font-size: var(--type-body);
   text-align: left;
   cursor: pointer;
 }
@@ -886,11 +896,8 @@ button[aria-busy="true"] {
   border-bottom: 1px solid var(--line);
   color: var(--faint);
   background: var(--panel-soft);
-  font:
-    9px "DM Mono",
-    monospace;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .project-row {
   min-height: 91px;
@@ -988,15 +995,14 @@ button[aria-busy="true"] {
   gap: 4px;
 }
 .project-copy strong {
-  font-size: 13px;
+  font-size: var(--type-subtitle);
   font-weight: 600;
 }
 .project-copy span {
   overflow: hidden;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1004,7 +1010,7 @@ button[aria-busy="true"] {
   display: grid;
   gap: 5px;
   min-width: 0;
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .branch-line {
   display: flex;
@@ -1013,9 +1019,8 @@ button[aria-busy="true"] {
   gap: 5px;
   overflow: hidden;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1034,9 +1039,8 @@ button[aria-busy="true"] {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 400;
 }
 .status-good {
   color: var(--good);
@@ -1050,9 +1054,8 @@ button[aria-busy="true"] {
 .git-sync {
   display: block;
   overflow: hidden;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1078,7 +1081,7 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: var(--panel-soft);
-  font-size: 10px;
+  font-size: var(--type-body);
   line-height: 1;
 }
 .facet-chip.platform-chip,
@@ -1118,6 +1121,7 @@ button[aria-busy="true"] {
   height: 100%;
   transform: scale(1.12);
 }
+/* Fitted inside the 31px platform mark. This is an icon, not reading text. */
 .platform-wordmark {
   display: inline-flex;
   align-items: center;
@@ -1184,7 +1188,7 @@ button[aria-busy="true"] {
 }
 .muted-inline {
   color: var(--faint);
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .command-run {
   color: var(--accent);
@@ -1279,13 +1283,13 @@ button[aria-busy="true"] {
 }
 .inspector-header h2 {
   margin: 0 0 4px;
-  font-size: 19px;
-  letter-spacing: -0.02em;
+  font-size: var(--type-title);
+  font-weight: 600;
 }
 .inspector-header p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-body);
   line-height: 1.45;
 }
 .inspector-section {
@@ -1302,15 +1306,13 @@ button[aria-busy="true"] {
 .section-heading h3 {
   margin: 0;
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--type-subtitle);
   font-weight: 600;
-  letter-spacing: 0.02em;
 }
 .section-heading > span {
   color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  font-weight: 400;
   text-align: right;
 }
 .repository-path-list {
@@ -1339,12 +1341,9 @@ button[aria-busy="true"] {
   background: var(--panel-soft);
 }
 .repository-path-label {
-  color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .repository-path-actions {
   display: flex;
@@ -1362,9 +1361,8 @@ button[aria-busy="true"] {
   min-width: 0;
   padding: 10px 11px 12px;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
   line-height: normal;
 }
 .repo-path > span:last-child {
@@ -1392,16 +1390,12 @@ button[aria-busy="true"] {
   border-radius: 6px;
   background: var(--panel-soft);
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .repo-fact-label {
-  color: var(--faint);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .repo-fact-value {
   display: flex;
@@ -1409,10 +1403,13 @@ button[aria-busy="true"] {
   justify-content: flex-end;
   min-width: 0;
   color: var(--muted);
-  font:
-    11px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 400;
   text-align: right;
+}
+.branch-picker-name,
+.branch-menu-item {
+  font-family: var(--font-mono);
 }
 .repo-fact-value.status-good {
   color: var(--good);
@@ -1495,9 +1492,8 @@ button[aria-busy="true"] {
   color: var(--muted);
   text-align: left;
   background: transparent;
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 .branch-menu-item:hover {
@@ -1536,13 +1532,12 @@ button[aria-busy="true"] {
 }
 .storage-summary strong {
   color: var(--text);
-  font:
-    12px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 600;
 }
 .storage-summary span {
   color: var(--faint);
-  font-size: 9px;
+  font-size: var(--type-caption);
 }
 .storage-entry-list {
   display: grid;
@@ -1589,9 +1584,8 @@ button[aria-busy="true"] {
 .storage-entry em {
   overflow: hidden;
   color: var(--text);
-  font:
-    9px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1602,9 +1596,8 @@ button[aria-busy="true"] {
 }
 .storage-entry span {
   color: var(--faint);
-  font:
-    8px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  font-weight: 400;
 }
 .cleanup-button {
   width: 100%;
@@ -1614,9 +1607,8 @@ button[aria-busy="true"] {
   color: var(--warning);
   text-align: left;
   background: color-mix(in srgb, var(--warning) 12%, transparent);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .cleanup-button:hover:not(:disabled),
 .cleanup-button:focus-visible:not(:disabled) {
@@ -1652,9 +1644,8 @@ button[aria-busy="true"] {
   gap: 7px;
   min-width: 0;
   color: var(--muted);
-  font:
-    8px/1.35 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  line-height: 1.35;
 }
 .cleanup-progress-heading span,
 .cleanup-progress-meta span:first-child {
@@ -1665,7 +1656,8 @@ button[aria-busy="true"] {
 .cleanup-progress-heading strong {
   flex: 0 0 auto;
   color: var(--warning);
-  font-size: 9px;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .cleanup-progress-track {
   height: 5px;
@@ -1698,15 +1690,15 @@ button[aria-busy="true"] {
 }
 .cleanup-confirmation strong {
   color: var(--warning);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .cleanup-confirmation p,
 .cleanup-confirmation ul {
   margin: 0;
   color: var(--muted);
-  font:
-    8px/1.45 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  line-height: 1.45;
 }
 .cleanup-confirmation ul {
   padding-left: 16px;
@@ -1720,9 +1712,8 @@ button[aria-busy="true"] {
 .cleanup-confirmation-actions button {
   padding: 5px 7px;
   border-radius: 5px;
-  font:
-    8px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .cleanup-cancel-button {
   border: 1px solid var(--line);
@@ -1743,9 +1734,8 @@ button[aria-busy="true"] {
 .cleanup-message {
   margin: 0;
   color: var(--good);
-  font:
-    9px/1.45 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  line-height: 1.45;
   animation: status-enter var(--motion-base) var(--ease-emphasized) both;
 }
 .cleanup-message.is-warning {
@@ -1764,9 +1754,7 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: var(--panel-soft);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .project-tool-bar button:hover,
 .project-links button:hover {
@@ -1784,9 +1772,7 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: var(--panel-soft);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .repository-path-actions button:hover,
 .repository-path-actions button:focus-visible {
@@ -1798,27 +1784,26 @@ button[aria-busy="true"] {
 }
 .facet-detail {
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 7px;
   margin: 8px 0;
-  align-items: start;
+  align-items: center;
 }
 .facet-detail > span {
-  padding-top: 5px;
-  color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--type-body);
+  font-weight: 600;
+  line-height: 1;
 }
 .facet-detail > div {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 5px;
 }
 .detail-chip {
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .detail-chip i {
   width: 5px;
@@ -1842,12 +1827,13 @@ button[aria-busy="true"] {
   gap: 4px;
 }
 .protocol-card strong {
-  font-size: 10px;
+  font-size: var(--type-body);
   font-weight: 600;
 }
 .protocol-card span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--type-body);
+  font-weight: 400;
   line-height: 1.4;
 }
 .protocol-status-configured strong {
@@ -1901,9 +1887,8 @@ button[aria-busy="true"] {
   cursor: pointer;
   text-align: left;
   background: transparent;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .animated-disclosure-trigger:hover,
 .animated-disclosure-trigger:focus-visible {
@@ -1978,15 +1963,13 @@ button[aria-busy="true"] {
 .section-disclosure .animated-disclosure-trigger {
   padding: 9px 10px;
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--type-subtitle);
   font-weight: 600;
-  letter-spacing: 0.02em;
   font-family: inherit;
 }
 .section-disclosure .animated-disclosure-meta {
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  font-weight: 400;
 }
 .animated-disclosure.is-expanded .protocol-capability {
   animation: disclosure-item-enter var(--motion-base) var(--ease-emphasized)
@@ -2014,9 +1997,8 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--accent-strong);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .protocol-action:hover,
 .protocol-action:focus-visible {
@@ -2027,14 +2009,17 @@ button[aria-busy="true"] {
   display: grid;
   gap: 3px;
   margin-top: 2px;
+  min-width: 0;
   color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
-  overflow-wrap: anywhere;
+  font-size: var(--type-caption);
 }
 .protocol-path span:last-child {
+  overflow: hidden;
   color: var(--muted);
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .protocol-capabilities {
   display: grid;
@@ -2072,14 +2057,13 @@ button[aria-busy="true"] {
 }
 .protocol-capability strong {
   color: var(--text);
-  font-size: 9px;
-  font-weight: 500;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .protocol-capability small {
   color: var(--muted);
-  font:
-    8px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  font-weight: 400;
 }
 .capability-configured .capability-dot {
   background: var(--good);
@@ -2111,13 +2095,13 @@ button[aria-busy="true"] {
 }
 .protocol-prerequisite strong {
   color: var(--warning);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .protocol-prerequisite span {
   color: var(--faint);
-  font:
-    9px/1.45 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  line-height: 1.45;
 }
 .agent-prompt-card {
   display: grid;
@@ -2137,7 +2121,8 @@ button[aria-busy="true"] {
 .agent-prompt-heading strong {
   min-width: 0;
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .agent-prompt-actions {
   display: flex;
@@ -2153,9 +2138,7 @@ button[aria-busy="true"] {
   resize: vertical;
   color: var(--muted);
   background: var(--panel);
-  font:
-    9px/1.55 "DM Mono",
-    monospace;
+  font: var(--type-body) / 1.55 var(--font-mono);
 }
 .profile-list {
   display: grid;
@@ -2187,7 +2170,8 @@ button[aria-busy="true"] {
 .profile-heading strong {
   overflow: hidden;
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2195,9 +2179,9 @@ button[aria-busy="true"] {
 .profile-source,
 .profile-issue {
   color: var(--muted);
-  font:
-    9px/1.35 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 400;
+  line-height: 1.35;
 }
 .profile-heading span i {
   padding: 0 4px;
@@ -2222,9 +2206,8 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: transparent;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .profile-action:hover:not(:disabled),
 .profile-action:focus-visible:not(:disabled) {
@@ -2255,12 +2238,9 @@ button[aria-busy="true"] {
   padding-top: 2px;
 }
 .artifact-heading {
-  color: var(--faint);
-  font:
-    8px "DM Mono",
-    monospace;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .artifact-list {
   display: grid;
@@ -2289,15 +2269,13 @@ button[aria-busy="true"] {
 }
 .artifact-copy strong {
   color: var(--text);
-  font:
-    9px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
 }
 .artifact-copy small {
   color: var(--muted);
-  font:
-    8px/1.35 "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
+  line-height: 1.35;
 }
 .artifact-open {
   flex: 0 0 auto;
@@ -2307,9 +2285,8 @@ button[aria-busy="true"] {
   border-radius: 4px;
   color: var(--accent-strong);
   background: transparent;
-  font:
-    8px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .artifact-open:hover:not(:disabled),
 .artifact-open:focus-visible:not(:disabled) {
@@ -2327,17 +2304,17 @@ button[aria-busy="true"] {
   border: 1px dashed var(--line-strong);
   border-radius: 7px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .configuration-empty strong {
   color: var(--warning);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .configuration-empty span {
   color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 400;
 }
 .command-list {
   display: grid;
@@ -2351,9 +2328,8 @@ button[aria-busy="true"] {
   color: var(--muted);
   text-align: left;
   background: var(--panel-soft);
-  font:
-    10px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
+  font-weight: 400;
 }
 .command-item:hover {
   border-color: var(--accent);
@@ -2379,13 +2355,13 @@ button[aria-busy="true"] {
 }
 .command-disclosure strong {
   color: var(--warning);
-  font-size: 10px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .command-disclosure span {
   color: var(--muted);
-  font:
-    9px/1.45 "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  line-height: 1.45;
 }
 .command-disclosure-button {
   width: 100%;
@@ -2395,9 +2371,8 @@ button[aria-busy="true"] {
   color: var(--warning);
   text-align: left;
   background: color-mix(in srgb, var(--warning) 12%, transparent);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .command-disclosure-button:hover,
 .command-disclosure-button:focus-visible {
@@ -2407,7 +2382,7 @@ button[aria-busy="true"] {
 .empty-copy {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-body);
   line-height: 1.55;
 }
 .live-run {
@@ -2415,9 +2390,7 @@ button[aria-busy="true"] {
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .live-run em {
   margin-left: auto;
@@ -2456,14 +2429,12 @@ button[aria-busy="true"] {
   gap: 6px 8px;
   align-items: baseline;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .run-history-meta code {
   overflow: hidden;
   color: var(--text);
-  font: inherit;
+  font: var(--type-body) var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2473,6 +2444,7 @@ button[aria-busy="true"] {
 .run-history-detail {
   grid-column: 1 / -1;
   color: var(--faint);
+  font-size: var(--type-caption);
 }
 .run-status.is-succeeded {
   color: var(--accent);
@@ -2493,9 +2465,7 @@ button[aria-busy="true"] {
   border: 0;
   color: var(--muted);
   background: transparent;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
   cursor: pointer;
 }
 .text-button:hover {
@@ -2545,9 +2515,7 @@ button[aria-busy="true"] {
   border-radius: 6px;
   color: var(--console-text);
   background: var(--console-bg);
-  font:
-    9px/1.55 "DM Mono",
-    monospace;
+  font: var(--type-body) / 1.55 var(--font-mono);
   white-space: pre-wrap;
 }
 .stop-link {
@@ -2555,9 +2523,8 @@ button[aria-busy="true"] {
   border: 0;
   color: var(--danger);
   background: transparent;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .stop-link:hover {
   text-decoration: underline;
@@ -2584,17 +2551,16 @@ button[aria-busy="true"] {
 .commit-copy strong {
   overflow: hidden;
   color: var(--text);
-  font-size: 10px;
-  font-weight: 500;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .commit-copy span,
 .commit-row time {
   color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
+  font: var(--type-caption) var(--font-mono);
+  font-weight: 400;
 }
 .commit-row time {
   white-space: nowrap;
@@ -2612,7 +2578,7 @@ button[aria-busy="true"] {
 }
 .empty-inspector p {
   max-width: 180px;
-  font-size: 12px;
+  font-size: var(--type-body);
 }
 
 .details-loading {
@@ -2662,9 +2628,7 @@ button[aria-busy="true"] {
 }
 .activity-heading > span:last-child {
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-size: var(--type-caption);
 }
 .activity-cards {
   display: grid;
@@ -2699,9 +2663,7 @@ button[aria-busy="true"] {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--danger);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
 }
 .activity-card:has(.activity-pulse.is-running) {
   border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
@@ -2713,27 +2675,25 @@ button[aria-busy="true"] {
   gap: 4px;
 }
 .activity-card strong {
-  font-size: 11px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .activity-card
   span:not(.activity-pulse):not(.activity-icon):not(.activity-result) {
-  overflow: hidden;
   color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: var(--type-caption);
+  font-weight: 400;
 }
 .activity-card button {
   margin-left: auto;
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
-.activity-project {
+.activity-card .activity-project {
   overflow: hidden;
   color: var(--faint);
-  font-size: 9px;
+  font-size: var(--type-caption);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2799,17 +2759,22 @@ button[aria-busy="true"] {
   gap: 4px;
 }
 .git-history-project strong {
-  font-size: 12px;
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .git-history-project span,
 .git-history-meta {
   overflow: hidden;
   color: var(--muted);
-  font:
-    10px "DM Mono",
-    monospace;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.git-history-project span {
+  font-size: var(--type-body);
+}
+.git-history-meta {
+  font: var(--type-caption) var(--font-mono);
 }
 .git-history-meta {
   display: grid;
@@ -2836,10 +2801,9 @@ button[aria-busy="true"] {
   gap: 5px;
 }
 .git-revision-controls label span {
-  color: var(--faint);
-  font:
-    9px "DM Mono",
-    monospace;
+  color: var(--text);
+  font-size: var(--type-subtitle);
+  font-weight: 600;
 }
 .git-revision-controls input,
 .settings-control textarea {
@@ -2847,7 +2811,7 @@ button[aria-busy="true"] {
   padding: 0 var(--control-padding-x);
   border-radius: var(--control-radius);
   background: var(--panel);
-  font-size: 10px;
+  font-size: var(--type-body);
 }
 .settings-control textarea {
   height: auto;
@@ -2866,7 +2830,8 @@ button[aria-busy="true"] {
   border-radius: 6px;
   color: var(--accent-strong);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
-  font-size: 10px;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .git-revision-controls .load-changes-button {
   padding: 0 var(--control-padding-x);
@@ -2880,9 +2845,7 @@ button[aria-busy="true"] {
   display: flex;
   gap: 9px;
   color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
 }
 .change-additions {
   color: var(--good);
@@ -2903,9 +2866,7 @@ button[aria-busy="true"] {
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
 }
 .changed-file-list strong {
   color: var(--accent);
@@ -2920,16 +2881,13 @@ button[aria-busy="true"] {
   border-radius: 5px;
   color: var(--muted);
   background: transparent;
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
+  font-weight: 600;
 }
 .inline-error {
   margin: 8px 0 0;
   color: var(--danger);
-  font:
-    9px "DM Mono",
-    monospace;
+  font-size: var(--type-body);
   animation: status-enter var(--motion-base) var(--ease-emphasized) both;
 }
 .workspace-path-list {
@@ -2949,9 +2907,7 @@ button[aria-busy="true"] {
   border-radius: var(--control-radius);
   color: var(--text);
   background: var(--panel);
-  font:
-    10px "DM Mono",
-    monospace;
+  font: var(--type-body) var(--font-mono);
 }
 .workspace-path-row button {
   width: 29px;
@@ -2986,7 +2942,7 @@ button[aria-busy="true"] {
   white-space: nowrap;
   color: var(--text);
   font:
-    10px "DM Mono",
+    var(--type-body) "DM Mono",
     monospace;
 }
 .exclusion-remove {
@@ -3007,11 +2963,12 @@ button[aria-busy="true"] {
 .secondary-button {
   justify-self: start;
 }
-.settings-help {
+.settings-card .settings-help {
   margin: -2px 0 0;
   color: var(--faint);
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: var(--type-caption);
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 .settings-view {
@@ -3033,7 +2990,7 @@ button[aria-busy="true"] {
 .settings-card p {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-body);
   line-height: 1.55;
 }
 .settings-grid {
@@ -3051,10 +3008,19 @@ button[aria-busy="true"] {
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--panel-soft);
+  font-size: var(--type-body);
+  line-height: 1.45;
 }
 .settings-card h3 {
   margin: -2px 0 -2px;
-  font-size: 15px;
+  font-size: var(--type-title);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.settings-card .dropdown-select-trigger,
+.settings-card .form-control,
+.settings-card .secondary-button {
+  font-size: var(--type-body);
 }
 .settings-card-workspace .secondary-button {
   min-height: var(--control-height);
@@ -3065,12 +3031,10 @@ button[aria-busy="true"] {
   display: grid;
   gap: 6px;
   margin-top: 4px;
-  color: var(--muted);
-  font:
-    9px "DM Mono",
-    monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: var(--type-subtitle);
+  font-weight: 600;
+  line-height: 1.35;
 }
 .settings-control select,
 .settings-control input,
@@ -3081,13 +3045,13 @@ button[aria-busy="true"] {
   padding: 0 var(--control-padding-x);
   border-radius: var(--control-radius);
   background: var(--panel);
+  color: var(--text);
   font:
-    11px "Avenir Next",
+    var(--type-body) "Avenir Next",
     ui-sans-serif,
     system-ui,
     sans-serif;
-  letter-spacing: normal;
-  text-transform: none;
+  font-weight: 400;
 }
 .settings-control textarea {
   height: auto;
@@ -3153,7 +3117,8 @@ button[aria-busy="true"] {
 .settings-switch-label {
   overflow: hidden;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--type-body);
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3166,13 +3131,14 @@ button[aria-busy="true"] {
 .settings-version-number {
   color: var(--text);
   font:
-    11px "DM Mono",
+    var(--type-body) "DM Mono",
     monospace;
 }
 .settings-version-status {
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-body);
+  font-weight: 400;
   line-height: 1.55;
 }
 .settings-version-notes {
@@ -3190,7 +3156,7 @@ button[aria-busy="true"] {
   background: var(--console-bg);
   color: var(--console-text);
   font:
-    11px/1.5 "DM Mono",
+    var(--type-body) / 1.5 "DM Mono",
     ui-monospace,
     monospace;
   white-space: pre-wrap;
@@ -3252,11 +3218,12 @@ button[aria-busy="true"] {
 .empty-state h3 {
   margin: 11px 0 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-title);
+  font-weight: 600;
 }
 .empty-state p {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: var(--type-body);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3303,7 +3270,6 @@ button[aria-busy="true"] {
     grid-template-columns:
       minmax(180px, 1.3fr) 88px minmax(105px, 0.9fr)
       minmax(105px, 0.9fr) 105px;
-    font-size: 9px;
   }
   .summary-meta {
     display: none;
@@ -3367,11 +3333,6 @@ button[aria-busy="true"] {
     padding-left: 10px;
   }
 
-  .project-list-head {
-    font-size: 8px;
-    letter-spacing: 0.05em;
-  }
-
   .project-row {
     min-height: 82px;
     padding-top: 10px;
@@ -3380,18 +3341,6 @@ button[aria-busy="true"] {
 
   .project-copy {
     gap: 3px;
-  }
-
-  .project-copy strong {
-    font-size: 12px;
-  }
-
-  .project-copy span,
-  .git-cell,
-  .status-good,
-  .status-warning,
-  .status-muted {
-    font-size: 9px;
   }
 
   .facet-cell {
