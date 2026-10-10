@@ -155,6 +155,9 @@ describe("settings detail-card switches", () => {
     expect(screen.getByText("Update available: 0.2.0")).toBeInTheDocument();
     expect(screen.getByText("Bug fixes")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Check for updates" }));
+    expect(update.check).toHaveBeenCalledTimes(1);
+
     fireEvent.click(screen.getByRole("button", { name: "Update now" }));
     expect(update.install).toHaveBeenCalledTimes(1);
 

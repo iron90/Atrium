@@ -343,6 +343,13 @@ export const SettingsPanel = memo(function SettingsPanel({
                 <button
                   type="button"
                   className="secondary-button"
+                  onClick={() => void appUpdate.check()}
+                >
+                  {t("checkForUpdates")}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
                   onClick={() => void appUpdate.install()}
                 >
                   {t("installUpdate")}
