@@ -46,7 +46,6 @@ const baseProps = () => ({
   update: makeUpdateController(),
   autoCheckUpdates: true,
   onAutoCheckUpdatesChange: vi.fn(),
-  inAppInstallSupported: true,
 });
 
 describe("workspace exclusions", () => {
@@ -190,28 +189,6 @@ describe("settings detail-card switches", () => {
 
     expect(screen.getByText(/Download the installer/)).toBeInTheDocument();
     expect(screen.queryByText(/从下方资产下载/)).not.toBeInTheDocument();
-  });
-
-  it("falls back to the download page where in-app install is unsupported", () => {
-    const update = makeUpdateController({
-      phase: "available",
-      info: { version: "0.2.0", notes: "", date: "" },
-    });
-    render(
-      <SettingsPanel
-        {...baseProps()}
-        update={update}
-        inAppInstallSupported={false}
-      />,
-    );
-
-    expect(screen.getByText("Update available: 0.2.0")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Update now" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Open download page" }),
-    ).toBeInTheDocument();
   });
 
   it("toggles the startup update check", () => {
