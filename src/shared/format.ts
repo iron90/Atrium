@@ -15,9 +15,9 @@ export const formatTime = (timestamp: number, language: Language): string =>
   }).format(new Date(timestamp));
 
 // Marked release bodies keep each language inside an HTML comment. The app
-// shows only that section, so the macOS install command outside the markers
-// stays on the GitHub release page. Older bodies put Chinese before a dash
-// line and English after it; a body with neither form is shown whole.
+// shows only that tagged update text, so headings and notes outside the
+// markers stay on the GitHub release page. Older bodies put Chinese before a
+// dash line and English after it; a body with neither form is shown whole.
 export const localizedReleaseNotes = (
   notes: string,
   language: Language = "en",
@@ -38,7 +38,9 @@ export const localizedReleaseNotes = (
 };
 
 export type ReleaseNoteBlock =
-  { type: "paragraph"; text: string } | { type: "command"; text: string };
+  | { type: "heading"; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "command"; text: string };
 
 const looksLikeCommand = (value: string): boolean => {
   const shaped = /^[a-z][\w.-]*(?:\s+\S+)+$/i.test(value);
@@ -61,16 +63,61 @@ const splitCommand = (paragraph: string): ReleaseNoteBlock[] => {
   ];
 };
 
+// Line breaks inside the tagged update text stay visible. Text outside the
+// tags is never read, so a new release-page note does not need its own filter.
+const parseReleaseMarkdown = (source: string): ReleaseNoteBlock[] => {
+  const blocks: ReleaseNoteBlock[] = [];
+  const paragraph: string[] = [];
+  let fence: string[] | null = null;
+
+  const flushParagraph = () => {
+    const text = paragraph.join("\n").trim();
+    paragraph.length = 0;
+    if (text) blocks.push(...splitCommand(text));
+  };
+
+  for (const line of source.split("\n")) {
+    if (fence) {
+      if (line.trim().startsWith("```")) {
+        const text = fence.join("\n").trim();
+        fence = null;
+        if (text) blocks.push({ type: "command", text });
+      } else {
+        fence.push(line);
+      }
+      continue;
+    }
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      flushParagraph();
+      fence = [];
+      continue;
+    }
+    const heading = /^(#{1,6})[ \t]+(\S.*)$/.exec(trimmed);
+    if (heading) {
+      flushParagraph();
+      blocks.push({ type: "heading", text: heading[2].trim() });
+      continue;
+    }
+    if (!trimmed) {
+      flushParagraph();
+      continue;
+    }
+    paragraph.push(trimmed);
+  }
+  if (fence) {
+    const text = fence.join("\n").trim();
+    if (text) blocks.push({ type: "command", text });
+  }
+  flushParagraph();
+  return blocks;
+};
+
 export const releaseNoteBlocks = (
   notes: string,
   language: Language = "en",
 ): ReleaseNoteBlock[] =>
-  localizedReleaseNotes(notes, language)
-    .split(/\n{2,}/)
-    .flatMap((paragraph) => {
-      const trimmed = paragraph.trim();
-      return trimmed ? splitCommand(trimmed) : [];
-    });
+  parseReleaseMarkdown(localizedReleaseNotes(notes, language));
 
 export const formatRelative = (
   timestamp: number,

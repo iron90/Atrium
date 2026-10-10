@@ -3145,8 +3145,21 @@ button[aria-busy="true"] {
   display: grid;
   gap: 8px;
   min-width: 0;
-  max-height: 180px;
+  max-height: 240px;
   padding-right: 16px;
+}
+.settings-version-notes h4 {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: var(--type-subtitle);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.settings-version-notes h4:first-child {
+  margin-top: 0;
+}
+.settings-version-notes p {
+  white-space: pre-line;
 }
 .settings-version-command {
   display: block;

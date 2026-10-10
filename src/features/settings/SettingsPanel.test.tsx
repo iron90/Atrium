@@ -222,6 +222,57 @@ describe("settings detail-card switches", () => {
     expect(screen.queryByText(/xattr -rd/)).not.toBeInTheDocument();
   });
 
+  it("shows only the tagged update text from a GitHub release body", () => {
+    const notes = [
+      "## English",
+      "",
+      "### Updates",
+      "",
+      "<!-- atrium:notes:en -->",
+      "Settings keeps Check for updates next to an available update.",
+      "<!-- /atrium:notes:en -->",
+      "",
+      "## 中文",
+      "",
+      "### 更新说明",
+      "",
+      "<!-- atrium:notes:zh -->",
+      "发现新版本后，「检查更新」仍留在旁边。",
+      "<!-- /atrium:notes:zh -->",
+      "",
+      "### 安装后首次运行",
+      "",
+      "在 macOS 上安装后首次运行时，若提示「已损坏」，在终端执行：",
+      "",
+      "```sh",
+      "xattr -rd com.apple.quarantine /Applications/Atrium.app",
+      "```",
+    ].join("\n");
+    render(
+      <SettingsPanel
+        {...baseProps()}
+        language="zh"
+        update={makeUpdateController({
+          phase: "available",
+          info: { version: "0.3.7", notes, date: "" },
+        })}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "更新说明" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "安装后首次运行" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/检查更新/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Check for updates next/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/xattr -rd/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/已损坏/)).not.toBeInTheDocument();
+  });
+
   it("toggles the startup update check", () => {
     const onAutoCheckUpdatesChange = vi.fn();
     render(

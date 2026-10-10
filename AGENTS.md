@@ -62,12 +62,20 @@ When the user asks to tag or publish a release:
   other internal commits. Do not copy commit subjects into the summary.
 - Write that summary twice: once in English, once in Chinese. Prose is enough.
   Do not add Added, Fixed, or Removed headings unless the user asks.
+- Put each user-visible change on its own line in both files, with a blank line
+  between changes. The version card shows the text inside the markers and keeps
+  those line breaks. A summary written as one paragraph is shown as one block.
 - Show both summaries to the user before creating the tag.
 - Create an annotated tag with
   `node scripts/tag-release.mjs vX.Y.Z --en-file notes.en.txt --zh-file notes.zh.txt`.
   The script inserts the `atrium:notes:en` and `atrium:notes:zh` markers.
-  Do not create a lightweight tag, and do not write the macOS `xattr` command
-  into the summary. The release script appends that command outside the markers.
+  Do not create a lightweight tag.
+- The version card reads only the text inside those two markers. It does not
+  select text by heading. Release-page notes stay outside the markers. Do not
+  put the macOS install note, the `xattr` command, or any later release-page
+  note into the summary files. `scripts/collect-release-notes.mjs` appends the
+  install note outside the markers. Add any new release-page-only section there,
+  still outside the markers.
 - Do not push the tag unless the user asks. The release workflow rejects a tag
   whose message is missing either language section.
 

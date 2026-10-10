@@ -312,7 +312,9 @@ export const SettingsPanel = memo(function SettingsPanel({
           {noteBlocks.length > 0 ? (
             <ScrollArea viewportClassName="settings-version-notes">
               {noteBlocks.map((block, index) =>
-                block.type === "command" ? (
+                block.type === "heading" ? (
+                  <h4 key={index}>{block.text}</h4>
+                ) : block.type === "command" ? (
                   <code key={index} className="settings-version-command">
                     {block.text}
                   </code>
