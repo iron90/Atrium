@@ -21,7 +21,10 @@ export const nativeToolMethods = {
   openProjectRemote: async (remote: string): Promise<void> =>
     invoke<void>("open_project_remote_command", { remote }),
 
-  openWebProfile: async (projectPath: string, profileId: string): Promise<void> =>
+  openWebProfile: async (
+    projectPath: string,
+    profileId: string,
+  ): Promise<void> =>
     invoke<void>("open_web_profile_command", { projectPath, profileId }),
 };
 

@@ -246,9 +246,7 @@ fn resolve_service_url(
             );
             *run_command_id = None;
         }
-        let Some(url) = declared else {
-            return None;
-        };
+        let url = declared?;
         return match crate::url_policy::validate_service_url(&url) {
             Ok(()) => Some(url),
             Err(error) => {
