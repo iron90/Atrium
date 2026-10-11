@@ -6,7 +6,7 @@ import type {
   ProjectCommand,
   RunStarted,
 } from "../../bridge";
-import { useI18n, localizedFacetLabel } from "../../i18n";
+import { useI18n } from "../../i18n";
 import { fill, formatBytes, formatTime } from "../../shared/format";
 import {
   artifactKindLabel,
@@ -83,25 +83,7 @@ export function BuildProfileCard({
   return (
     <div className="profile-card">
       <div className="profile-heading">
-        <div>
-          <strong>{profile.label}</strong>
-          <span>
-            {localizedFacetLabel(
-              language,
-              profile.platform.key,
-              profile.platform.label,
-            )}
-            <i aria-hidden="true">·</i>
-            {localizedFacetLabel(
-              language,
-              profile.channel.key,
-              profile.channel.label,
-            )}
-          </span>
-        </div>
-        <span className="profile-source" title={profile.source}>
-          {profile.id}
-        </span>
+        <strong title={profile.source}>{profile.label}</strong>
       </div>
       <div className="profile-actions">
         {actions.map((action) => {

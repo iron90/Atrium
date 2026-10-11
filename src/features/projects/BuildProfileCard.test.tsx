@@ -107,6 +107,17 @@ const renderCard = (
   );
 
 describe("build profile card", () => {
+  it("shows the profile title without repeating the platform, channel, or id", () => {
+    renderCard();
+
+    expect(screen.getByText("macOS · Direct")).toBeInTheDocument();
+    expect(screen.queryByText("macos-direct")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("macOS · Direct").closest(".profile-heading")
+        ?.textContent,
+    ).toBe("macOS · Direct");
+  });
+
   it("orders profile actions as check, build, then run", () => {
     const { container } = renderCard([availableArtifact]);
 
