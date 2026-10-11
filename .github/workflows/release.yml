@@ -98,6 +98,13 @@ jobs:
           fi
           while read -r asset_id asset_name; do
             new_name="${asset_name/_en-US.msi/.msi}"
+            # Rebuilding the same tag leaves the previous canonical name in
+            # place. Remove that asset so the new file can take its name.
+            existing_id=$(gh api "$release_api" --jq ".assets[] | select(.name == \"$new_name\") | .id")
+            if [ -n "$existing_id" ]; then
+              gh api --method DELETE "repos/${{ github.repository }}/releases/assets/$existing_id" >/dev/null
+              echo "Removed existing $new_name"
+            fi
             gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$asset_id" -f name="$new_name" --jq '.name'
             echo "Renamed $asset_name -> $new_name"
           done <<< "$msi_assets"
