@@ -15,6 +15,7 @@ export interface ProjectInspectorActionsOptions {
   language: Language;
   inspectorProject?: ProjectSnapshot;
   onError: (message: string | null) => void;
+  onCleaned?: (project: ProjectSnapshot) => Promise<void> | void;
   updateInspectorProject: (
     updater: (
       current: ProjectSnapshot | undefined,
@@ -46,6 +47,7 @@ export function useProjectInspectorActions({
   language,
   inspectorProject,
   onError,
+  onCleaned,
   updateInspectorProject,
 }: ProjectInspectorActionsOptions): ProjectInspectorActions {
   const {
@@ -72,6 +74,7 @@ export function useProjectInspectorActions({
   } = useProjectCleanupActions({
     inspectorProject,
     onError,
+    onCleaned,
     updateInspectorProject,
   });
 

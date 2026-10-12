@@ -34,6 +34,7 @@ export interface UseProjectCleanupActionsOptions {
       current: ProjectSnapshot | undefined,
     ) => ProjectSnapshot | undefined,
   ) => void;
+  onCleaned?: (project: ProjectSnapshot) => Promise<void> | void;
 }
 
 export const cleanupPathsForProject = (
@@ -48,6 +49,7 @@ export function useProjectCleanupActions({
   inspectorProject,
   onError,
   updateInspectorProject,
+  onCleaned,
 }: UseProjectCleanupActionsOptions): ProjectCleanupActions {
   const [cleanupFeedback, setCleanupFeedback] =
     useState<CleanupFeedback | null>(null);
@@ -131,6 +133,9 @@ export function useProjectCleanupActions({
         failedCount: result.failedEntries.length,
       });
       setCleanupSelection([]);
+      // Storage alone leaves artifacts and profile readiness stale, so Run
+      // stays available after its outputs were removed.
+      await onCleaned?.(project);
     } catch (error) {
       onError(errorMessage(error));
     } finally {
@@ -138,7 +143,13 @@ export function useProjectCleanupActions({
       setIsCleaningArtifacts(false);
       setCleanupProgress(null);
     }
-  }, [isCleaningArtifacts, onError, pendingCleanup, updateInspectorProject]);
+  }, [
+    isCleaningArtifacts,
+    onCleaned,
+    onError,
+    pendingCleanup,
+    updateInspectorProject,
+  ]);
 
   return {
     cleanupFeedback,

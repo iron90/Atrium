@@ -171,6 +171,7 @@ export default function App() {
     language,
     inspectorProject,
     onError: handleWorkspaceError,
+    onCleaned: refreshProject,
     updateInspectorProject,
   });
   useEffect(() => {

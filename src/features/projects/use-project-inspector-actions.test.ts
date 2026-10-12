@@ -86,4 +86,33 @@ describe("project inspector cleanup selection", () => {
     expect(result.current.cleanupSelection).toEqual([]);
     cleanup.mockRestore();
   });
+
+  it("refreshes the project after cleanup completes", async () => {
+    const onCleaned = vi.fn(async () => undefined);
+    const cleanup = vi
+      .spyOn(bridge, "cleanProjectArtifacts")
+      .mockResolvedValue({
+        removedBytes: 20,
+        removedEntries: [storage.entries[1]],
+        failedEntries: [],
+        storage,
+      });
+    const { result } = renderHook(() =>
+      useProjectCleanupActions({
+        inspectorProject: project,
+        onError: vi.fn(),
+        updateInspectorProject: vi.fn(),
+        onCleaned,
+      }),
+    );
+
+    act(() => result.current.setCleanupSelection(["dist"]));
+    act(() => result.current.cleanArtifacts(project));
+    await act(async () => {
+      await result.current.confirmCleanup();
+    });
+
+    expect(onCleaned).toHaveBeenCalledWith(project);
+    cleanup.mockRestore();
+  });
 });
