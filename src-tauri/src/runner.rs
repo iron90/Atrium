@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 
 use crate::captured_process::captured_command;
 use crate::history::{append_run_history, with_history_lock};
-use crate::model::{CommandKind, ProjectCommand, RunError, RunStarted};
+use crate::model::{CommandKind, ProjectCommand, RunError, RunFinished, RunStarted, RunStatus};
 use crate::run_context::RunContext;
 use crate::run_supervisor::supervise_process;
 use crate::run_validation::{resolve_run_request, validate_run_id};
@@ -38,7 +38,18 @@ pub async fn start_project_command(
         }
     }
     let context = RunContext::new(&request);
-    let mut child = build_process(&request.command)?;
+    let mut child = match build_process(&request.command) {
+        Ok(child) => child,
+        Err(message) => {
+            // The process never existed, so the supervisor cannot write history.
+            // Persist the start failure before returning it, or the sidebar
+            // error is the only trace and the next scan can erase that too.
+            let finished =
+                context.finished(RunStatus::Failed, None, String::new(), message.clone());
+            record_finished_run(&app, &state, &finished).await;
+            return Err(message);
+        }
+    };
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
     let (stop_tx, stop_rx) = oneshot::channel();
@@ -85,34 +96,7 @@ pub async fn start_project_command(
                 "Run registry could not be cleaned up".to_string(),
             );
         }
-        let history_lock = state_for_task.history_lock.clone();
-        let history_app = app_for_task.clone();
-        let history_record = finished.clone();
-        let history_result = tauri::async_runtime::spawn_blocking(move || {
-            with_history_lock(&history_lock, || {
-                append_run_history(&history_app, &history_record)
-            })
-        })
-        .await;
-        match history_result {
-            Ok(Ok(())) => {}
-            Ok(Err(error)) => report_run_error(
-                &app_for_task,
-                &finished.run_id,
-                format!("Run completed but could not be persisted: {error}"),
-            ),
-            Err(error) => report_run_error(
-                &app_for_task,
-                &finished.run_id,
-                format!("Run completed but history task failed: {error}"),
-            ),
-        }
-        if let Err(error) = app_for_task.emit("run-finished", &finished) {
-            eprintln!(
-                "Atrium could not emit run-finished for {}: {error}",
-                finished.run_id
-            );
-        }
+        record_finished_run(&app_for_task, &state_for_task, &finished).await;
     });
 
     Ok(started)
@@ -150,6 +134,37 @@ fn build_process(command: &ProjectCommand) -> Result<tokio::process::Child, Stri
     tokio_command
         .spawn()
         .map_err(|error| format!("Cannot start {}: {error}", command.display_command))
+}
+
+async fn record_finished_run(app: &AppHandle, state: &AppState, finished: &RunFinished) {
+    let history_lock = state.history_lock.clone();
+    let history_app = app.clone();
+    let history_record = finished.clone();
+    let history_result = tauri::async_runtime::spawn_blocking(move || {
+        with_history_lock(&history_lock, || {
+            append_run_history(&history_app, &history_record)
+        })
+    })
+    .await;
+    match history_result {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => report_run_error(
+            app,
+            &finished.run_id,
+            format!("Run completed but could not be persisted: {error}"),
+        ),
+        Err(error) => report_run_error(
+            app,
+            &finished.run_id,
+            format!("Run completed but history task failed: {error}"),
+        ),
+    }
+    if let Err(error) = app.emit("run-finished", finished) {
+        eprintln!(
+            "Atrium could not emit run-finished for {}: {error}",
+            finished.run_id
+        );
+    }
 }
 
 fn report_run_error(app: &AppHandle, run_id: &str, message: String) {

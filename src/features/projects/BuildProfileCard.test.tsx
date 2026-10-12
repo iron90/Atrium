@@ -251,7 +251,7 @@ describe("build profile card", () => {
 
     const buildButton = screen.getByRole("button", { name: "Build" });
     expect(buildButton).toBeDisabled();
-    const blockedMessage = `Verification is blocked; the development Agent recorded: ${reason}`;
+    const blockedMessage = `Verification is blocked for Build; the development Agent recorded: ${reason}`;
     expect(buildButton).toHaveAttribute("title", blockedMessage);
     expect(screen.getByText(blockedMessage)).toBeInTheDocument();
     expect(

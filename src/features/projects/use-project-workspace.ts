@@ -20,6 +20,7 @@ export interface UseProjectWorkspaceOptions {
   language: Language;
   workspaceRefreshMs: WorkspaceRefreshMs;
   onError: (message: string | null) => void;
+  activeError: string | null;
   onProjectSelected: () => void;
   onSnapshotApplied: (snapshot: WorkspaceSnapshot) => void;
 }
@@ -55,6 +56,7 @@ export function useProjectWorkspace({
   language,
   workspaceRefreshMs,
   onError,
+  activeError,
   onProjectSelected,
   onSnapshotApplied,
 }: UseProjectWorkspaceOptions): UseProjectWorkspaceResult {
@@ -154,6 +156,7 @@ export function useProjectWorkspace({
     language,
     workspaceRefreshMs,
     onError,
+    activeError,
     onApplySnapshot: applyWorkspaceSnapshot,
     onSnapshotTimestamp: handleSnapshotTimestamp,
   });

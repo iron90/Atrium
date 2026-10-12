@@ -30,6 +30,9 @@ export interface UseWorkspaceScanLifecycleOptions {
   excludeNames: string[];
   language: Language;
   onError: (message: string | null) => void;
+  // The banner currently on screen. A recovered background scan clears only
+  // an error this hook posted, so a command failure survives the next poll.
+  activeError?: string | null;
   onApplySnapshot: (snapshot: WorkspaceSnapshot) => void;
   onSnapshotTimestamp: (scannedAt: number) => void;
   workspaceRefreshMs?: WorkspaceRefreshMs;
@@ -54,6 +57,7 @@ export function useWorkspaceScanLifecycle({
   excludeNames,
   language,
   onError,
+  activeError = null,
   onApplySnapshot,
   onSnapshotTimestamp,
   workspaceRefreshMs = WORKSPACE_REFRESH_DEFAULT_MS,
@@ -68,6 +72,8 @@ export function useWorkspaceScanLifecycle({
   // self-heals on the next attempt is noise, so only consecutive failures
   // surface.
   const backgroundScanFailures = useRef(0);
+  const postedBackgroundError = useRef<string | null>(null);
+  const activeErrorRef = useRef(activeError);
   const languageRef = useRef(language);
 
   const excludeNamesRef = useRef(excludeNames);
@@ -82,7 +88,8 @@ export function useWorkspaceScanLifecycle({
     excludeNamesRef.current = excludeNames;
     preferencesRef.current = preferences;
     onErrorRef.current = onError;
-  }, [language, excludeNames, preferences, onError]);
+    activeErrorRef.current = activeError;
+  }, [language, excludeNames, preferences, onError, activeError]);
 
   useEffect(() => {
     workspaceFingerprintRef.current = snapshotFingerprint(snapshot);
@@ -159,9 +166,9 @@ export function useWorkspaceScanLifecycle({
     const refreshWorkspace = async () => {
       if (disposed || scanRequests.isBusy) return;
       const requestId = scanRequests.begin();
-      // Background polls stay silent: announcing each one would overwrite the
-      // status banner and bury messages the user should read. Only real
-      // changes and failures are reported.
+      // A quiet poll must not clear a command failure. It only retires an
+      // error this hook itself posted, and only while that error is still
+      // the one on screen. Snapshot changes are applied without a banner.
       try {
         const nextSnapshot = await withTimeout(
           scanWorkspacesFn({
@@ -174,12 +181,15 @@ export function useWorkspaceScanLifecycle({
         );
         if (disposed || !scanRequests.isCurrent(requestId)) return;
         backgroundScanFailures.current = 0;
-        onError(null);
+        const posted = postedBackgroundError.current;
+        postedBackgroundError.current = null;
+        if (posted !== null && activeErrorRef.current === posted) {
+          onError(null);
+        }
         const changed =
           workspaceFingerprintRef.current !== snapshotFingerprint(nextSnapshot);
         if (changed) {
           applyScannedSnapshot(nextSnapshot);
-          onError(null);
         } else {
           onSnapshotTimestamp(nextSnapshot.scannedAt);
         }
@@ -187,7 +197,9 @@ export function useWorkspaceScanLifecycle({
         if (!disposed && scanRequests.isCurrent(requestId)) {
           backgroundScanFailures.current += 1;
           if (backgroundScanFailures.current >= 2) {
-            onError(errorMessage(refreshError));
+            const message = errorMessage(refreshError);
+            postedBackgroundError.current = message;
+            onError(message);
           }
         }
       } finally {

@@ -128,6 +128,7 @@ export default function App() {
     language,
     workspaceRefreshMs,
     onError: handleWorkspaceError,
+    activeError: error,
     onProjectSelected: resetProjectInspection,
     onSnapshotApplied: ensureProjectMeta,
   });

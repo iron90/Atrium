@@ -203,6 +203,88 @@ describe("workspace scan lifecycle", () => {
     }
   });
 
+  it("leaves a command error in place when a background refresh succeeds", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSnapshot = emptySnapshot("/workspace");
+      const scanWorkspacesFn = vi.fn(async () => initialSnapshot);
+      const onError = vi.fn();
+      const commandError =
+        "Cannot start npm run build:macos: No such file or directory (os error 2)";
+
+      renderHook(() =>
+        useWorkspaceScanLifecycle({
+          nativeRuntime: true,
+          preferences: { workspaces: ["/workspace"] },
+          initialRootPath: "/workspace",
+          initialWorkspacePaths: ["/workspace"],
+          initialSnapshot,
+          snapshot: initialSnapshot,
+          excludeNames: [],
+          language: "en",
+          activeError: commandError,
+          onError,
+          onApplySnapshot: noop,
+          onSnapshotTimestamp: noop,
+          scanWorkspacesFn,
+        }),
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      onError.mockClear();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(scanWorkspacesFn).toHaveBeenCalledTimes(2);
+      expect(onError).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears a background scan error after a later refresh succeeds", async () => {
+    vi.useFakeTimers();
+    try {
+      const initialSnapshot = emptySnapshot("/workspace");
+      let call = 0;
+      const scanWorkspacesFn = vi.fn(async () => {
+        call += 1;
+        if (call === 2 || call === 3) throw new Error("refresh exploded");
+        return initialSnapshot;
+      });
+      const onError = vi.fn();
+
+      const { rerender } = renderHook(
+        ({ activeError }: { activeError: string | null }) =>
+          useWorkspaceScanLifecycle({
+            nativeRuntime: true,
+            preferences: { workspaces: ["/workspace"] },
+            initialRootPath: "/workspace",
+            initialWorkspacePaths: ["/workspace"],
+            initialSnapshot,
+            snapshot: initialSnapshot,
+            excludeNames: [],
+            language: "en",
+            activeError,
+            onError,
+            onApplySnapshot: noop,
+            onSnapshotTimestamp: noop,
+            scanWorkspacesFn,
+          }),
+        { initialProps: { activeError: null as string | null } },
+      );
+
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(onError).toHaveBeenCalledWith("refresh exploded");
+
+      rerender({ activeError: "refresh exploded" });
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(onError).toHaveBeenCalledWith(null);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("waits for the selected refresh interval before scanning again", async () => {
     vi.useFakeTimers();
     try {

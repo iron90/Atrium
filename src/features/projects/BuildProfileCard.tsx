@@ -77,8 +77,12 @@ export function BuildProfileCard({
   const profileVerificationMessage = t("profileHostVerificationPending");
   const blockerForAction = (action: ProfileAction) =>
     profile.blockedActions.find((blocked) => blocked.action === action);
-  const blockerMessage = (reason: string) =>
-    fill(t("profileVerificationBlocked"), "reason", reason);
+  const blockerMessage = (action: ProfileAction, reason: string) =>
+    fill(
+      fill(t("profileVerificationBlocked"), "action", t(action)),
+      "reason",
+      reason,
+    );
 
   return (
     <div className="profile-card">
@@ -123,7 +127,7 @@ export function BuildProfileCard({
               : hostMismatch
                 ? hostMismatchMessage
                 : blocker
-                  ? blockerMessage(blocker.reason)
+                  ? blockerMessage(action, blocker.reason)
                   : hostVerificationPending
                     ? profileVerificationMessage
                     : runBlockedUntilBuild
@@ -232,12 +236,16 @@ export function BuildProfileCard({
           {profileHostMessage}
         </span>
       ) : profile.blockedActions.length ? (
-        <span
-          className="profile-issue"
+        <div
+          className="profile-issue-list"
           id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
         >
-          {blockerMessage(profile.blockedActions[0].reason)}
-        </span>
+          {profile.blockedActions.map((blocked) => (
+            <span className="profile-issue" key={blocked.action}>
+              {blockerMessage(blocked.action, blocked.reason)}
+            </span>
+          ))}
+        </div>
       ) : profile.unverifiedActions.length ? (
         <span
           className="profile-issue"

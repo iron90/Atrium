@@ -49,6 +49,16 @@ describe("LocalActivityPanel", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows the full start failure instead of a truncated line", () => {
+    const message =
+      "Cannot start npm run build:macos: No such file or directory (os error 2)";
+    const status: RuntimeStatus = { kind: "error", message };
+
+    render(<LocalActivityPanel status={status} onStop={noop} />);
+
+    expect(screen.getByText(message)).toBeInTheDocument();
+  });
+
   it("shows the ready state when idle", () => {
     const status: RuntimeStatus = { kind: "ready" };
 
