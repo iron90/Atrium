@@ -42,14 +42,18 @@ describe("releaseNotesBody", () => {
     expect(englishLaunch).toBeLessThan(chinese);
     expect(chinese).toBeLessThan(body.indexOf("设置页现在也会显示"));
     expect(body.indexOf("设置页现在也会显示")).toBeLessThan(chineseLaunch);
-    expect(body.match(/xattr -rd com\.apple\.quarantine/g)).toHaveLength(2);
+    expect(body.match(/Open Anyway/g)).toHaveLength(1);
+    expect(body.match(/仍要打开/g)).toHaveLength(1);
+    expect(body).not.toContain("xattr");
   });
 
-  it("does not repeat an install command that was already in the tag message", () => {
+  it("leaves an old install command in the tag message off the release page", () => {
     const body = releaseNotesBody(
       `${marked}\n\nxattr -rd com.apple.quarantine /Applications/Atrium.app\n`,
     );
-    expect(body.match(/xattr -rd com\.apple\.quarantine/g)).toHaveLength(2);
+    expect(body).not.toContain("xattr");
+    expect(body).toContain("Open Anyway");
+    expect(body).toContain("仍要打开");
   });
 
   it("rejects a message that omits a language", () => {
@@ -84,7 +88,9 @@ describe("collectReleaseNotes", () => {
 
     expect(body).toContain("The first public build.");
     expect(body).toContain("第一个公开发布的版本。");
-    expect(body).toContain("xattr -rd com.apple.quarantine");
+    expect(body).toContain("Open Anyway");
+    expect(body).toContain("仍要打开");
+    expect(body).not.toContain("xattr");
     expect(body).not.toContain("feat: first");
     expect(body).not.toContain("fix: second");
   });

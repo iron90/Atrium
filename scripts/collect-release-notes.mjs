@@ -7,7 +7,10 @@ import { versionFromTag } from "./stamp-release-version.mjs";
 const SECTION =
   /<!--\s*atrium:notes:(en|zh)\s*-->([\s\S]*?)<!--\s*\/atrium:notes:\1\s*-->/g;
 
-const XATTR_COMMAND = "xattr -rd com.apple.quarantine /Applications/Atrium.app";
+const MACOS_INSTALL_NOTE_EN =
+  "On macOS, this build is signed with an Apple Development certificate and is not notarized. If the system blocks the first launch, allow it in System Settings → Privacy & Security → Open Anyway.";
+const MACOS_INSTALL_NOTE_ZH =
+  "此 macOS 安装包使用 Apple Development 证书签名，尚未公证。若系统阻止首次打开，请到「系统设置 → 隐私与安全性」中选择「仍要打开」。";
 
 function markedSection(notes, language) {
   const pattern = new RegExp(
@@ -18,7 +21,7 @@ function markedSection(notes, language) {
 }
 
 // English block first, then Chinese. Each block keeps the update text inside
-// its marker and the first-launch command outside it, so GitHub shows them
+// its marker and the first-launch note outside it, so GitHub shows them
 // together while the app still reads only the marker.
 export function releaseNotesBody(tagMessage) {
   const notes = String(tagMessage ?? "")
@@ -44,11 +47,7 @@ export function releaseNotesBody(tagMessage) {
     "",
     "### First launch after install",
     "",
-    "On macOS, if the first launch after installing says the app is damaged, run:",
-    "",
-    "```sh",
-    XATTR_COMMAND,
-    "```",
+    MACOS_INSTALL_NOTE_EN,
     "",
     "## 中文",
     "",
@@ -58,11 +57,7 @@ export function releaseNotesBody(tagMessage) {
     "",
     "### 安装后首次运行",
     "",
-    "在 macOS 上安装后首次运行时，若提示「已损坏」，在终端执行：",
-    "",
-    "```sh",
-    XATTR_COMMAND,
-    "```",
+    MACOS_INSTALL_NOTE_ZH,
     "",
   ].join("\n");
 }

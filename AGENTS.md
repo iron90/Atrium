@@ -72,10 +72,11 @@ When the user asks to tag or publish a release:
   Do not create a lightweight tag.
 - The version card reads only the text inside those two markers. It does not
   select text by heading. Release-page notes stay outside the markers. Do not
-  put the macOS install note, the `xattr` command, or any later release-page
-  note into the summary files. `scripts/collect-release-notes.mjs` appends the
-  install note outside the markers. Add any new release-page-only section there,
-  still outside the markers.
+  put the macOS install note into the summary files.
+  `scripts/collect-release-notes.mjs` appends that note outside the markers:
+  the build is signed with an Apple Development certificate, and a blocked
+  first launch is allowed in System Settings. Add any new release-page-only
+  section there, still outside the markers.
 - Do not push the tag unless the user asks. The release workflow rejects a tag
   whose message is missing either language section.
 

@@ -53,10 +53,10 @@ structured JSON.
 ## Download
 
 Download the macOS and Windows installers from
-[GitHub Releases](https://github.com/iron90/Atrium/releases). The artifacts are
-not signed by Apple: on macOS, the first launch may report the app as damaged —
-run `xattr -rd com.apple.quarantine /Applications/Atrium.app` once to allow it;
-on Windows, SmartScreen shows a one-time warning.
+[GitHub Releases](https://github.com/iron90/Atrium/releases). The macOS build is
+signed with an Apple Development certificate and is not notarized. If macOS
+blocks the first launch, allow it in System Settings → Privacy & Security →
+Open Anyway. On Windows, SmartScreen shows a one-time warning.
 
 ## Development
 

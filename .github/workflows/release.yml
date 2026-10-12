@@ -34,8 +34,8 @@ jobs:
       # lightweight tag at the same name, so the script fetches the tag from
       # origin before reading it. A message missing either language marker
       # fails the release. English is published first, then Chinese. Each
-      # language keeps its update text and its macOS xattr hint together, and
-      # the hint stays outside the note markers.
+      # language keeps its update text and the macOS first-launch note
+      # together, and that note stays outside the note markers.
       - name: Collect release notes
         id: notes
         env:
@@ -60,11 +60,42 @@ jobs:
         with:
           workspaces: src-tauri
 
+      # The Apple Development private key never enters the repository. The
+      # macOS runner imports it from secrets and signs with that identity.
+      # This is not Developer ID and is not notarized.
+      - name: Require the Apple Development certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_CERTIFICATE_PASSWORD" ]; then
+            echo "macOS releases require APPLE_CERTIFICATE and APPLE_CERTIFICATE_PASSWORD." >&2
+            echo "Export only Apple Development: YiLong Chen (7Q33J5Y5Q4) as a .p12." >&2
+            exit 1
+          fi
+
       # Builds both platforms in parallel; tauri-action creates the GitHub
       # release from the first finished job and uploads into it from the rest.
-      # Artifacts are unsigned, so installers show the usual Gatekeeper and
-      # SmartScreen first-run warnings.
-      - name: Build and publish the release
+      - name: Build and publish the macOS release
+        if: runner.os == 'macOS'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Apple Development: YiLong Chen (7Q33J5Y5Q4)"
+        with:
+          tagName: v__VERSION__
+          releaseName: "Atrium v__VERSION__"
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: false
+          prerelease: false
+
+      - name: Build and publish the Windows release
+        if: runner.os == 'Windows'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
