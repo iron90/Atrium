@@ -3,6 +3,8 @@ import type {
   CleanupResult,
   GitBranchOverview,
   GitChangeSummary,
+  LocalProxyCandidate,
+  ProxyTestOutcome,
   NetworkProxySettings,
   ProfileAction,
   ProjectGuidanceReport,
@@ -53,6 +55,8 @@ export interface AtriumBridge {
   openProjectRemote(remote: string): Promise<void>;
   openWebProfile(projectPath: string, profileId: string): Promise<void>;
   readNetworkProxy(): Promise<NetworkProxySettings>;
+  detectLocalProxies(): Promise<LocalProxyCandidate[]>;
+  testNetworkProxy(settings: NetworkProxySettings): Promise<ProxyTestOutcome>;
   saveNetworkProxy(
     settings: NetworkProxySettings,
   ): Promise<NetworkProxySettings>;

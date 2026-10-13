@@ -182,9 +182,42 @@ export const en = {
   inspectorCardDescription:
     "Choose which sections appear in the project detail card.",
   networkProxyCard: "Build network proxy",
+  networkProxyActions: "Install, Check, Build, and Run",
   networkProxyDescription:
-    "Atrium passes this address to Check, Build, and Run as HTTP_PROXY, HTTPS_PROXY, and ALL_PROXY. Tools such as curl, git, cargo, npm, and pip follow it automatically, and no project needs a hard-coded mirror. Leave it empty to use the environment Atrium was started with.",
+    "Atrium passes this address to {actions} as HTTP_PROXY, HTTPS_PROXY, and ALL_PROXY. Tools such as curl, git, cargo, npm, and pip follow it automatically, and no project needs a hard-coded mirror.",
   networkProxyAddress: "Proxy address",
+  networkProxyAddressHint:
+    "{actions} start with this address in their environment. Leave it empty to inherit whatever Atrium itself was started with.",
+  detectLocalProxies: "Detect a local proxy",
+  testNetworkProxy: "Test connection",
+  testingNetworkProxy: "Testing…",
+  networkProxyTestTarget:
+    "Opens a tunnel through the proxy and requests {host} over it.",
+  networkProxyTestHost: "Test address",
+  networkProxyTestHostHint:
+    "A rule-based proxy can send one host around the tunnel and block it while everything else works. Point this at what your builds actually download.",
+  "proxyTest.tunnelled": "Connected through the proxy in {ms} ms.",
+  "proxyTest.tunnelGranted":
+    "The proxy granted the tunnel, but {host} did not answer through it.",
+  "proxyTest.refused":
+    "The proxy answered but refused the tunnel (status {status}).",
+  "proxyTest.notAProxy":
+    "Something answered there, but it is not an HTTP proxy.",
+  "proxyTest.timeout": "The proxy did not answer in time.",
+  "proxyTest.unreachable": "Nothing is listening at that address.",
+  "proxyTest.inherited":
+    "No proxy is configured, so commands inherit the environment Atrium started with.",
+  "proxyTest.unsupportedScheme":
+    "Atrium can test an http:// or socks5:// proxy. It has no handshake for this scheme, so nothing was checked.",
+  detectingLocalProxies: "Detecting…",
+  noLocalProxyFound:
+    "No proxy answered on the usual local ports. Open your proxy client and copy the address it shows here.",
+  useThisProxy: "Use this",
+  networkProxyAdvanced: "Advanced",
+  "proxyKind.http": "Answers as an HTTP proxy",
+  "proxyKind.socks5": "Answers as a SOCKS5 proxy",
+  "proxyKind.listener":
+    "Something is listening, but it does not answer as a proxy",
   networkProxyBypass: "Never proxy these addresses",
   networkProxyBypassHint:
     "Local services stay off the proxy by default, so a project can keep talking to a development server on this machine.",
@@ -489,9 +522,36 @@ export const zh: Record<keyof typeof en, string> = {
   inspectorCard: "项目详情卡片",
   inspectorCardDescription: "选择项目详情卡片中显示的内容区块。",
   networkProxyCard: "构建网络代理",
+  networkProxyActions: "安装依赖、检查、构建、运行",
   networkProxyDescription:
-    "Atrium 会把这个地址以 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY 传给 Check、Build、Run。curl、git、cargo、npm、pip 等工具会自动遵循，项目里不需要硬编码镜像。留空则沿用启动 Atrium 时的环境。",
+    "Atrium 会把这个地址以 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY 传给{actions}。curl、git、cargo、npm、pip 等工具会自动遵循，项目里不需要硬编码镜像。",
   networkProxyAddress: "代理地址",
+  networkProxyAddressHint:
+    "{actions}会在各自的环境变量里带上这个地址。留空则沿用启动 Atrium 时的环境。",
+  detectLocalProxies: "检测本机代理",
+  testNetworkProxy: "测试连接",
+  testingNetworkProxy: "测试中…",
+  networkProxyTestTarget: "通过代理建立隧道，再用它请求 {host}。",
+  networkProxyTestHost: "测试地址",
+  networkProxyTestHostHint:
+    "分流代理可能让某个域名绕过隧道被墙，而其他一切正常。把这里改成你项目真正会下载的地址。",
+  "proxyTest.tunnelled": "已通过代理连通，用时 {ms} 毫秒。",
+  "proxyTest.tunnelGranted": "代理接受了隧道，但 {host} 没有通过它回应。",
+  "proxyTest.refused": "代理有回应但拒绝了隧道（状态码 {status}）。",
+  "proxyTest.notAProxy": "那个地址有东西应答，但它不是 HTTP 代理。",
+  "proxyTest.timeout": "代理没有在超时前回应。",
+  "proxyTest.unreachable": "那个地址上没有任何服务在监听。",
+  "proxyTest.inherited": "没有配置代理，命令会沿用启动 Atrium 时的环境。",
+  "proxyTest.unsupportedScheme":
+    "Atrium 能测试 http:// 和 socks5:// 代理，但没有这种协议的握手方式，本次没有做任何检查。",
+  detectingLocalProxies: "检测中…",
+  noLocalProxyFound:
+    "常见本地端口上没找到代理。打开你的代理软件，把它显示的地址填到这里。",
+  useThisProxy: "填入这个",
+  networkProxyAdvanced: "高级",
+  "proxyKind.http": "确认是 HTTP 代理",
+  "proxyKind.socks5": "确认是 SOCKS5 代理",
+  "proxyKind.listener": "有服务在监听，但它不是代理",
   networkProxyBypass: "不走代理的地址",
   networkProxyBypassHint:
     "本地服务默认不走代理，项目仍可连接本机上的开发服务器。",

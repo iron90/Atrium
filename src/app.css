@@ -1952,6 +1952,14 @@ button[aria-busy="true"] {
 }
 /* Card children need breathing room under the trigger row; the shared
    content style only pads the sides and bottom. */
+.settings-card .animated-disclosure-content {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.settings-card .animated-disclosure-content > .settings-help {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
 .storage-entries .animated-disclosure-content,
 .commands-disclosure .animated-disclosure-content,
 .section-disclosure .animated-disclosure-content {
@@ -2981,6 +2989,15 @@ button[aria-busy="true"] {
   gap: 12px;
   align-items: start;
 }
+/* Explicit columns rather than a row-major grid: with cards as grid children,
+   a tall card on the right stretches its row and drags the next left-hand card
+   down. Each column now packs on its own. */
+.settings-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
 .settings-card {
   display: grid;
   align-content: start;
@@ -3003,6 +3020,35 @@ button[aria-busy="true"] {
 .settings-card .form-control,
 .settings-card .secondary-button {
   font-size: var(--type-body);
+}
+.proxy-detection-list {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.proxy-detection-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--line-subtle, rgb(255 255 255 / 0.08));
+  border-radius: var(--control-radius);
+}
+.proxy-detection-detail {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.proxy-detection-detail code {
+  font-size: var(--type-body);
+}
+.proxy-detection-detail em {
+  color: var(--text-muted);
+  font-size: var(--type-caption, var(--type-subtitle));
+  font-style: normal;
 }
 .settings-card-workspace .secondary-button {
   min-height: var(--control-height);
@@ -3122,6 +3168,11 @@ button[aria-busy="true"] {
   font-size: var(--type-body);
   font-weight: 400;
   line-height: 1.55;
+}
+/* A passing connectivity check is the one settings result the user acts on,
+   so it reads as a result rather than as another line of grey text. */
+.settings-version-status.is-success {
+  color: var(--accent);
 }
 .settings-version-notes {
   display: grid;

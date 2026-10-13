@@ -71,6 +71,8 @@ pub fn run() {
             tool_commands::external::open_web_profile_command,
             tool_commands::external::open_release_page_command,
             network_proxy::read_network_proxy_command,
+            network_proxy::detect_local_proxies_command,
+            network_proxy::test_network_proxy_command,
             network_proxy::save_network_proxy_command
         ])
         .build(tauri::generate_context!())
