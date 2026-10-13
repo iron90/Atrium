@@ -323,21 +323,33 @@ describe("settings detail-card switches", () => {
 });
 
 describe("build network proxy", () => {
+  // The proxy card lives behind its own tab now.
+  const openNetworkTab = async () => {
+    fireEvent.click(screen.getByRole("tab", { name: "Network proxy" }));
+    await screen.findByLabelText("Proxy address");
+  };
+
+  const renderNetwork = async (
+    overrides: Partial<ReturnType<typeof baseProps>> = {},
+  ) => {
+    render(<SettingsPanel {...baseProps()} {...overrides} />);
+    await openNetworkTab();
+  };
+
   const rowText = (host: string) =>
     screen.getByText(host).closest("li")?.textContent ?? "";
 
   const proxyField = () =>
     screen.getByLabelText("Proxy address") as HTMLInputElement;
 
-  it("shows the stored address and saves a newly typed one", async () => {
+  it("shows the stored address and stores a newly typed one without a save click", async () => {
     const readSpy = vi
       .spyOn(bridge, "readNetworkProxy")
       .mockResolvedValue({ proxy: "http://127.0.0.1:7890" });
     const saveSpy = vi
       .spyOn(bridge, "saveNetworkProxy")
       .mockImplementation(async (settings) => settings);
-    render(<SettingsPanel {...baseProps()} />);
-
+    await renderNetwork();
     await waitFor(() =>
       expect(proxyField().value).toBe("http://127.0.0.1:7890"),
     );
@@ -345,7 +357,6 @@ describe("build network proxy", () => {
     fireEvent.change(proxyField(), {
       target: { value: "socks5://127.0.0.1:1080" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
 
     await waitFor(() =>
       expect(saveSpy).toHaveBeenCalledWith({
@@ -354,13 +365,62 @@ describe("build network proxy", () => {
         testHost: "",
       }),
     );
-    await waitFor(() =>
-      expect(
-        screen.getByText("Saved. Commands started from now on use it."),
-      ).toBeTruthy(),
-    );
+    expect(
+      await screen.findByText("Stored. Commands started from now on use it."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Save proxy" }),
+    ).not.toBeInTheDocument();
 
     readSpy.mockRestore();
+    saveSpy.mockRestore();
+  });
+
+  it("stores nothing while an address is still being typed", async () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
+    const saveSpy = vi
+      .spyOn(bridge, "saveNetworkProxy")
+      .mockImplementation(async (settings) => settings);
+    await renderNetwork();
+
+    fireEvent.change(proxyField(), { target: { value: "h" } });
+    fireEvent.change(proxyField(), { target: { value: "htt" } });
+    fireEvent.change(proxyField(), { target: { value: "https:/" } });
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(proxyField().value).toBe("https:/");
+
+    saveSpy.mockRestore();
+  });
+
+  it("clearing the field turns the proxy off", async () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({
+      proxy: "http://127.0.0.1:7890",
+    });
+    const saveSpy = vi
+      .spyOn(bridge, "saveNetworkProxy")
+      .mockImplementation(async (settings) => settings);
+    await renderNetwork();
+    await waitFor(() =>
+      expect(proxyField().value).toBe("http://127.0.0.1:7890"),
+    );
+
+    fireEvent.change(proxyField(), { target: { value: "" } });
+
+    await waitFor(() =>
+      expect(saveSpy).toHaveBeenCalledWith({
+        proxy: "",
+        noProxy: "",
+        testHost: "",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "No proxy. Commands inherit the environment Atrium was started with.",
+      ),
+    ).toBeInTheDocument();
+
     saveSpy.mockRestore();
   });
 
@@ -369,18 +429,16 @@ describe("build network proxy", () => {
     const saveSpy = vi
       .spyOn(bridge, "saveNetworkProxy")
       .mockRejectedValue("A proxy address must be a valid absolute URL");
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
-    await waitFor(() => expect(proxyField().value).toBe(""));
-    fireEvent.change(proxyField(), { target: { value: "127.0.0.1:7890" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
+    fireEvent.change(proxyField(), {
+      target: { value: "http://127.0.0.1:7890" },
+    });
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("A proxy address must be a valid absolute URL"),
-      ).toBeTruthy(),
-    );
-    expect(proxyField().value).toBe("127.0.0.1:7890");
+    expect(
+      await screen.findByText("A proxy address must be a valid absolute URL"),
+    ).toBeInTheDocument();
+    expect(proxyField().value).toBe("http://127.0.0.1:7890");
 
     saveSpy.mockRestore();
   });
@@ -392,7 +450,7 @@ describe("build network proxy", () => {
       { url: "socks5://127.0.0.1:1080", kind: "socks5" },
       { url: "http://127.0.0.1:9999", kind: "listener" },
     ]);
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Detect a local proxy" }),
@@ -415,7 +473,7 @@ describe("build network proxy", () => {
     vi.spyOn(bridge, "detectLocalProxies").mockResolvedValue([
       { url: "http://127.0.0.1:7890", kind: "http" },
     ]);
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Detect a local proxy" }),
@@ -432,7 +490,7 @@ describe("build network proxy", () => {
   it("says plainly when no local proxy answered", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
     vi.spyOn(bridge, "detectLocalProxies").mockResolvedValue([]);
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Detect a local proxy" }),
@@ -447,7 +505,7 @@ describe("build network proxy", () => {
 
   it("keeps the bypass list behind an advanced disclosure", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     const disclosure = screen.getByRole("button", { name: "Advanced" });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
@@ -469,7 +527,7 @@ describe("build network proxy", () => {
     const testSpy = vi
       .spyOn(bridge, "testNetworkProxy")
       .mockResolvedValue({ kind: "tunnelled", latencyMillis: 128 });
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
 
@@ -501,7 +559,7 @@ describe("build network proxy", () => {
         ? { kind: "refused", status: 407 }
         : { kind: "tunnelled", latencyMillis: 90 },
     );
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
 
@@ -518,7 +576,7 @@ describe("build network proxy", () => {
     vi.spyOn(bridge, "testNetworkProxy").mockResolvedValue({
       kind: "inherited",
     });
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
 
@@ -527,7 +585,7 @@ describe("build network proxy", () => {
     );
   });
 
-  it("drops an earlier report once a new address is saved", async () => {
+  it("drops an earlier report once the address changes", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
     vi.spyOn(bridge, "testNetworkProxy").mockResolvedValue({
       kind: "tunnelled",
@@ -536,20 +594,24 @@ describe("build network proxy", () => {
     vi.spyOn(bridge, "saveNetworkProxy").mockImplementation(
       async (settings) => settings,
     );
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
+    fireEvent.change(proxyField(), {
+      target: { value: "http://127.0.0.1:7890" },
+    });
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
     await waitFor(() =>
       expect(rowText("github.com")).toContain("Connected through the proxy"),
     );
 
-    fireEvent.change(screen.getByLabelText("Proxy address"), {
+    // Results measured against the old address must not outlive it.
+    fireEvent.change(proxyField(), {
       target: { value: "http://127.0.0.1:1080" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
-
     await waitFor(() =>
-      expect(rowText("github.com")).toContain("Not checked yet"),
+      expect(screen.getAllByText(/· Not checked yet/).length).toBeGreaterThan(
+        0,
+      ),
     );
   });
 
@@ -568,6 +630,7 @@ describe("build network proxy", () => {
     );
 
     const { rerender } = render(withLanguage("zh"));
+    fireEvent.click(screen.getByRole("tab", { name: "网络代理" }));
 
     // The action names come from the catalogue, so a Chinese sentence must not
     // keep English words in it, and the new Install action must be listed.
@@ -577,6 +640,8 @@ describe("build network proxy", () => {
     expect(screen.queryByText(/Check, Build/)).not.toBeInTheDocument();
 
     rerender(withLanguage("en"));
+    // The tab selection lives in the panel, which a rerender keeps, so the
+    // network card is still the one on screen.
 
     expect(
       screen.getByText(
@@ -589,7 +654,7 @@ describe("build network proxy", () => {
   it("separates a fast success from a target that stayed silent", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
     const testSpy = vi.spyOn(bridge, "testNetworkProxy");
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     testSpy.mockResolvedValue({ kind: "tunnelled", latencyMillis: null });
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
@@ -610,10 +675,11 @@ describe("build network proxy", () => {
 
   it("probes the address the user typed as one more row", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
+    vi.spyOn(bridge, "saveNetworkProxy").mockImplementation(async (s) => s);
     const testSpy = vi
       .spyOn(bridge, "testNetworkProxy")
       .mockResolvedValue({ kind: "tunnelled", latencyMillis: 1900 });
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
     fireEvent.change(screen.getByLabelText("Test address"), {
@@ -646,7 +712,7 @@ describe("build network proxy", () => {
           ? { kind: "refused", status: 403 }
           : { kind: "tunnelled", latencyMillis: 120 },
       );
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
     await waitFor(() =>
@@ -682,7 +748,7 @@ describe("build network proxy", () => {
       .mockResolvedValue({ kind: "tunnelled", latencyMillis: 77 });
     // An earlier test may have left calls on the same spy.
     testSpy.mockClear();
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     const rows = document.querySelectorAll(".proxy-detection-row");
     const githubRow = [...rows].find((row) =>
@@ -706,9 +772,9 @@ describe("build network proxy", () => {
     expect(rowText("www.gstatic.com")).toContain("Not checked yet");
   });
 
-  it("says a host is unchecked rather than failed before any sweep", () => {
+  it("says a host is unchecked rather than failed before any sweep", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     expect(screen.getAllByText(/· Not checked yet/).length).toBe(6);
   });
@@ -720,7 +786,7 @@ describe("build network proxy", () => {
         release = resolve;
       }),
     );
-    render(<SettingsPanel {...baseProps()} />);
+    await renderNetwork();
 
     fireEvent.change(screen.getByLabelText("Proxy address"), {
       target: { value: "http://127.0.0.1:1080" },

@@ -181,6 +181,8 @@ export const en = {
   inspectorCard: "Project detail card",
   inspectorCardDescription:
     "Choose which sections appear in the project detail card.",
+  settingsTabGeneral: "General",
+  settingsTabNetwork: "Network proxy",
   networkProxyCard: "Build network proxy",
   networkProxyActions: "Install, Check, Build, and Run",
   networkProxyDescription:
@@ -533,6 +535,8 @@ export const zh: Record<keyof typeof en, string> = {
   languageDescription: "Atrium 导航和界面标签使用的语言。",
   inspectorCard: "项目详情卡片",
   inspectorCardDescription: "选择项目详情卡片中显示的内容区块。",
+  settingsTabGeneral: "常规",
+  settingsTabNetwork: "网络代理",
   networkProxyCard: "构建网络代理",
   networkProxyActions: "安装依赖、检查、构建、运行",
   networkProxyDescription:
