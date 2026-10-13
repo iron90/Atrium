@@ -247,16 +247,13 @@ const COMMON_PROXY_PORTS: [u16; 14] = [
 const PROBE_CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
 const PROBE_READ_TIMEOUT: Duration = Duration::from_millis(900);
 
-/// RFC 2606 reserves `.invalid`, so this host can never resolve and the probe
-/// cannot reach anything outside the machine.
-const UNRESOLVABLE_HOST: &str = "localhost.invalid";
-
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalProxyCandidate {
     pub url: String,
-    /// What the probe observed. `http` and `socks5` mean the port answered the
-    /// matching handshake; `listener` only means something is listening.
+    /// What the probe observed. `http` and `socks5` mean the port opened a
+    /// tunnel with the matching handshake; a mixed port answers as both and is
+    /// reported as `http`, which is the scheme most tools understand.
     pub kind: LocalProxyKind,
 }
 
@@ -303,7 +300,7 @@ fn detect_proxy_ports(ports: &[u16]) -> Vec<LocalProxyCandidate> {
 
 fn classify(port: u16) -> Option<LocalProxyKind> {
     let mut stream = open_probe(port)?;
-    let kind = if read_status_line_after_request(&mut stream) {
+    let kind = if opens_tunnel(&mut stream) {
         LocalProxyKind::Http
     } else {
         // The connection carried an unknown protocol, so it is reused only as
@@ -318,14 +315,23 @@ fn classify(port: u16) -> Option<LocalProxyKind> {
     })
 }
 
-fn read_status_line_after_request(stream: &mut TcpStream) -> bool {
+/// Detection asks exactly the question the connection test asks: can this
+/// endpoint open a tunnel? A proxy that forwards a plain GET to an
+/// unresolvable host but stalls on CONNECT is still an HTTP proxy, and asking
+/// about something else first is how a mixed port got labelled SOCKS5 and sent
+/// the user off to fill in the wrong scheme.
+fn opens_tunnel(stream: &mut TcpStream) -> bool {
     let request = format!(
-        "GET http://{UNRESOLVABLE_HOST}/ HTTP/1.1\r\nHost: {UNRESOLVABLE_HOST}\r\nConnection: close\r\n\r\n"
+        "CONNECT {DEFAULT_TEST_HOST}:{TEST_PORT} HTTP/1.1\r\nHost: {DEFAULT_TEST_HOST}:{TEST_PORT}\r\n\r\n"
     );
     if stream.write_all(request.as_bytes()).is_err() {
         return false;
     }
-    read_status_line(stream)
+    // Any HTTP status proves the peer is an HTTP proxy. Whether the tunnel was
+    // granted is the connection test's question, not detection's: a proxy
+    // whose upstream is down still speaks HTTP, and calling it "just a
+    // listener" would hide the very thing the user is looking for.
+    read_status_line(stream).is_some()
 }
 
 /// A SOCKS5 greeting advertises exactly one no-authentication method; the
@@ -355,12 +361,10 @@ fn open_probe(port: u16) -> Option<TcpStream> {
     Some(stream)
 }
 
-fn read_status_line(stream: &mut TcpStream) -> bool {
-    let mut buffer = [0u8; 16];
-    let read = stream.read(&mut buffer).unwrap_or(0);
-    // Any HTTP response, including an error status, proves the peer speaks
-    // HTTP as a proxy rather than as an unrelated service.
-    buffer[..read].starts_with(b"HTTP/")
+/// The status code of the reply, or None when the peer did not speak HTTP.
+fn read_status_line(stream: &mut TcpStream) -> Option<u16> {
+    let head = read_http_head(stream)?;
+    parse_status(&head)
 }
 
 #[tauri::command]
@@ -781,6 +785,9 @@ mod tests {
                 let _ = stream.read(&mut [0u8; 256]);
                 let _ = stream.write_all(response);
                 let _ = stream.flush();
+                // Hold the socket: closing with unread input sends a reset
+                // that discards the reply and turns the outcome into a race.
+                std::thread::sleep(Duration::from_millis(200));
             }
         });
         Some(port)
@@ -794,6 +801,42 @@ mod tests {
         assert!(super::detect_local_proxies()
             .iter()
             .all(|candidate| candidate.url.contains("127.0.0.1:")));
+    }
+
+    /// Serves a proxy that opens the tunnel, like a mixed local port does.
+    fn spawn_tunnelling_probe_server() -> Option<u16> {
+        let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).ok()?;
+        let port = listener.local_addr().ok()?.port();
+        std::thread::spawn(move || {
+            for _ in 0..2 {
+                let Ok((mut stream, _)) = listener.accept() else {
+                    return;
+                };
+                let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
+                let mut chunk = [0u8; 512];
+                let _ = stream.read(&mut chunk);
+                let _ = stream.write_all(b"HTTP/1.1 200 Connection established\r\n\r\n");
+                let _ = stream.flush();
+                std::thread::sleep(Duration::from_millis(200));
+            }
+        });
+        Some(port)
+    }
+
+    #[test]
+    fn a_mixed_port_is_reported_as_http_so_the_scheme_is_the_common_one() {
+        // A Clash-style mixed port answers both handshakes. Labelling it
+        // SOCKS5 sent a user off to fill in a scheme most tools handle worse,
+        // for a capability the port actually had.
+        let port = spawn_tunnelling_probe_server().expect("bind a listener");
+
+        let found = detect_proxy_ports(&[port])
+            .into_iter()
+            .find(|candidate| candidate.url.ends_with(&format!(":{port}")))
+            .expect("the probed port is reported");
+
+        assert_eq!(found.kind, LocalProxyKind::Http);
+        assert_eq!(found.url, format!("http://127.0.0.1:{port}"));
     }
 
     #[test]

@@ -13,13 +13,14 @@ import { useNetworkProxy } from "./use-network-proxy";
 // Shown when no release metadata is available to hand the user a URL.
 const FALLBACK_RELEASE_URL = "https://github.com/iron90/Atrium/releases/latest";
 
-// The host the connection test reaches through the proxy. It is named in the
-// card so the answer is never about somewhere the user cannot see.
-const DEFAULT_TEST_HOST = "www.gstatic.com";
 import {
   INSPECTOR_SECTION_IDS,
   type InspectorSectionId,
 } from "../projects/inspector-section-visibility";
+import {
+  PROXY_TEST_TARGETS,
+  type ProxyTestTarget,
+} from "../projects/proxy-test-targets";
 import {
   WORKSPACE_REFRESH_LABEL_KEYS,
   WORKSPACE_REFRESH_OPTIONS,
@@ -437,44 +438,75 @@ export const SettingsPanel = memo(function SettingsPanel({
                   ? t("savingNetworkProxy")
                   : t("saveNetworkProxy")}
               </button>
+            </div>
+
+            <div className="settings-version-actions">
               <button
                 type="button"
                 className="secondary-button"
-                disabled={networkProxy.test.phase === "testing"}
-                onClick={networkProxy.test.run}
+                disabled={networkProxy.sweep.phase === "running"}
+                onClick={networkProxy.sweep.checkAll}
               >
-                {networkProxy.test.phase === "testing"
-                  ? t("testingNetworkProxy")
-                  : t("testNetworkProxy")}
+                {networkProxy.sweep.phase === "running"
+                  ? t("checkingAllProxyTargets")
+                  : t("checkAllProxyTargets")}
               </button>
             </div>
-            <p className="settings-help">
-              {fill(
-                t("networkProxyTestTarget"),
-                "host",
-                networkProxy.testHost.trim() || DEFAULT_TEST_HOST,
-              )}
-            </p>
-            {networkProxy.test.phase === "done" && networkProxy.test.outcome ? (
-              <p
-                className={`settings-version-status${
-                  networkProxy.test.outcome.kind === "tunnelled"
-                    ? " is-success"
-                    : ""
-                }`}
-              >
-                {proxyTestMessage(
-                  t,
-                  networkProxy.test.outcome,
-                  networkProxy.testHost.trim() || DEFAULT_TEST_HOST,
-                )}
-              </p>
-            ) : null}
-            {networkProxy.test.error ? (
-              <p className="settings-version-status">
-                {networkProxy.test.error}
-              </p>
-            ) : null}
+            <p className="settings-help">{t("proxyTargetsNote")}</p>
+            <ul className="proxy-detection-list">
+              {(() => {
+                const customHost = networkProxy.testHost.trim().toLowerCase();
+                const known = PROXY_TEST_TARGETS.some(
+                  (target) => target.host === customHost,
+                );
+                const rows: readonly ProxyTestTarget[] = [
+                  ...PROXY_TEST_TARGETS,
+                  ...(customHost && !known
+                    ? [
+                        {
+                          id: "custom",
+                          host: customHost,
+                          labelKey: "proxyTargetCustom" as const,
+                        },
+                      ]
+                    : []),
+                ];
+                return rows.map((target) => {
+                  const outcome = networkProxy.sweep.outcomes[target.host];
+                  const failure = networkProxy.sweep.errors[target.host];
+                  const summary = failure
+                    ? failure
+                    : outcome
+                      ? proxyTestMessage(t, outcome, target.host)
+                      : t("proxyTargetPending");
+                  const reachable = outcome?.kind === "tunnelled";
+                  return (
+                    <li className="proxy-detection-row" key={target.id}>
+                      <span className="proxy-detection-detail">
+                        <code>{target.host}</code>
+                        <em className={reachable ? "is-success" : undefined}>
+                          {t(target.labelKey)} · {summary}
+                        </em>
+                      </span>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={Boolean(
+                          networkProxy.sweep.running[target.host],
+                        )}
+                        onClick={() =>
+                          networkProxy.sweep.checkHost(target.host)
+                        }
+                      >
+                        {networkProxy.sweep.running[target.host]
+                          ? t("testingThisHost")
+                          : t("testThisHost")}
+                      </button>
+                    </li>
+                  );
+                });
+              })()}
+            </ul>
             {networkProxy.phase === "saved" ? (
               <p className="settings-version-status">
                 {t("networkProxySaved")}

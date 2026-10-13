@@ -4,9 +4,10 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bridge } from "../../bridge";
+import { bridge, type NetworkProxySettings } from "../../bridge";
 import { SettingsPanel } from "./SettingsPanel";
 import { I18nProvider, translate } from "../../i18n";
 import type { InspectorSectionId } from "../projects/inspector-section-visibility";
@@ -322,6 +323,9 @@ describe("settings detail-card switches", () => {
 });
 
 describe("build network proxy", () => {
+  const rowText = (host: string) =>
+    screen.getByText(host).closest("li")?.textContent ?? "";
+
   const proxyField = () =>
     screen.getByLabelText("Proxy address") as HTMLInputElement;
 
@@ -458,51 +462,55 @@ describe("build network proxy", () => {
     ).toBeInTheDocument();
   });
 
-  it("reports a working proxy and names the host it checked", async () => {
+  it("reports a working proxy for every host it checks", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({
       proxy: "http://127.0.0.1:7890",
     });
-    const testSpy = vi.spyOn(bridge, "testNetworkProxy").mockResolvedValue({
-      kind: "tunnelled",
-      latencyMillis: 128,
-    });
+    const testSpy = vi
+      .spyOn(bridge, "testNetworkProxy")
+      .mockResolvedValue({ kind: "tunnelled", latencyMillis: 128 });
     render(<SettingsPanel {...baseProps()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
+
     await waitFor(() =>
-      expect(proxyField().value).toBe("http://127.0.0.1:7890"),
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
-
-    expect(
-      await screen.findByText("Connected through the proxy in 128 ms."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Opens a tunnel through the proxy and requests www.gstatic.com over it.",
+      expect(rowText("www.gstatic.com")).toContain(
+        "Connected through the proxy in 128 ms",
       ),
-    ).toBeInTheDocument();
-    expect(testSpy).toHaveBeenCalledWith({
-      proxy: "http://127.0.0.1:7890",
-      noProxy: "",
-      testHost: "",
-    });
+    );
+    // Every listed host is probed against the configured proxy.
+    for (const host of [
+      "github.com",
+      "objects.githubusercontent.com",
+      "registry.npmjs.org",
+      "static.crates.io",
+      "files.pythonhosted.org",
+    ]) {
+      expect(testSpy).toHaveBeenCalledWith({
+        proxy: "http://127.0.0.1:7890",
+        noProxy: "",
+        testHost: host,
+      });
+    }
   });
 
-  it("distinguishes a refused tunnel from an endpoint that is not a proxy", async () => {
+  it("names the host a proxy refused instead of blaming the proxy", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
-    vi.spyOn(bridge, "testNetworkProxy").mockResolvedValue({
-      kind: "refused",
-      status: 407,
-    });
+    vi.spyOn(bridge, "testNetworkProxy").mockImplementation(async (settings) =>
+      settings.testHost === "github.com"
+        ? { kind: "refused", status: 407 }
+        : { kind: "tunnelled", latencyMillis: 90 },
+    );
     render(<SettingsPanel {...baseProps()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
 
-    expect(
-      await screen.findByText(
-        "The proxy answered but refused the tunnel (status 407).",
+    await waitFor(() =>
+      expect(rowText("github.com")).toContain(
+        "refused the tunnel (status 407)",
       ),
-    ).toBeInTheDocument();
+    );
+    expect(rowText("github.com")).toContain("GitHub ·");
   });
 
   it("says nothing is configured when no address is set", async () => {
@@ -512,16 +520,14 @@ describe("build network proxy", () => {
     });
     render(<SettingsPanel {...baseProps()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
 
-    expect(
-      await screen.findByText(
-        "No proxy is configured, so commands inherit the environment Atrium started with.",
-      ),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(rowText("www.gstatic.com")).toContain("No proxy is configured"),
+    );
   });
 
-  it("drops an earlier verdict once a new address is saved", async () => {
+  it("drops an earlier report once a new address is saved", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
     vi.spyOn(bridge, "testNetworkProxy").mockResolvedValue({
       kind: "tunnelled",
@@ -532,8 +538,10 @@ describe("build network proxy", () => {
     );
     render(<SettingsPanel {...baseProps()} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
-    await screen.findByText("Connected through the proxy in 10 ms.");
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
+    await waitFor(() =>
+      expect(rowText("github.com")).toContain("Connected through the proxy"),
+    );
 
     fireEvent.change(screen.getByLabelText("Proxy address"), {
       target: { value: "http://127.0.0.1:1080" },
@@ -541,9 +549,7 @@ describe("build network proxy", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
 
     await waitFor(() =>
-      expect(
-        screen.queryByText("Connected through the proxy in 10 ms."),
-      ).not.toBeInTheDocument(),
+      expect(rowText("github.com")).toContain("Not checked yet"),
     );
   });
 
@@ -586,48 +592,143 @@ describe("build network proxy", () => {
     render(<SettingsPanel {...baseProps()} />);
 
     testSpy.mockResolvedValue({ kind: "tunnelled", latencyMillis: null });
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
-    expect(
-      await screen.findByText(
-        "The proxy granted the tunnel, but www.gstatic.com did not answer through it.",
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
+    await waitFor(() =>
+      expect(rowText("www.gstatic.com")).toContain(
+        "granted the tunnel, but www.gstatic.com did not answer",
       ),
-    ).toBeInTheDocument();
+    );
 
     testSpy.mockResolvedValue({ kind: "tunnelled", latencyMillis: 214 });
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
-    expect(
-      await screen.findByText("Connected through the proxy in 214 ms."),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check all" }));
+    await waitFor(() =>
+      expect(rowText("www.gstatic.com")).toContain(
+        "Connected through the proxy in 214 ms",
+      ),
+    );
   });
 
-  it("measures whatever host the user points it at", async () => {
+  it("probes the address the user typed as one more row", async () => {
     vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
     const testSpy = vi
       .spyOn(bridge, "testNetworkProxy")
       .mockResolvedValue({ kind: "tunnelled", latencyMillis: 1900 });
     render(<SettingsPanel {...baseProps()} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Advanced" }));
+    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
     fireEvent.change(screen.getByLabelText("Test address"), {
-      target: { value: "registry.npmjs.org" },
+      target: { value: "registry.example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check all" }));
 
     await waitFor(() =>
       expect(testSpy).toHaveBeenCalledWith({
         proxy: "",
         noProxy: "",
-        testHost: "registry.npmjs.org",
+        testHost: "registry.example.com",
       }),
     );
-    // The card names the host it will reach, before the user clicks.
-    expect(
-      screen.getByText(
-        "Opens a tunnel through the proxy and requests registry.npmjs.org over it.",
+    await waitFor(() =>
+      expect(rowText("registry.example.com")).toContain(
+        "Connected through the proxy in 1900 ms",
       ),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText("Connected through the proxy in 1900 ms."),
-    ).toBeInTheDocument();
+    );
+  });
+
+  it("checks every known download host and reports each one separately", async () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({
+      proxy: "http://127.0.0.1:7890",
+    });
+    const testSpy = vi
+      .spyOn(bridge, "testNetworkProxy")
+      .mockImplementation(async (settings) =>
+        settings.testHost === "registry.npmjs.org"
+          ? { kind: "refused", status: 403 }
+          : { kind: "tunnelled", latencyMillis: 120 },
+      );
+    render(<SettingsPanel {...baseProps()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Check all" }));
+    await waitFor(() =>
+      expect(rowText("www.gstatic.com")).toContain(
+        "Connected through the proxy in 120 ms",
+      ),
+    );
+
+    // One host failing must not colour the others: a rule-based proxy can
+    // block a single destination while everything else works.
+    expect(rowText("registry.npmjs.org")).toContain(
+      "refused the tunnel (status 403)",
+    );
+    expect(rowText("objects.githubusercontent.com")).toContain(
+      "Connected through the proxy",
+    );
+    expect(rowText("files.pythonhosted.org")).toContain(
+      "Connected through the proxy",
+    );
+    // Every listed host is probed against the configured proxy, not against
+    // whatever happens to be in the test address field.
+    expect(testSpy).toHaveBeenCalledWith({
+      proxy: "http://127.0.0.1:7890",
+      noProxy: "",
+      testHost: "objects.githubusercontent.com",
+    });
+  });
+
+  it("tests one row without touching the others", async () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
+    const testSpy = vi
+      .spyOn(bridge, "testNetworkProxy")
+      .mockResolvedValue({ kind: "tunnelled", latencyMillis: 77 });
+    // An earlier test may have left calls on the same spy.
+    testSpy.mockClear();
+    render(<SettingsPanel {...baseProps()} />);
+
+    const rows = document.querySelectorAll(".proxy-detection-row");
+    const githubRow = [...rows].find((row) =>
+      row.textContent?.includes("github.com"),
+    );
+    fireEvent.click(within(githubRow as HTMLElement).getByRole("button"));
+
+    await waitFor(() =>
+      expect(rowText("github.com")).toContain(
+        "Connected through the proxy in 77 ms",
+      ),
+    );
+    // Pressing one row's button must not quietly test the rest, and must not
+    // write a hidden field somewhere else in the card.
+    expect(testSpy).toHaveBeenCalledTimes(1);
+    expect(testSpy).toHaveBeenCalledWith({
+      proxy: "",
+      noProxy: "",
+      testHost: "github.com",
+    });
+    expect(rowText("www.gstatic.com")).toContain("Not checked yet");
+  });
+
+  it("says a host is unchecked rather than failed before any sweep", () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
+    render(<SettingsPanel {...baseProps()} />);
+
+    expect(screen.getAllByText(/· Not checked yet/).length).toBe(6);
+  });
+
+  it("keeps what the user typed when the saved settings arrive late", async () => {
+    let release: (settings: NetworkProxySettings) => void = () => undefined;
+    vi.spyOn(bridge, "readNetworkProxy").mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    render(<SettingsPanel {...baseProps()} />);
+
+    fireEvent.change(screen.getByLabelText("Proxy address"), {
+      target: { value: "http://127.0.0.1:1080" },
+    });
+    release({ proxy: "http://127.0.0.1:7890" });
+
+    await waitFor(() =>
+      expect(proxyField().value).toBe("http://127.0.0.1:1080"),
+    );
   });
 });

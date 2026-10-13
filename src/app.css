@@ -3050,6 +3050,11 @@ button[aria-busy="true"] {
   font-size: var(--type-caption, var(--type-subtitle));
   font-style: normal;
 }
+/* Only a host that actually answered is worth emphasising; a pending or
+   refused row stays plain text. */
+.proxy-detection-detail em.is-success {
+  color: var(--accent);
+}
 .settings-card-workspace .secondary-button {
   min-height: var(--control-height);
   padding: 0 var(--control-padding-x);
