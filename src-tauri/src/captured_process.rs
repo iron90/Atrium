@@ -29,6 +29,7 @@ pub(crate) fn captured_command(program: impl AsRef<OsStr>) -> Command {
     }
     #[cfg(unix)]
     apply_login_path(&mut command);
+    crate::network_proxy::apply_to_command(&mut command);
     command
 }
 

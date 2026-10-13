@@ -181,6 +181,16 @@ export const en = {
   inspectorCard: "Project detail card",
   inspectorCardDescription:
     "Choose which sections appear in the project detail card.",
+  networkProxyCard: "Build network proxy",
+  networkProxyDescription:
+    "Atrium passes this address to Check, Build, and Run as HTTP_PROXY, HTTPS_PROXY, and ALL_PROXY. Tools such as curl, git, cargo, npm, and pip follow it automatically, and no project needs a hard-coded mirror. Leave it empty to use the environment Atrium was started with.",
+  networkProxyAddress: "Proxy address",
+  networkProxyBypass: "Never proxy these addresses",
+  networkProxyBypassHint:
+    "Local services stay off the proxy by default, so a project can keep talking to a development server on this machine.",
+  saveNetworkProxy: "Save proxy",
+  savingNetworkProxy: "Saving…",
+  networkProxySaved: "Saved. Commands started from now on use it.",
   versionCard: "Version",
   currentVersion: "Current version",
   checkForUpdates: "Check for updates",
@@ -471,6 +481,16 @@ export const zh: Record<keyof typeof en, string> = {
   languageDescription: "Atrium 导航和界面标签使用的语言。",
   inspectorCard: "项目详情卡片",
   inspectorCardDescription: "选择项目详情卡片中显示的内容区块。",
+  networkProxyCard: "构建网络代理",
+  networkProxyDescription:
+    "Atrium 会把这个地址以 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY 传给 Check、Build、Run。curl、git、cargo、npm、pip 等工具会自动遵循，项目里不需要硬编码镜像。留空则沿用启动 Atrium 时的环境。",
+  networkProxyAddress: "代理地址",
+  networkProxyBypass: "不走代理的地址",
+  networkProxyBypassHint:
+    "本地服务默认不走代理，项目仍可连接本机上的开发服务器。",
+  saveNetworkProxy: "保存代理",
+  savingNetworkProxy: "保存中…",
+  networkProxySaved: "已保存，之后启动的命令会使用它。",
   versionCard: "版本",
   currentVersion: "当前版本",
   checkForUpdates: "检查更新",

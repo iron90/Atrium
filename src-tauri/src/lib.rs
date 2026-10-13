@@ -12,6 +12,7 @@ mod manifest;
 mod manifest_projection;
 mod manifest_schema;
 mod model;
+mod network_proxy;
 mod os_open;
 mod process_tree;
 mod project_metadata;
@@ -44,6 +45,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(state::AppState::default())
+        .setup(|app| {
+            // Loaded before the first window appears so a command started in
+            // the first moments of the session already sees the proxy.
+            network_proxy::load(app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             workspace_commands::scan_workspace_command,
             workspace_commands::sync_workspace_roots_command,
@@ -61,7 +68,9 @@ pub fn run() {
             tool_commands::project::open_project_terminal_command,
             tool_commands::external::open_project_remote_command,
             tool_commands::external::open_web_profile_command,
-            tool_commands::external::open_release_page_command
+            tool_commands::external::open_release_page_command,
+            network_proxy::read_network_proxy_command,
+            network_proxy::save_network_proxy_command
         ])
         .build(tauri::generate_context!())
         .expect("error while building Atrium")

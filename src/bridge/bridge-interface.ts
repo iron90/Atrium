@@ -3,6 +3,7 @@ import type {
   CleanupResult,
   GitBranchOverview,
   GitChangeSummary,
+  NetworkProxySettings,
   ProfileAction,
   ProjectGuidanceReport,
   ProjectSnapshot,
@@ -51,6 +52,10 @@ export interface AtriumBridge {
   openProjectTerminal(projectPath: string): Promise<void>;
   openProjectRemote(remote: string): Promise<void>;
   openWebProfile(projectPath: string, profileId: string): Promise<void>;
+  readNetworkProxy(): Promise<NetworkProxySettings>;
+  saveNetworkProxy(
+    settings: NetworkProxySettings,
+  ): Promise<NetworkProxySettings>;
   getAppVersion(): Promise<string>;
   checkForAppUpdate(): Promise<AppUpdateInfo | null>;
   downloadAndInstallAppUpdate(

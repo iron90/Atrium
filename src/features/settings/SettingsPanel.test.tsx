@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bridge } from "../../bridge";
 import { SettingsPanel } from "./SettingsPanel";
@@ -311,5 +317,65 @@ describe("settings detail-card switches", () => {
 
     fireEvent.click(screen.getByRole("switch", { name: "Build profiles" }));
     expect(onToggleInspectorSection).toHaveBeenCalledWith("buildProfiles");
+  });
+});
+
+describe("build network proxy", () => {
+  const proxyField = () =>
+    screen.getByLabelText("Proxy address") as HTMLInputElement;
+
+  it("shows the stored address and saves a newly typed one", async () => {
+    const readSpy = vi
+      .spyOn(bridge, "readNetworkProxy")
+      .mockResolvedValue({ proxy: "http://127.0.0.1:7890" });
+    const saveSpy = vi
+      .spyOn(bridge, "saveNetworkProxy")
+      .mockImplementation(async (settings) => settings);
+    render(<SettingsPanel {...baseProps()} />);
+
+    await waitFor(() =>
+      expect(proxyField().value).toBe("http://127.0.0.1:7890"),
+    );
+
+    fireEvent.change(proxyField(), {
+      target: { value: "socks5://127.0.0.1:1080" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
+
+    await waitFor(() =>
+      expect(saveSpy).toHaveBeenCalledWith({
+        proxy: "socks5://127.0.0.1:1080",
+        noProxy: "",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("Saved. Commands started from now on use it."),
+      ).toBeTruthy(),
+    );
+
+    readSpy.mockRestore();
+    saveSpy.mockRestore();
+  });
+
+  it("reports a rejected address without clearing what the user typed", async () => {
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({});
+    const saveSpy = vi
+      .spyOn(bridge, "saveNetworkProxy")
+      .mockRejectedValue("A proxy address must be a valid absolute URL");
+    render(<SettingsPanel {...baseProps()} />);
+
+    await waitFor(() => expect(proxyField().value).toBe(""));
+    fireEvent.change(proxyField(), { target: { value: "127.0.0.1:7890" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save proxy" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("A proxy address must be a valid absolute URL"),
+      ).toBeTruthy(),
+    );
+    expect(proxyField().value).toBe("127.0.0.1:7890");
+
+    saveSpy.mockRestore();
   });
 });

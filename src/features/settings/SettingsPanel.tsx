@@ -7,6 +7,7 @@ import type { Language, TranslationKey } from "../../i18n";
 import { fill, formatTime, releaseNoteBlocks } from "../../shared/format";
 import type { ThemeId } from "./model";
 import type { AppUpdateController } from "./use-app-update";
+import { useNetworkProxy } from "./use-network-proxy";
 
 // Shown when no release metadata is available to hand the user a URL.
 const FALLBACK_RELEASE_URL = "https://github.com/iron90/Atrium/releases/latest";
@@ -78,6 +79,7 @@ export const SettingsPanel = memo(function SettingsPanel({
 }) {
   const { t } = useI18n();
   const { state: updateState } = appUpdate;
+  const networkProxy = useNetworkProxy();
   const noteBlocks =
     updateState.phase === "available" && updateState.info?.notes
       ? releaseNoteBlocks(updateState.info.notes, language)
@@ -293,6 +295,56 @@ export const SettingsPanel = memo(function SettingsPanel({
               {isScanning ? t("scanning") : t("scanWorkspace")}
             </button>
           </div>
+        </section>
+        <section className="settings-card">
+          <h3>{t("networkProxyCard")}</h3>
+          <p>{t("networkProxyDescription")}</p>
+          <label className="settings-control" htmlFor="settings-network-proxy">
+            <span>{t("networkProxyAddress")}</span>
+          </label>
+          <input
+            id="settings-network-proxy"
+            className="form-control"
+            value={networkProxy.proxy}
+            placeholder="http://127.0.0.1:7890"
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(event) => networkProxy.setProxy(event.target.value)}
+          />
+          <label
+            className="settings-control"
+            htmlFor="settings-network-no-proxy"
+          >
+            <span>{t("networkProxyBypass")}</span>
+          </label>
+          <input
+            id="settings-network-no-proxy"
+            className="form-control"
+            value={networkProxy.noProxy}
+            placeholder="localhost,127.0.0.1,::1"
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(event) => networkProxy.setNoProxy(event.target.value)}
+          />
+          <p className="settings-help">{t("networkProxyBypassHint")}</p>
+          <div className="settings-version-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={networkProxy.phase === "loading"}
+              onClick={networkProxy.save}
+            >
+              {networkProxy.phase === "saving"
+                ? t("savingNetworkProxy")
+                : t("saveNetworkProxy")}
+            </button>
+          </div>
+          {networkProxy.phase === "saved" ? (
+            <p className="settings-version-status">{t("networkProxySaved")}</p>
+          ) : null}
+          {networkProxy.error ? (
+            <p className="settings-version-status">{networkProxy.error}</p>
+          ) : null}
         </section>
         <section className="settings-card">
           <h3>{t("versionCard")}</h3>
