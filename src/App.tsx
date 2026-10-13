@@ -135,9 +135,12 @@ export default function App() {
   const handleRunFinished = useCallback(
     (finished: RunFinished) => {
       setRunHistoryRefreshToken((token) => token + 1);
+      // A successful install or build changes what the profile can produce,
+      // so the detail card is refreshed to show the new state.
       if (
         finished.status !== "succeeded" ||
-        finished.profileAction !== "build"
+        (finished.profileAction !== "build" &&
+          finished.profileAction !== "install")
       ) {
         return;
       }

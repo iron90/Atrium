@@ -8,6 +8,7 @@ mod git;
 mod git_commands;
 mod guidance;
 mod history;
+mod install_policy;
 mod manifest;
 mod manifest_projection;
 mod manifest_schema;

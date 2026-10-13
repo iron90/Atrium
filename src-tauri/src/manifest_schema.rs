@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-pub(crate) const CURRENT_SCHEMA: u32 = 2;
+pub(crate) const CURRENT_SCHEMA: u32 = 3;
 pub(crate) const LEGACY_SCHEMA: u32 = 1;
 
 pub(crate) fn is_supported_schema(schema: u32) -> bool {
@@ -63,6 +63,7 @@ pub(crate) struct ManifestVerificationBlocker {
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ManifestCommands {
+    pub(crate) install: Option<String>,
     pub(crate) check: Option<String>,
     pub(crate) build: Option<String>,
     pub(crate) run: Option<String>,
@@ -71,6 +72,7 @@ pub(crate) struct ManifestCommands {
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ManifestHostRequirements {
+    pub(crate) install: Option<Vec<String>>,
     pub(crate) check: Option<Vec<String>>,
     pub(crate) build: Option<Vec<String>>,
     pub(crate) run: Option<Vec<String>>,

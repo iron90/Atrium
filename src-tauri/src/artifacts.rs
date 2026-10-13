@@ -24,6 +24,7 @@ mod tests {
             label: "macOS · Local".to_string(),
             platform: facet.clone(),
             channel: facet,
+            install_command_id: None,
             run_command_id: None,
             check_command_id: None,
             build_command_id: Some("build".to_string()),

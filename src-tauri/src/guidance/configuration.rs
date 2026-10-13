@@ -75,6 +75,11 @@ fn binding_rules() -> String {
         .to_string()
 }
 
+fn install_rules() -> String {
+    "## Install command binding\n\nInstall restores the dependencies the other actions consume. It is an independent action with its own button, listed before Check and Build only because it comes first in the workflow. Nothing runs it automatically: pressing Build never installs, and Atrium never runs Install on the user's behalf.\n\n- Bind `install` to a command the project already owns that restores a clean dependency state from the project's lockfile. Atrium does not invent or wrap one.\n- It must not modify a lockfile. Use the project's frozen or clean-restore entry (`npm ci`, `uv sync --frozen`, a `cargo` restore), never a command that would rewrite dependency versions.\n- It must not install outside the project. No privilege escalation, no system or user-wide scope, no package-manager install that writes a shared location. Atrium reports a binding that does this and does not offer the button.\n- It must not open, install, or replace an application; that stays a separate, explicit user action.\n- Omit `install` when the project has no reliable entry. A build command that already restores its own dependencies does not need one.\n\nInstall has its own `host_requirements`, `verification`, and blockers like the other actions, except that its verification is a plain successful run on that host. Do not require a cold rebuild for Install: it exists to restore a cleared state, so clearing more state first would be self-contradictory.\n\nThese rules are framework-neutral. A framework command such as `uv sync` or `npm ci` is only an example when the repository actually uses that tool.\n\n"
+        .to_string()
+}
+
 fn host_verification_rules() -> String {
     "## Host requirements and verification\n\n`platform` is the target of the produced artifact. Keep the artifact target, compatible execution hosts, and verification evidence separate; do not infer either host requirement or verification from the target platform. `[build_profiles.host_requirements]` declares the hosts where an action may execute; it is the lower compatibility boundary, not proof that the action has passed. `[build_profiles.verification]` records hosts where the exact bound action has passed; it is the upper evidence boundary. Declare host requirements and verification independently for `check`, `build`, and `run` using only `macos`, `windows`, or `linux`, and update them whenever cross-compilation or toolchain support changes.\n\nFor every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:\n\n| Action | Required proof |\n| --- | --- |\n| `check` | The complete command finishes with exit code `0`. |\n| `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |\n| `run` | For a web profile, the service at `service_url` accepts a connection and opens in the browser. For every other profile, the primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |\n\nBuild proof covers the output directory, not the dependency cache. Before recording a host in `[build_profiles.verification.build]`, empty that profile's declared `[cleanup] build` entries and run the build command again, then confirm every declared artifact was produced by that second run. Removing only the final installer while leaving the compilation cache behind does not satisfy this: a build that never had to regenerate its output proves nothing about what Atrium's Clean button does to the project.\n\nDo not clear `[cleanup] cache` entries to prove Build. A dependency directory is restored by restoring dependencies, not by the build command, and clearing it turns the result into a statement about the network rather than about the project. Declare those directories under their real bucket and report a dependency restore the project cannot perform as a blocker, not as a Build failure.\n\nAdd a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
@@ -117,10 +122,11 @@ Add or update only the marked block below in the repository's `AGENTS.md`. Prese
 <!-- BEGIN ATRIUM MANAGED RULES -->
 Atrium guidance revision: {GUIDANCE_REVISION}
 
-{binding_rules}{host_verification_rules}{run_target_rules}{blocker_rules}{cleanup_rules}{sync_rules}{migration_rules}<!-- END ATRIUM MANAGED RULES -->
+{binding_rules}{install_rules}{host_verification_rules}{run_target_rules}{blocker_rules}{cleanup_rules}{sync_rules}{migration_rules}<!-- END ATRIUM MANAGED RULES -->
 
 "#,
         binding_rules = binding_rules(),
+        install_rules = install_rules(),
         host_verification_rules = host_verification_rules(),
         run_target_rules = run_target_rules(),
         blocker_rules = blocker_rules(),
@@ -169,6 +175,10 @@ channel = "<actual-channel-id>"
 artifacts = ["<relative generated file or directory>"]
 
 [build_profiles.commands]
+# Optional. Restores dependencies from the lockfile; must not modify it, must
+# not install outside the project, and never runs automatically before another
+# action. Omit when the project has no reliable entry.
+# install = "<existing command id or source>"
 # Project quality validation with a meaningful success/failure exit code.
 check = "<existing command id or source>"
 # Project build command that produces this profile's declared artifacts.
@@ -183,6 +193,7 @@ run = "<existing command id or source>"
 # values are the lower compatibility boundary. Preserve a required host even
 # when the current machine cannot test it.
 # [build_profiles.host_requirements]
+# install = ["macos", "windows", "linux"]
 # check = ["macos", "windows", "linux"]
 # build = ["windows"]
 # run = ["macos", "windows"]
@@ -192,6 +203,7 @@ run = "<existing command id or source>"
 # postcondition. A host omitted here is not automatically unsupported; it may
 # simply be waiting for verification on the matching machine.
 # [build_profiles.verification]
+# install = ["macos", "windows", "linux"]
 # check = ["macos", "windows", "linux"]
 # build = ["windows"]
 # run = ["windows"]
@@ -282,6 +294,10 @@ mod tests {
         assert!(rules.contains("update `.atrium/manifest.toml`"));
         assert!(rules.contains("primary local runtime entry"));
         assert!(rules.contains("framework-neutral"));
+        assert!(rules.contains("Nothing runs it automatically"));
+        assert!(rules.contains("must not modify a lockfile"));
+        assert!(rules.contains("must not install outside the project"));
+        assert!(rules.contains("Do not require a cold rebuild for Install"));
         assert!(rules.contains("installation is a separate, explicit user action"));
         assert!(rules.contains("[build_profiles.host_requirements]"));
         assert!(rules.contains(
@@ -322,6 +338,7 @@ mod tests {
 
         for heading in [
             "## Check / Build / Run command bindings",
+            "## Install command binding",
             "## Host requirements and verification",
             "## Run target rules",
             "## Validation blockers and completion",

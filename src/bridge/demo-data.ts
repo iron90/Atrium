@@ -32,7 +32,11 @@ const buildProfile = (
   commands: Partial<
     Pick<
       BuildProfile,
-      "checkCommandId" | "buildCommandId" | "runCommandId" | "serviceUrl"
+      | "installCommandId"
+      | "checkCommandId"
+      | "buildCommandId"
+      | "runCommandId"
+      | "serviceUrl"
     >
   >,
 ): BuildProfile => ({
@@ -40,16 +44,19 @@ const buildProfile = (
   label,
   platform,
   channel,
+  installCommandId: commands.installCommandId ?? null,
   checkCommandId: commands.checkCommandId ?? null,
   buildCommandId: commands.buildCommandId ?? null,
   runCommandId: commands.runCommandId ?? null,
   serviceUrl: commands.serviceUrl ?? null,
   hostRequirements: {
+    install: null,
     check: null,
     build: null,
     run: null,
   },
   verification: {
+    install: ["macos"],
     check: ["macos"],
     build: ["macos"],
     run: ["macos"],

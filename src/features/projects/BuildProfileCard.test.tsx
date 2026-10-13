@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BuildArtifact, BuildProfile, ProjectCommand } from "../../bridge";
 import { BuildProfileCard } from "./BuildProfileCard";
@@ -22,14 +28,17 @@ const profile: BuildProfile = {
   },
   checkCommandId: "npm:check",
   buildCommandId: "npm:build:macos",
+  installCommandId: "npm:ci",
   runCommandId: "npm:dev",
   serviceUrl: null,
   hostRequirements: {
+    install: null,
     check: null,
     build: null,
     run: null,
   },
   verification: {
+    install: ["macos"],
     check: ["macos"],
     build: ["macos"],
     run: ["macos"],
@@ -46,6 +55,16 @@ const profile: BuildProfile = {
 };
 
 const commands: ProjectCommand[] = [
+  {
+    id: "npm:ci",
+    kind: "install",
+    label: "Install",
+    program: "npm",
+    args: ["ci"],
+    workingDirectory: "/workspace/SnapCutout",
+    displayCommand: "npm ci",
+    source: "package.json#scripts.restore",
+  },
   {
     id: "npm:dev",
     kind: "run",
@@ -92,6 +111,7 @@ const availableArtifact: BuildArtifact = {
 const renderCard = (
   artifacts: BuildArtifact[] = [],
   profileOverride: BuildProfile = profile,
+  onRun = vi.fn(),
 ) =>
   render(
     <BuildProfileCard
@@ -100,7 +120,7 @@ const renderCard = (
       artifacts={artifacts}
       projectPath="/workspace/SnapCutout"
       canExecute
-      onRun={vi.fn()}
+      onRun={onRun}
       onOpenWebService={vi.fn()}
       onOpenArtifact={vi.fn()}
     />,
@@ -118,7 +138,7 @@ describe("build profile card", () => {
     ).toBe("macOS · Direct");
   });
 
-  it("orders profile actions as check, build, then run", () => {
+  it("orders profile actions as install, check, build, then run", () => {
     const { container } = renderCard([availableArtifact]);
 
     expect(
@@ -126,7 +146,33 @@ describe("build profile card", () => {
         .getAllByRole("button")
         .filter((button) => button.classList.contains("profile-action"))
         .map((button) => button.textContent),
-    ).toEqual(["Check", "Build", "Run"]);
+    ).toEqual(["Install", "Check", "Build", "Run"]);
+  });
+
+  it("offers install as its own button that never stands in for another action", () => {
+    const onRun = vi.fn();
+    renderCard([availableArtifact], profile, onRun);
+
+    // Install is independent: enabling or pressing it neither triggers
+    // install on its own nor is required before Check or Build.
+    const installButton = screen.getByRole("button", { name: "Install" });
+    expect(installButton).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Build" }));
+    expect(onRun).toHaveBeenCalledTimes(1);
+    expect(onRun.mock.calls[0][2]).toBe("build");
+
+    fireEvent.click(installButton);
+    expect(onRun).toHaveBeenCalledTimes(2);
+    expect(onRun.mock.calls[1][2]).toBe("install");
+  });
+
+  it("omits the install button when the project declares no install entry", () => {
+    renderCard([availableArtifact], { ...profile, installCommandId: null });
+
+    expect(
+      screen.queryByRole("button", { name: "Install" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check" })).toBeInTheDocument();
   });
 
   it("requires an available artifact before enabling run", () => {

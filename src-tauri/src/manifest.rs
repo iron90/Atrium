@@ -123,6 +123,25 @@ mod tests {
         }
     }
 
+    fn command_with_arguments(
+        id: &str,
+        source: &str,
+        kind: CommandKind,
+        program: &str,
+        args: &[&str],
+    ) -> ProjectCommand {
+        ProjectCommand {
+            id: id.to_string(),
+            kind,
+            label: id.to_string(),
+            program: program.to_string(),
+            args: args.iter().map(|arg| arg.to_string()).collect(),
+            working_directory: "/tmp/project".to_string(),
+            display_command: format!("{program} {}", args.join(" ")).trim().to_string(),
+            source: source.to_string(),
+        }
+    }
+
     #[test]
     fn reads_explicit_platform_channel_and_profile_bindings() {
         let root = std::env::temp_dir().join(format!("atrium-manifest-{}", std::process::id()));
@@ -130,7 +149,7 @@ mod tests {
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "macos"
@@ -180,7 +199,7 @@ build = ["dist"]
             result.build_profiles[0].run_command_id.as_deref(),
             Some("npm:dev")
         );
-        assert_eq!(result.manifest_schema, Some(2));
+        assert_eq!(result.manifest_schema, Some(3));
         assert_eq!(result.cleanup.cache, vec![".cache"]);
         assert_eq!(result.cleanup.build, vec!["dist"]);
         assert_eq!(
@@ -204,7 +223,7 @@ build = ["dist"]
             protocol.manifest_status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(protocol.schema, Some(2));
+        assert_eq!(protocol.schema, Some(3));
         assert!(!protocol.needs_update);
         assert_eq!(
             protocol
@@ -257,7 +276,7 @@ build = ["dist"]
         fs::create_dir_all(root.join(".atrium")).expect("create manifest directory");
         fs::write(
             root.join(".atrium/manifest.toml"),
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "windows"
@@ -304,7 +323,7 @@ check = ["macos"]
             result.configuration.status,
             ProjectConfigurationStatus::Configured
         );
-        assert_eq!(result.manifest_schema, Some(2));
+        assert_eq!(result.manifest_schema, Some(3));
         let protocol = build_protocol_status(
             &result,
             &IconConformance {
@@ -1009,10 +1028,157 @@ build = "package.json#scripts.build"
     }
 
     #[test]
+    fn reads_an_install_binding_from_the_current_schema() {
+        let root = write_manifest(
+            "install-binding",
+            r#"schema = 3
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "local"
+label = "Local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.commands]
+install = "package.json#scripts.ci"
+check = "package.json#scripts.test"
+build = "package.json#scripts.build"
+
+[build_profiles.host_requirements]
+install = ["macos"]
+
+[build_profiles.verification]
+install = ["macos"]
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[
+                command_with_arguments(
+                    "npm:ci",
+                    "package.json#scripts.ci",
+                    CommandKind::Install,
+                    "npm",
+                    &["ci"],
+                ),
+                command("npm:test", "package.json#scripts.test", CommandKind::Check),
+                command(
+                    "npm:build",
+                    "package.json#scripts.build",
+                    CommandKind::Build,
+                ),
+            ],
+        );
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(
+            result.build_profiles[0].install_command_id.as_deref(),
+            Some("npm:ci")
+        );
+        assert!(result.build_profiles[0].issues.is_empty());
+        // Install leads the action order and is verified here, so it must not
+        // be reported as pending on this host.
+        assert!(!result.build_profiles[0]
+            .unverified_actions
+            .contains(&CommandKind::Install));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn refuses_an_install_binding_that_leaves_the_project() {
+        let root = write_manifest(
+            "install-scope",
+            r#"schema = 3
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "local"
+label = "Local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.commands]
+install = "package.json#scripts.global"
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[command_with_arguments(
+                "npm:global",
+                "package.json#scripts.global",
+                CommandKind::Install,
+                "npm",
+                &["install", "--global", "left-pad"],
+            )],
+        );
+
+        let profile_issue = result.build_profiles[0]
+            .issues
+            .iter()
+            .chain(result.configuration.issues.iter())
+            .find(|issue| issue.contains("outside the project"))
+            .expect("the system-wide install is reported");
+        assert!(profile_issue.contains("--global"));
+        assert_eq!(result.build_profiles[0].install_command_id, None);
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn a_legacy_schema_manifest_cannot_declare_install() {
+        let root = write_manifest(
+            "install-legacy",
+            r#"schema = 2
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "local"
+label = "Local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.commands]
+install = "package.json#scripts.ci"
+"#,
+        );
+        let result = scan_project_configuration(&root, &[]);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
     fn web_profile_run_is_the_service_url() {
         let root = write_manifest(
             "web-service",
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "web"
@@ -1064,7 +1230,7 @@ check = "package.json#scripts.test"
     fn rejects_links_and_a_web_profile_that_binds_a_run_command() {
         let root = write_manifest(
             "web-links",
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "web"
@@ -1121,7 +1287,7 @@ url = "http://127.0.0.1:3000"
     fn rejects_a_service_url_on_a_desktop_profile() {
         let root = write_manifest(
             "desktop-service",
-            r#"schema = 2
+            r#"schema = 3
 
 [[platforms]]
 id = "macos"

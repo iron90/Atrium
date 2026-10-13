@@ -117,14 +117,17 @@ channel = "apple-app-store"
 artifacts = ["src-tauri/target/release/bundle/macos"]
 
 [build_profiles.commands]
+install = "package.json#scripts.ci"
 build = "package.json#scripts.build:macos:appstore"
 run = "package.json#scripts.dev"
 
 [build_profiles.host_requirements]
+install = ["macos", "windows"]
 build = ["macos"]
 run = ["macos"]
 
 [build_profiles.verification]
+install = ["macos"]
 build = ["macos"]
 run = ["macos"]
 ```
@@ -137,6 +140,20 @@ with its own build implementation.
 
 The command roles are framework-neutral, in workflow order:
 
+- `install` is an independent action that restores the dependencies the other
+  actions consume. It has its own button and is listed first only because it
+  comes first in the workflow. Nothing runs it automatically: pressing Build
+  never installs, and Atrium never runs Install on the user's behalf. Bind it
+  to a command the project already owns that restores a clean dependency state
+  from its lockfile; it must not modify a lockfile, must not install outside
+  the project, must not escalate privileges or use a system or user-wide
+  scope, and must not open, install, or replace an application. A binding that
+  does any of those is reported as an issue and no button is offered. Omit
+  `install` when the project has no reliable entry; a build command that
+  already restores its own dependencies does not need one. Install has its own
+  `host_requirements`, `verification`, and blockers, but its verification is a
+  plain successful run: requiring a cold rebuild would contradict the purpose
+  of an action that exists to restore a cleared state.
 - `check` points to an existing project quality-validation command, such as
   tests, lint, type checking, or another command with a meaningful exit result.
 - `build` points to the existing command that produces the profile's declared

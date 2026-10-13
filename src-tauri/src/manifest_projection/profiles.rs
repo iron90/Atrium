@@ -48,6 +48,8 @@ pub(super) fn parse_build_profiles(
             &mut profile_issues,
         );
         let bindings = manifest_profile.commands.unwrap_or_default();
+        let install_command_id =
+            resolve_install_reference(bindings.install.as_deref(), commands, &mut profile_issues);
         let check_command_id =
             resolve_command_reference(bindings.check.as_deref(), commands, &mut profile_issues);
         let build_command_id =
@@ -70,6 +72,7 @@ pub(super) fn parse_build_profiles(
                 .verification_blockers
                 .as_deref()
                 .unwrap_or(&[]),
+            &install_command_id,
             &check_command_id,
             &build_command_id,
             service_url.is_some() || run_command_id.is_some(),
@@ -97,6 +100,7 @@ pub(super) fn parse_build_profiles(
         };
 
         let action_is_bound = |action: CommandKind| match action {
+            CommandKind::Install => install_command_id.is_some(),
             CommandKind::Check => check_command_id.is_some(),
             CommandKind::Build => build_command_id.is_some(),
             CommandKind::Run => service_url.is_some() || run_command_id.is_some(),
@@ -135,6 +139,7 @@ pub(super) fn parse_build_profiles(
             label,
             platform,
             channel,
+            install_command_id,
             check_command_id,
             build_command_id,
             run_command_id,
@@ -225,7 +230,7 @@ fn dedupe_verified_equivalents(build_profiles: &mut [BuildProfile], issues: &mut
     }
 }
 
-fn bound_actions(profile: &BuildProfile) -> [(CommandKind, Option<String>); 3] {
+fn bound_actions(profile: &BuildProfile) -> [(CommandKind, Option<String>); 4] {
     CommandKind::PROFILE_ACTIONS.map(|action| (action, profile.action_binding_key(&action)))
 }
 
@@ -261,8 +266,28 @@ fn resolve_service_url(
     None
 }
 
+/// Install is the only bound action that writes outside a build output
+/// directory, so a binding that escalates privileges or installs system-wide
+/// is reported as an issue instead of being offered as a button.
+fn resolve_install_reference(
+    reference: Option<&str>,
+    commands: &[ProjectCommand],
+    issues: &mut Vec<String>,
+) -> Option<String> {
+    let command_id = resolve_command_reference(reference, commands, issues)?;
+    let command = commands
+        .iter()
+        .find(|command| Some(command.id.as_str()) == Some(command_id.as_str()))?;
+    if let Err(error) = crate::install_policy::project_local(command) {
+        issues.push(error);
+        return None;
+    }
+    Some(command_id)
+}
+
 fn action_label(action: CommandKind) -> &'static str {
     match action {
+        CommandKind::Install => "install",
         CommandKind::Check => "check",
         CommandKind::Build => "build",
         CommandKind::Run => "run",
@@ -273,6 +298,7 @@ fn action_label(action: CommandKind) -> &'static str {
 #[allow(clippy::too_many_arguments)]
 fn parse_verification_blockers(
     declarations: &[ManifestVerificationBlocker],
+    install_command_id: &Option<String>,
     check_command_id: &Option<String>,
     build_command_id: &Option<String>,
     run_bound: bool,
@@ -285,18 +311,20 @@ fn parse_verification_blockers(
     let mut seen = HashSet::new();
     for declaration in declarations {
         let action = match declaration.action.trim().to_ascii_lowercase().as_str() {
+            "install" => CommandKind::Install,
             "check" => CommandKind::Check,
             "build" => CommandKind::Build,
             "run" => CommandKind::Run,
             _ => {
                 issues.push(format!(
-                    "Build profile {profile_id} verification blocker uses unsupported action {}; expected check, build, or run.",
+                    "Build profile {profile_id} verification blocker uses unsupported action {}; expected install, check, build, or run.",
                     declaration.action
                 ));
                 continue;
             }
         };
         let command_bound = match action {
+            CommandKind::Install => install_command_id.is_some(),
             CommandKind::Check => check_command_id.is_some(),
             CommandKind::Build => build_command_id.is_some(),
             CommandKind::Run => run_bound,
@@ -374,6 +402,7 @@ fn parse_host_requirements(
     };
 
     BuildHostRequirements {
+        install: parse_host_list(declaration.install, profile_id, "install", issues),
         check: parse_host_list(declaration.check, profile_id, "check", issues),
         build: parse_host_list(declaration.build, profile_id, "build", issues),
         run: parse_host_list(declaration.run, profile_id, "run", issues),

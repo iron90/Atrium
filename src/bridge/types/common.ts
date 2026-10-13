@@ -1,5 +1,5 @@
 export type FacetSource = "detected" | "configured";
-export type CommandKind = "check" | "build" | "run" | "other";
+export type CommandKind = "install" | "check" | "build" | "run" | "other";
 export type ProfileAction = Exclude<CommandKind, "other">;
 export type ProjectConfigurationStatus = "configured" | "missing" | "invalid";
 

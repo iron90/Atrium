@@ -81,7 +81,7 @@ When the user asks to tag or publish a release:
   whose message is missing either language section.
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
-Atrium guidance revision: 6
+Atrium guidance revision: 7
 
 ## Check / Build / Run command bindings
 
@@ -92,6 +92,20 @@ Each build profile must reference commands already owned by the project:
 - `run`: for platform `web`, do not bind a project command. Declare `service_url` as the absolute `http://` or `https://` address of the site, without embedded credentials. Run checks that this service is accepting connections and then opens it in the browser. Atrium does not start the server. If the project has no such address, omit `service_url`. For every other platform, `run` is a command that starts or provides the primary target. First identify the profile's primary local runtime entry and its existing local entry point. A desktop target should use its own desktop launcher; CLI, game, and mobile targets should use their existing local run entry. Do not bind only a subordinate service, such as a frontend server required by a desktop shell. If no reliable entry exists, omit `run` instead of guessing.
 
 These rules are framework-neutral. A framework command such as `tauri dev` is only an example when the repository actually uses Tauri. Atrium does not invent or wrap project commands.
+
+## Install command binding
+
+Install restores the dependencies the other actions consume. It is an independent action with its own button, listed before Check and Build only because it comes first in the workflow. Nothing runs it automatically: pressing Build never installs, and Atrium never runs Install on the user's behalf.
+
+- Bind `install` to a command the project already owns that restores a clean dependency state from the project's lockfile. Atrium does not invent or wrap one.
+- It must not modify a lockfile. Use the project's frozen or clean-restore entry (`npm ci`, `uv sync --frozen`, a `cargo` restore), never a command that would rewrite dependency versions.
+- It must not install outside the project. No privilege escalation, no system or user-wide scope, no package-manager install that writes a shared location. Atrium reports a binding that does this and does not offer the button.
+- It must not open, install, or replace an application; that stays a separate, explicit user action.
+- Omit `install` when the project has no reliable entry. A build command that already restores its own dependencies does not need one.
+
+Install has its own `host_requirements`, `verification`, and blockers like the other actions, except that its verification is a plain successful run on that host. Do not require a cold rebuild for Install: it exists to restore a cleared state, so clearing more state first would be self-contradictory.
+
+These rules are framework-neutral. A framework command such as `uv sync` or `npm ci` is only an example when the repository actually uses that tool.
 
 ## Host requirements and verification
 

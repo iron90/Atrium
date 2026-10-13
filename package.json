@@ -20,6 +20,7 @@
     "build": "tsc && vite build",
     "build:macos": "tauri build --bundles app,dmg",
     "build:windows": "tauri build --bundles msi,nsis",
+    "restore": "npm ci",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -1,4 +1,4 @@
-schema = 2
+schema = 3
 
 [identity]
 icon = "src-tauri/icons/icon.png"
@@ -30,6 +30,7 @@ artifacts = [
 ]
 
 [build_profiles.commands]
+install = "package.json#scripts.restore"
 check = "package.json#scripts.quality"
 build = "package.json#scripts.build:macos"
 run = "package.json#scripts.dev"
@@ -37,6 +38,7 @@ run = "package.json#scripts.dev"
 # Lower compatibility boundary. CI exercises the quality gate on all three
 # hosts; the macOS bundle and the desktop run entry only apply on macOS.
 [build_profiles.host_requirements]
+install = ["macos", "windows", "linux"]
 check = ["macos", "windows", "linux"]
 build = ["macos"]
 run = ["macos"]
@@ -46,6 +48,7 @@ run = ["macos"]
 # declared artifacts produced during that run; run: desktop target started
 # with devUrl readiness/smoke 200).
 [build_profiles.verification]
+install = ["macos"]
 check = ["macos"]
 build = ["macos"]
 run = ["macos"]
@@ -61,11 +64,13 @@ artifacts = [
 ]
 
 [build_profiles.commands]
+install = "package.json#scripts.restore"
 check = "package.json#scripts.quality"
 build = "package.json#scripts.build:windows"
 run = "package.json#scripts.dev"
 
 [build_profiles.host_requirements]
+install = ["macos", "windows", "linux"]
 check = ["macos", "windows", "linux"]
 build = ["windows"]
 run = ["windows"]

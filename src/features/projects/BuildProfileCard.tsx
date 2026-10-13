@@ -157,11 +157,7 @@ export function BuildProfileCard({
                   : undefined
               }
             >
-              {action === "run"
-                ? t("run")
-                : action === "check"
-                  ? t("check")
-                  : t("build")}
+              {t(action)}
             </button>
           );
           return runBlockedUntilBuild ? (

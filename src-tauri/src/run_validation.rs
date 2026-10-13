@@ -159,6 +159,7 @@ fn resolve_profile(
 
 fn format_command_kind(kind: &CommandKind) -> &'static str {
     match kind {
+        CommandKind::Install => "install",
         CommandKind::Check => "check",
         CommandKind::Build => "build",
         CommandKind::Run => "run",
@@ -227,12 +228,14 @@ mod tests {
             label: id.to_string(),
             platform: facet(current.as_str()),
             channel: facet("local"),
+            install_command_id: None,
             run_command_id: run_command_id.map(str::to_string),
             check_command_id: None,
             build_command_id: None,
             service_url: None,
             host_requirements: BuildHostRequirements::default(),
             verification: BuildHostRequirements {
+                install: None,
                 run: Some(vec![current]),
                 check: None,
                 build: None,
@@ -451,6 +454,7 @@ mod tests {
         let current = HostOs::current().expect("supported host");
         let mut profile = profile("macos-local", Some("run-dev"));
         profile.host_requirements = BuildHostRequirements {
+            install: None,
             run: Some(vec![other_host()]),
             check: None,
             build: None,
@@ -480,6 +484,7 @@ mod tests {
         let current = HostOs::current().expect("supported host");
         let mut profile = profile("macos-local", Some("run-dev"));
         profile.verification = BuildHostRequirements {
+            install: None,
             run: Some(vec![other_host()]),
             check: None,
             build: None,
