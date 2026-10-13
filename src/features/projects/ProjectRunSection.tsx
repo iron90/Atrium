@@ -4,6 +4,7 @@ import { useI18n } from "../../i18n";
 import { fill } from "../../shared/format";
 import { ScrollArea } from "../../shared/ScrollArea";
 import { InspectorSection } from "./InspectorPrimitives";
+import { looksLikeMissingDependency } from "./missing-dependency-signature";
 
 export function ProjectRunSection({
   lastFinishedRun,
@@ -57,6 +58,11 @@ export function ProjectRunSection({
     : run.stdout
       ? run.stdout
       : run.stderr || t("waitingForOutput");
+  // Labelled as a guess on purpose: the output alone cannot tell a missing
+  // dependency apart from a project error that mentions one.
+  const suspectMissingDependency =
+    run.status === "failed" &&
+    looksLikeMissingDependency(`${consoleText}\n${run.stderr}`);
 
   return (
     <InspectorSection title={t("lastRunResult")}>
@@ -71,6 +77,9 @@ export function ProjectRunSection({
       <ScrollArea viewportComponent="pre" viewportClassName="output-console">
         {consoleText}
       </ScrollArea>
+      {suspectMissingDependency ? (
+        <p className="profile-issue">{t("dependencyHintGuess")}</p>
+      ) : null}
     </InspectorSection>
   );
 }

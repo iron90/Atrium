@@ -81,7 +81,7 @@ When the user asks to tag or publish a release:
   whose message is missing either language section.
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
-Atrium guidance revision: 7
+Atrium guidance revision: 8
 
 ## Check / Build / Run command bindings
 
@@ -102,6 +102,8 @@ Install restores the dependencies the other actions consume. It is an independen
 - It must not install outside the project. No privilege escalation, no system or user-wide scope, no package-manager install that writes a shared location. Atrium reports a binding that does this and does not offer the button.
 - It must not open, install, or replace an application; that stays a separate, explicit user action.
 - Omit `install` when the project has no reliable entry. A build command that already restores its own dependencies does not need one.
+
+Declare `[dependencies] paths` when a project has directories whose absence makes a bound action unable to start, such as `node_modules` or a virtual environment. Atrium checks only the declared paths, disables the affected buttons while one is absent, and names the missing directory so the user can run Install. Install itself is never blocked by this declaration, because it is the action that repairs it. Do not declare a path Atrium cannot see from the project root, and do not pad the list with directories whose absence a command tolerates.
 
 Install has its own `host_requirements`, `verification`, and blockers like the other actions, except that its verification is a plain successful run on that host. Do not require a cold rebuild for Install: it exists to restore a cleared state, so clearing more state first would be self-contradictory.
 

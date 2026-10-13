@@ -5,6 +5,7 @@ import type {
   ProjectConfigurationStatus,
 } from "./common";
 import type { GitSnapshot } from "./git";
+import type { DependencyDeclaration } from "./storage";
 import type {
   GuidanceStatus,
   IconConformance,
@@ -99,6 +100,8 @@ export interface ProjectSnapshot {
   buildProfiles: BuildProfile[];
   configuration: ProjectConfiguration;
   commands: ProjectCommand[];
+  dependencies: DependencyDeclaration;
+  missingDependencies: string[];
   cleanup: CleanupDeclaration;
   storage: ProjectStorage | null;
   artifacts: BuildArtifact[] | null;

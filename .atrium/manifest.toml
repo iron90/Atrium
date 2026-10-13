@@ -3,6 +3,11 @@ schema = 3
 [identity]
 icon = "src-tauri/icons/icon.png"
 
+# Atrium checks these before a bound action starts and names the missing one
+# instead of letting the command fail. node_modules comes back through Install.
+[dependencies]
+paths = ["node_modules"]
+
 [cleanup]
 cache = ["node_modules/.vite"]
 build = ["dist", "src-tauri/target"]

@@ -4,8 +4,8 @@ use crate::conformance::MANIFEST_PATH;
 use crate::manifest_projection;
 use crate::manifest_schema;
 use crate::model::{
-    BuildProfile, CleanupDeclaration, Facet, ProjectCommand, ProjectConfiguration,
-    ProjectConfigurationStatus, ProjectTools,
+    BuildProfile, CleanupDeclaration, DependencyDeclaration, Facet, ProjectCommand,
+    ProjectConfiguration, ProjectConfigurationStatus, ProjectTools,
 };
 use crate::project_path::read_project_text_file;
 
@@ -14,6 +14,7 @@ pub struct ProjectConfigurationInspection {
     pub platforms: Vec<Facet>,
     pub channels: Vec<Facet>,
     pub build_profiles: Vec<BuildProfile>,
+    pub dependencies: DependencyDeclaration,
     pub cleanup: CleanupDeclaration,
     pub tools: ProjectTools,
     pub manifest_status: ProjectConfigurationStatus,
@@ -87,6 +88,7 @@ fn unavailable_configuration(
         platforms: Vec::new(),
         channels: Vec::new(),
         build_profiles: Vec::new(),
+        dependencies: DependencyDeclaration::default(),
         cleanup: CleanupDeclaration::default(),
         tools: ProjectTools::default(),
         manifest_status: status,

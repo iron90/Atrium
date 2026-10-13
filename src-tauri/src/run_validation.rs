@@ -93,6 +93,23 @@ fn resolve_profile(
             profile.issues.join(" ")
         ));
     }
+    // Install is the action that repairs a missing dependency, so it is never
+    // gated on one. Every other bound action needs the declared directories to
+    // be present, otherwise the command is going to fail for a reason the
+    // board can name before it starts.
+    if *action != CommandKind::Install && !project.missing_dependencies.is_empty() {
+        return Err(format!(
+            "Build profile {} action {} needs the declared dependency {}, which is not present. Run Install first.",
+            project
+                .build_profiles
+                .iter()
+                .find(|candidate| candidate.id == profile_id)
+                .map(|candidate| candidate.id.as_str())
+                .unwrap_or(profile_id),
+            format_command_kind(action),
+            project.missing_dependencies.join(", ")
+        ));
+    }
     if !profile.action_supported_on_current_host(action) {
         if matches!(action, CommandKind::Run) {
             if let Some(target) = HostOs::parse(&profile.platform.key) {
@@ -171,10 +188,10 @@ fn format_command_kind(kind: &CommandKind) -> &'static str {
 mod tests {
     use super::{resolve_profile, validate_run_id};
     use crate::model::{
-        BuildHostRequirements, BuildProfile, CleanupDeclaration, CommandKind, Facet, FacetSource,
-        GuidanceStatus, HostOs, IconConformance, IconConformanceStatus, ProjectCommand,
-        ProjectConfiguration, ProjectConfigurationStatus, ProjectSnapshot, ProjectTools,
-        ProtocolStatus,
+        BuildHostRequirements, BuildProfile, CleanupDeclaration, CommandKind,
+        DependencyDeclaration, Facet, FacetSource, GuidanceStatus, HostOs, IconConformance,
+        IconConformanceStatus, ProjectCommand, ProjectConfiguration, ProjectConfigurationStatus,
+        ProjectSnapshot, ProjectTools, ProtocolStatus,
     };
 
     #[test]
@@ -289,6 +306,8 @@ mod tests {
                 issues: vec![],
             },
             commands: vec![],
+            dependencies: DependencyDeclaration::default(),
+            missing_dependencies: Vec::new(),
             cleanup: CleanupDeclaration::default(),
             storage: None,
             artifacts: None,
@@ -446,6 +465,46 @@ mod tests {
                 "Run for windows-local requires a matching {} host.",
                 other_host().as_str()
             )
+        );
+    }
+
+    #[test]
+    fn blocks_a_bound_action_when_a_declared_dependency_is_missing() {
+        let mut profile = profile("macos-local", None);
+        profile.check_command_id = Some("npm-test".to_string());
+        let mut project = configured_project(vec![profile]);
+        project.missing_dependencies = vec!["node_modules".to_string()];
+
+        let error = resolve_profile(
+            &project,
+            &command("npm-test"),
+            Some("macos-local"),
+            Some(&CommandKind::Check),
+        )
+        .expect_err("a missing dependency blocks the action");
+
+        assert!(error.contains("node_modules"), "{error}");
+        assert!(error.contains("Run Install first"), "{error}");
+    }
+
+    #[test]
+    fn install_stays_available_while_a_dependency_is_missing() {
+        let mut profile = profile("macos-local", None);
+        let current = HostOs::current().expect("supported host");
+        profile.install_command_id = Some("npm-ci".to_string());
+        profile.verification.install = Some(vec![current]);
+        let mut project = configured_project(vec![profile]);
+        project.missing_dependencies = vec!["node_modules".to_string()];
+
+        assert!(
+            resolve_profile(
+                &project,
+                &command("npm-ci"),
+                Some("macos-local"),
+                Some(&CommandKind::Install),
+            )
+            .is_ok(),
+            "install is the action that repairs the missing dependency"
         );
     }
 

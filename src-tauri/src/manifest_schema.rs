@@ -16,6 +16,7 @@ pub(crate) struct ManifestDocument {
     pub(crate) platforms: Option<Vec<ManifestFacet>>,
     pub(crate) channels: Option<Vec<ManifestFacet>>,
     pub(crate) build_profiles: Option<Vec<ManifestBuildProfile>>,
+    pub(crate) dependencies: Option<ManifestDependencies>,
     pub(crate) cleanup: Option<ManifestCleanup>,
     pub(crate) tools: Option<ManifestTools>,
     pub(crate) links: Option<Vec<ManifestLink>>,
@@ -76,6 +77,15 @@ pub(crate) struct ManifestHostRequirements {
     pub(crate) check: Option<Vec<String>>,
     pub(crate) build: Option<Vec<String>>,
     pub(crate) run: Option<Vec<String>>,
+}
+
+/// Project-relative directories that must exist for the project's bound
+/// actions to have a chance of running. Atrium checks presence and disables
+/// the button; it never guesses the list from a framework.
+#[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ManifestDependencies {
+    pub(crate) paths: Option<Vec<String>>,
 }
 
 #[derive(Debug, Default, Deserialize)]

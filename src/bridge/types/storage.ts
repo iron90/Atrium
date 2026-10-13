@@ -1,5 +1,11 @@
 export type StorageEntryKind = "cache" | "build";
 
+// Project-declared dependency directories, plus the ones currently absent.
+// Atrium checks presence; it never infers the list from a framework.
+export interface DependencyDeclaration {
+  paths: string[];
+}
+
 export interface StorageEntry {
   relativePath: string;
   kind: StorageEntryKind;

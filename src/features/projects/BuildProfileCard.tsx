@@ -27,6 +27,7 @@ export function BuildProfileCard({
   projectPath,
   activeRun,
   canExecute,
+  missingDependencies = [],
   onRun,
   onOpenWebService,
   onOpenArtifact,
@@ -37,6 +38,7 @@ export function BuildProfileCard({
   projectPath: string;
   activeRun?: RunStarted;
   canExecute: boolean;
+  missingDependencies?: string[];
   onRun: (
     command: ProjectCommand,
     profileId?: string,
@@ -51,6 +53,9 @@ export function BuildProfileCard({
 }) {
   const { language, t } = useI18n();
   const actions = profileActionOrder;
+  // Declared by the project, absent on disk: a bound action other than
+  // Install cannot start, so the button explains what to run instead.
+  const dependenciesMissing = missingDependencies.length > 0;
   const profileReady = canExecute && profile.issues.length === 0;
   const profileArtifacts = artifacts.filter(
     (artifact) => artifact.profileId === profile.id,
@@ -114,12 +119,15 @@ export function BuildProfileCard({
                       .join(" / "),
                   )
                 : t("profileHostUnsupported");
+          const actionBlockedByDependencies =
+            dependenciesMissing && action !== "install";
           const actionDisabled =
             Boolean(activeRun) ||
             !profileReady ||
             runBlockedUntilBuild ||
             hostMismatch ||
-            hostVerificationPending;
+            hostVerificationPending ||
+            actionBlockedByDependencies;
           const actionTitle = !canExecute
             ? t("configurationMissing")
             : profile.issues.length
@@ -130,9 +138,17 @@ export function BuildProfileCard({
                   ? blockerMessage(action, blocker.reason)
                   : hostVerificationPending
                     ? profileVerificationMessage
-                    : runBlockedUntilBuild
-                      ? t("buildRequiredToRun")
-                      : (serviceUrl ?? command?.displayCommand ?? "");
+                    : actionBlockedByDependencies
+                      ? fill(
+                          profile.installCommandId
+                            ? t("dependenciesMissingWithInstall")
+                            : t("dependenciesMissing"),
+                          "path",
+                          missingDependencies.join(", "),
+                        )
+                      : runBlockedUntilBuild
+                        ? t("buildRequiredToRun")
+                        : (serviceUrl ?? command?.displayCommand ?? "");
           // Disabled buttons expose their reason through the card-level
           // visible issue text (below), linked via aria-describedby.
           const issueHintId = `profile-issue-${profile.id.replace(/\s+/g, "-")}`;
@@ -152,6 +168,7 @@ export function BuildProfileCard({
                 hostMismatch ||
                 blocker ||
                 hostVerificationPending ||
+                actionBlockedByDependencies ||
                 profile.issues.length
                   ? issueHintId
                   : undefined
@@ -248,6 +265,19 @@ export function BuildProfileCard({
           id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
         >
           {profileVerificationMessage}
+        </span>
+      ) : dependenciesMissing ? (
+        <span
+          className="profile-issue"
+          id={`profile-issue-${profile.id.replace(/\s+/g, "-")}`}
+        >
+          {fill(
+            profile.installCommandId
+              ? t("dependenciesMissingWithInstall")
+              : t("dependenciesMissing"),
+            "path",
+            missingDependencies.join(", "),
+          )}
         </span>
       ) : null}
     </div>

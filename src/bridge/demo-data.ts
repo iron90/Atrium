@@ -136,10 +136,19 @@ const demoIconConformance = (
 
 const demoProjectDefaults: Pick<
   ProjectSnapshot,
-  "tools" | "cleanup" | "storage" | "artifacts" | "guidance" | "modifiedAt"
+  | "tools"
+  | "cleanup"
+  | "dependencies"
+  | "missingDependencies"
+  | "storage"
+  | "artifacts"
+  | "guidance"
+  | "modifiedAt"
 > = {
   tools: { terminal: null },
   cleanup: { cache: [], build: [] },
+  dependencies: { paths: [] },
+  missingDependencies: [],
   storage: null,
   artifacts: null,
   guidance: { revision: 1, needsUpdate: false, needsSync: false },

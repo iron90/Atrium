@@ -76,7 +76,9 @@ fn binding_rules() -> String {
 }
 
 fn install_rules() -> String {
-    "## Install command binding\n\nInstall restores the dependencies the other actions consume. It is an independent action with its own button, listed before Check and Build only because it comes first in the workflow. Nothing runs it automatically: pressing Build never installs, and Atrium never runs Install on the user's behalf.\n\n- Bind `install` to a command the project already owns that restores a clean dependency state from the project's lockfile. Atrium does not invent or wrap one.\n- It must not modify a lockfile. Use the project's frozen or clean-restore entry (`npm ci`, `uv sync --frozen`, a `cargo` restore), never a command that would rewrite dependency versions.\n- It must not install outside the project. No privilege escalation, no system or user-wide scope, no package-manager install that writes a shared location. Atrium reports a binding that does this and does not offer the button.\n- It must not open, install, or replace an application; that stays a separate, explicit user action.\n- Omit `install` when the project has no reliable entry. A build command that already restores its own dependencies does not need one.\n\nInstall has its own `host_requirements`, `verification`, and blockers like the other actions, except that its verification is a plain successful run on that host. Do not require a cold rebuild for Install: it exists to restore a cleared state, so clearing more state first would be self-contradictory.\n\nThese rules are framework-neutral. A framework command such as `uv sync` or `npm ci` is only an example when the repository actually uses that tool.\n\n"
+    "## Install command binding\n\nInstall restores the dependencies the other actions consume. It is an independent action with its own button, listed before Check and Build only because it comes first in the workflow. Nothing runs it automatically: pressing Build never installs, and Atrium never runs Install on the user's behalf.\n\n- Bind `install` to a command the project already owns that restores a clean dependency state from the project's lockfile. Atrium does not invent or wrap one.\n- It must not modify a lockfile. Use the project's frozen or clean-restore entry (`npm ci`, `uv sync --frozen`, a `cargo` restore), never a command that would rewrite dependency versions.\n- It must not install outside the project. No privilege escalation, no system or user-wide scope, no package-manager install that writes a shared location. Atrium reports a binding that does this and does not offer the button.\n- It must not open, install, or replace an application; that stays a separate, explicit user action.\n- Omit `install` when the project has no reliable entry. A build command that already restores its own dependencies does not need one.\n\nDeclare `[dependencies] paths` when a project has directories whose absence makes a bound action unable to start, such as `node_modules` or a virtual environment. Atrium checks only the declared paths, disables the affected buttons while one is absent, and names the missing directory so the user can run Install. Install itself is never blocked by this declaration, because it is the action that repairs it. Do not declare a path Atrium cannot see from the project root, and do not pad the list with directories whose absence a command tolerates.
+
+Install has its own `host_requirements`, `verification`, and blockers like the other actions, except that its verification is a plain successful run on that host. Do not require a cold rebuild for Install: it exists to restore a cleared state, so clearing more state first would be self-contradictory.\n\nThese rules are framework-neutral. A framework command such as `uv sync` or `npm ci` is only an example when the repository actually uses that tool.\n\n"
         .to_string()
 }
 
@@ -216,7 +218,11 @@ run = "<existing command id or source>"
 # host = "macos"
 # reason = "<the exact missing dependency, e.g. a signing identity or SDK>"
 
-# Installation is not represented by this profile; it is a separate explicit action.
+# Directories whose absence makes a bound action unable to start. Atrium
+# disables the affected buttons while one is missing and names it. Do not
+# guess the list from a framework; declare what this project actually needs.
+# [dependencies]
+# paths = ["node_modules", ".venv"]
 
 # Every declared directory is a promise: a command the project owns can bring
 # it back. Put a directory in the bucket that matches what restores it.
@@ -298,6 +304,8 @@ mod tests {
         assert!(rules.contains("must not modify a lockfile"));
         assert!(rules.contains("must not install outside the project"));
         assert!(rules.contains("Do not require a cold rebuild for Install"));
+        assert!(rules.contains("Declare `[dependencies] paths`"));
+        assert!(rules.contains("never blocked by this declaration"));
         assert!(rules.contains("installation is a separate, explicit user action"));
         assert!(rules.contains("[build_profiles.host_requirements]"));
         assert!(rules.contains(

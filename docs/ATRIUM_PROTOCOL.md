@@ -29,6 +29,10 @@ build_profiles → [[build_profiles]] and existing command references
 cleanup        → [cleanup].cache and [cleanup].build
 ```
 
+`[dependencies]` is read alongside them but is not a capability of its own: it
+is an optional precondition list, and an invalid entry is reported as a
+configuration issue.
+
 Each capability has one of these deterministic statuses:
 
 - `configured`: the declared data passed validation;
@@ -346,6 +350,28 @@ confirms, and then allows any discovered command to run independently of
 profile binding. A command may therefore appear in both places when the
 project uses the same native command for a formal profile action and for its
 repository command list.
+
+## Declared dependency paths
+
+A project may declare the directories whose absence makes its bound actions
+unable to start:
+
+```toml
+[dependencies]
+paths = ["node_modules", ".venv"]
+```
+
+Atrium checks only the declared paths. While one of them is absent, Check,
+Build, and Run are disabled and the reason names the missing directory, so the
+user can run Install instead of watching a command fail for an unnamed reason.
+Install itself is never blocked by this declaration, because Install is the
+action that repairs it. The native run boundary rejects the same cases, so the
+precondition holds even when a command is dispatched outside the board.
+
+Atrium does not infer these paths from a framework or a lockfile: a project
+that declares none keeps every button enabled, and a project should declare
+only what it actually needs. A path must be relative, stay inside the project,
+and must not target `.git` or `.atrium`.
 
 ## Cleanup declarations
 

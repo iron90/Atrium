@@ -1,4 +1,5 @@
 mod cleanup;
+mod dependencies;
 mod facets;
 mod links;
 mod path_policy;
@@ -32,6 +33,7 @@ pub(crate) fn project(
     );
     let platform_map = facets::facets_by_key(&platforms);
     let channel_map = facets::facets_by_key(&channels);
+    let dependencies = dependencies::parse_dependencies(document.dependencies, &mut issues);
     let cleanup_issue_start = issues.len();
     let cleanup = cleanup::parse_cleanup(document.cleanup, &mut issues);
     let cleanup_issues = issues[cleanup_issue_start..].to_vec();
@@ -69,6 +71,7 @@ pub(crate) fn project(
         platforms,
         channels,
         build_profiles,
+        dependencies,
         cleanup,
         tools,
         manifest_status: ProjectConfigurationStatus::Configured,

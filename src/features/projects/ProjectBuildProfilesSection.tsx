@@ -65,6 +65,7 @@ export function ProjectBuildProfilesSection({
                 projectPath={project.path}
                 activeRun={activeRun}
                 canExecute={canExecuteProfiles}
+                missingDependencies={project.missingDependencies}
                 onRun={onRun}
                 onOpenWebService={(profileId) =>
                   onOpenWebService(project.path, profileId)

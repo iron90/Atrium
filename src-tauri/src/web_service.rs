@@ -141,9 +141,10 @@ pub(crate) fn ensure_service_accepting(url: &str) -> Result<(), String> {
 mod tests {
     use super::{ensure_service_accepting, resolve_web_service_url};
     use crate::model::{
-        BuildHostRequirements, BuildProfile, CleanupDeclaration, Facet, FacetSource,
-        GuidanceStatus, HostOs, IconConformance, IconConformanceStatus, ProjectConfiguration,
-        ProjectConfigurationStatus, ProjectSnapshot, ProjectTools, ProtocolStatus,
+        BuildHostRequirements, BuildProfile, CleanupDeclaration, DependencyDeclaration, Facet,
+        FacetSource, GuidanceStatus, HostOs, IconConformance, IconConformanceStatus,
+        ProjectConfiguration, ProjectConfigurationStatus, ProjectSnapshot, ProjectTools,
+        ProtocolStatus,
     };
     use std::net::TcpListener;
 
@@ -224,6 +225,8 @@ mod tests {
                 issues: vec![],
             },
             commands: vec![],
+            dependencies: DependencyDeclaration::default(),
+            missing_dependencies: Vec::new(),
             cleanup: CleanupDeclaration::default(),
             storage: None,
             artifacts: None,

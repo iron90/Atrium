@@ -8,12 +8,26 @@ use crate::conformance::inspect_icon;
 use crate::git::read_git_snapshot;
 use crate::guidance::inspect_guidance_status;
 use crate::manifest::scan_project_configuration;
-use crate::model::ProjectSnapshot;
+use crate::model::{DependencyDeclaration, ProjectSnapshot};
 use crate::project_metadata::{read_project_description, read_project_name};
 use crate::project_path::canonical_project_root;
 use crate::protocol::build_protocol_status;
 use crate::storage::inspect_project_storage;
 use crate::time::now_millis;
+
+/// Observed absence, not a declared fact: the manifest says which directories
+/// the project's actions need, and the filesystem says which of them are not
+/// there right now.
+fn missing_dependency_paths(root: &Path, dependencies: &DependencyDeclaration) -> Vec<String> {
+    dependencies
+        .paths
+        .iter()
+        .filter(|relative| {
+            !crate::project_path::project_entry_exists(root, Path::new(relative)).unwrap_or(false)
+        })
+        .cloned()
+        .collect()
+}
 
 pub fn scan_project(project_path: &Path) -> Option<ProjectSnapshot> {
     scan_project_with_storage(project_path, false)
@@ -67,6 +81,8 @@ pub fn scan_project_with_storage(
         build_profiles,
         configuration: configuration.configuration,
         commands,
+        missing_dependencies: missing_dependency_paths(&path, &configuration.dependencies),
+        dependencies: configuration.dependencies,
         cleanup: configuration.cleanup,
         storage,
         artifacts,

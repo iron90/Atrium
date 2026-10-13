@@ -112,6 +112,7 @@ const renderCard = (
   artifacts: BuildArtifact[] = [],
   profileOverride: BuildProfile = profile,
   onRun = vi.fn(),
+  missingDependencies: string[] = [],
 ) =>
   render(
     <BuildProfileCard
@@ -120,6 +121,7 @@ const renderCard = (
       artifacts={artifacts}
       projectPath="/workspace/SnapCutout"
       canExecute
+      missingDependencies={missingDependencies}
       onRun={onRun}
       onOpenWebService={vi.fn()}
       onOpenArtifact={vi.fn()}
@@ -173,6 +175,45 @@ describe("build profile card", () => {
       screen.queryByRole("button", { name: "Install" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Check" })).toBeInTheDocument();
+  });
+
+  it("disables bound actions and points at install when a declared dependency is absent", () => {
+    renderCard([availableArtifact], profile, vi.fn(), ["node_modules"]);
+
+    const buildButton = screen.getByRole("button", { name: "Build" });
+    expect(buildButton).toBeDisabled();
+    expect(buildButton).toHaveAttribute(
+      "title",
+      "This project needs node_modules, which is not present. Run Install first.",
+    );
+    // Install is the action that repairs it, so it stays available.
+    expect(screen.getByRole("button", { name: "Install" })).toBeEnabled();
+  });
+
+  it("names the missing dependency without promising install when none is declared", () => {
+    renderCard(
+      [availableArtifact],
+      { ...profile, installCommandId: null },
+      vi.fn(),
+      [".venv"],
+    );
+
+    const checkButton = screen.getByRole("button", { name: "Check" });
+    expect(checkButton).toBeDisabled();
+    expect(checkButton).toHaveAttribute(
+      "title",
+      "This project needs .venv, which is not present, and declares no Install command.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Install" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("leaves actions alone when the project declares no dependency paths", () => {
+    renderCard([availableArtifact], profile, vi.fn(), []);
+
+    expect(screen.getByRole("button", { name: "Check" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Build" })).toBeEnabled();
   });
 
   it("requires an available artifact before enabling run", () => {

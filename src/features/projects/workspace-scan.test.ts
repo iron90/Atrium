@@ -41,6 +41,8 @@ const snapshot = (rootPath: string, projectId: string): WorkspaceSnapshot => ({
         issues: [],
       },
       commands: [],
+      dependencies: { paths: [] },
+      missingDependencies: [],
       cleanup: { cache: [], build: [] },
       storage: null,
       artifacts: null,

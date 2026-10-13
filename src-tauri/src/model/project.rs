@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     git::GitSnapshot,
     protocol::{GuidanceStatus, IconConformance, ProtocolStatus},
-    storage::{BuildArtifact, CleanupDeclaration, ProjectStorage},
+    storage::{BuildArtifact, CleanupDeclaration, DependencyDeclaration, ProjectStorage},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,6 +34,11 @@ pub struct ProjectSnapshot {
     pub build_profiles: Vec<BuildProfile>,
     pub configuration: ProjectConfiguration,
     pub commands: Vec<ProjectCommand>,
+    /// Declared dependency directories, with the ones currently absent. The
+    /// absence is observed state, not a declared fact, so it is reported next
+    /// to the declaration instead of inside it.
+    pub dependencies: DependencyDeclaration,
+    pub missing_dependencies: Vec<String>,
     pub cleanup: CleanupDeclaration,
     pub storage: Option<ProjectStorage>,
     pub artifacts: Option<Vec<BuildArtifact>>,

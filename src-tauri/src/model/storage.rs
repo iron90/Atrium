@@ -1,5 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+/// Project-declared dependency directories. Atrium checks that they exist
+/// before a bound action starts so a missing dependency is reported as such
+/// instead of as an arbitrary command failure.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DependencyDeclaration {
+    pub paths: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct CleanupDeclaration {

@@ -232,6 +232,12 @@ export const en = {
   syncStatus: "Sync",
   gitNotFound: "Git not found",
   gitStatusUnavailable: "Git status unavailable",
+  dependencyHintGuess:
+    "This looks like a missing dependency, but it is only a guess. Running Install may fix it.",
+  dependenciesMissingWithInstall:
+    "This project needs {path}, which is not present. Run Install first.",
+  dependenciesMissing:
+    "This project needs {path}, which is not present, and declares no Install command.",
   install: "Install",
   check: "Check",
   build: "Build",
@@ -531,6 +537,12 @@ export const zh: Record<keyof typeof en, string> = {
   syncStatus: "同步状态",
   gitNotFound: "未找到 Git",
   gitStatusUnavailable: "Git 状态不可用",
+  dependencyHintGuess:
+    "这次失败看起来像依赖缺失，但这只是推测。执行安装依赖可能解决问题。",
+  dependenciesMissingWithInstall:
+    "该项目需要 {path}，当前不存在。请先执行安装依赖。",
+  dependenciesMissing:
+    "该项目需要 {path}，当前不存在，且没有声明安装依赖的命令。",
   install: "安装依赖",
   check: "检查",
   build: "构建",
