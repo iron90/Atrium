@@ -218,7 +218,9 @@ action-specific:
 - `build` must finish with exit code `0` and create every required declared
   artifact during that run; each artifact must exist, be non-empty, and have
   the expected path and type. A stale artifact or an intermediate successful
-  sub-step is not evidence.
+  sub-step is not evidence. The evidence must also come from a clean rebuild:
+  empty the profile's `[cleanup] build` entries first, so the run regenerates
+  its own output instead of reusing it.
 
 The target platform, target triple, runner name, installed executable, CI
 configuration, or a command that merely reaches its first step does not prove
@@ -332,15 +334,39 @@ repository command list.
 
 Cache and build cleanup is also project-owned. Atrium does not infer cleanup
 directories from a framework name or delete a conventional directory merely
-because it exists. The project development Agent decides which project
-directories are safe to regenerate and may declare dependency or vendor
-subdirectories when that is the correct project-specific choice:
+because it exists. The bucket a directory is declared in follows from what
+actually restores it, not from what it is called:
 
 ```toml
 [cleanup]
 cache = ["node_modules/.cache", ".turbo"]
 build = ["dist", "src-tauri/target"]
 ```
+
+`build` holds the directories the bound build command regenerates by itself: the
+build toolchain's whole default output directory including its profile and
+target-triple children, generated bundles, and packaging output. `cache` holds
+the directories only a dependency restore or a project run brings back: package
+and tool caches, vendored dependency trees, and lockfile-driven install
+directories. A nested dependency cache such as `node_modules/.vite` belongs in
+`cache` once that restoration has been verified for the project.
+
+Every declared directory is a promise that a command the project owns can bring
+it back. A directory the project cannot restore must not be declared: Atrium
+would then be deleting state nothing rebuilds, and Clean would leave the project
+worse than before. Directories that grow across builds must be declared even
+when no build profile references them.
+
+Because Clean removes exactly the declared entries, Build verification has to
+prove the same round trip. Before a host is recorded in
+`[build_profiles.verification.build]`, the bound build command must run again
+from an emptied `[cleanup] build` directory and produce every declared artifact
+by itself. Deleting only the final installer while leaving the compilation
+cache proves nothing about what Clean does. Dependency directories are not
+cleared to prove Build: they come back through dependency restoration rather
+than through the build command, so clearing them would measure the network
+instead of the project. Report an unrestorable dependency restore as a
+verification blocker rather than as a Build failure.
 
 Paths must be relative to the repository and must not contain `..`. At
 execution time, Atrium resolves each declared path and refuses anything that

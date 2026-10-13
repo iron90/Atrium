@@ -81,8 +81,7 @@ When the user asks to tag or publish a release:
   whose message is missing either language section.
 
 <!-- BEGIN ATRIUM MANAGED RULES -->
-
-Atrium guidance revision: 5
+Atrium guidance revision: 6
 
 ## Check / Build / Run command bindings
 
@@ -100,11 +99,15 @@ These rules are framework-neutral. A framework command such as `tauri dev` is on
 
 For every profile action and candidate host, inspect the actual program, args, working directory, expanded scripts, SDKs, and toolchain. If the current host is not listed in `host_requirements`, do not run the action, do not call it a failure, and do not remove its command binding; record the mismatch as deferred verification. When the current host matches, run the exact project command and use these postconditions as proof:
 
-| Action  | Required proof                                                                                                                                                                                                                         |
-| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check` | The complete command finishes with exit code `0`.                                                                                                                                                                                      |
-| `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count.        |
-| `run`   | For a web profile, the service at `service_url` accepts a connection and opens in the browser. For every other profile, the primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |
+| Action | Required proof |
+| --- | --- |
+| `check` | The complete command finishes with exit code `0`. |
+| `build` | The complete command finishes with exit code `0` and produces every required declared artifact during that run; each artifact must exist, be non-empty, and have the expected path/type. Pre-existing stale files do not count. |
+| `run` | For a web profile, the service at `service_url` accepts a connection and opens in the browser. For every other profile, the primary target starts and passes an available readiness or smoke check; process spawn alone is not enough. |
+
+Build proof covers the output directory, not the dependency cache. Before recording a host in `[build_profiles.verification.build]`, empty that profile's declared `[cleanup] build` entries and run the build command again, then confirm every declared artifact was produced by that second run. Removing only the final installer while leaving the compilation cache behind does not satisfy this: a build that never had to regenerate its output proves nothing about what Atrium's Clean button does to the project.
+
+Do not clear `[cleanup] cache` entries to prove Build. A dependency directory is restored by restoring dependencies, not by the build command, and clearing it turns the result into a statement about the network rather than about the project. Declare those directories under their real bucket and report a dependency restore the project cannot perform as a blocker, not as a Build failure.
 
 Add a host to `verification` only after complete verification succeeds. Do not add a host after a failure or missing dependency. Do not delete `host_requirements` or the command solely because the current environment is unavailable. Do not remove a compatible host merely because it cannot be tested on the current machine. Do not treat the target platform, target triple, runner name, an installed executable, CI configuration, an intermediate log, or a successful sub-step as proof. Cross-compilation is supported only when the complete toolchain is present on that host and the exact command produces and verifies the target artifact; the presence of `cargo-xwin`, `cross`, or a target triple is not evidence. Remove a command only when no real project-owned entry exists. Omit an action's host field only when the command has actually been established to be host-independent; omission must not mean “not checked”.
 
@@ -134,7 +137,14 @@ Choose the project's real quality gate before running `check`. Do not replace a 
 
 ## Cleanup declarations
 
-Cleanup declarations are project-owned, and they are expected to be complete. Declare every project-relative directory that grows across builds or tool runs and can be fully regenerated afterwards by the project's own commands: build output directories, package-manager and tool caches, and generated bundles. The everyday incremental build output is usually the largest consumer, so declare the build toolchain's whole default output directory including profile or target subdirectories — for example a Rust `target` directory with its `debug`, `release`, and target-triple children — not only the directories referenced by build profiles. Verify before declaring that the project's own commands regenerate the content and that no manual, credential, or user state lives inside. Dependency or vendor subdirectories are valid once that project-specific verification has been made; a nested dependency cache such as `node_modules/.vite` may be declared after it. Do not leave a regenerable directory undeclared just because no build profile references it.
+Every declared directory is a promise: after Atrium removes it, a command the project owns must be able to bring it back. Choose the bucket from what actually restores the directory, not from what the directory is called.
+
+- `[cleanup] build` holds the directories the bound build command regenerates by itself: the build toolchain's whole default output directory including its profile and target-triple children, generated bundles, and packaging output.
+- `[cleanup] cache` holds the directories only a dependency restore or a project run brings back: package-manager and tool caches, vendored dependency trees, and lockfile-driven install directories.
+
+A nested dependency cache such as `node_modules/.vite` belongs in `cache` once that project-specific restoration has been verified. Declare every project-relative directory that grows across builds or tool runs, not only the directories referenced by build profiles, and verify before declaring that the project's own commands regenerate the content and that no manual, credential, or user state lives inside.
+
+Do not declare a directory the project cannot restore. Atrium would then be deleting state nothing the project owns can rebuild, and Clean would leave the project worse than before. Leave it out, and say so in the report.
 
 Atrium only enforces that cleanup paths are relative, stay inside the project at execution time, do not traverse symbolic links outside it, and do not target `.git` or `.atrium`; it does not maintain a universal denylist of project directories. Duplicate or nested declarations are rejected only so storage metrics and cleanup targets remain deterministic.
 
