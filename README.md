@@ -30,7 +30,7 @@ Selecting a project opens the project detail card, top to bottom:
 - **Atrium protocol** — capability status read from `.atrium/manifest.toml`, plus one-click guidance files and a copyable prompt for the project's development agent.
 - **Declared context** — the platforms and channels the project declares.
 - **Storage** — project size and cleanable entries with per-entry selection; cleanup only ever touches directories the manifest declares.
-- **Build profiles** — the project's own Check / Build / Run bindings, with inspection of the build artifacts each profile explicitly declares. A web profile's Run checks that its declared service is accepting connections and then opens it.
+- **Build profiles** — the project's own Install / Check / Build / Run bindings, with inspection of the build artifacts each profile explicitly declares. Install is an independent action that restores dependencies and never runs on its own; Check, Build, and Run are disabled while a project-declared dependency directory is missing. A web profile's Run checks that its declared service is accepting connections and then opens it.
 - **Discovered repository commands** — commands found in the repository itself, shown only after explicit confirmation.
 - **Live output** — start a bound action and watch its output and final result here.
 - **Persistent run history** — finished runs are recorded locally with project, profile, platform, channel, and Git context; logs stay openable and copyable.

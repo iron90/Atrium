@@ -16,6 +16,13 @@ The manifest is integration metadata owned by Atrium. It does not replace or
 override `package.json`, `Cargo.toml`, `pubspec.yaml`, Unity project settings,
 or any framework's build and release configuration.
 
+Schema 3 adds the optional `commands.install` binding, `install` entries in
+`host_requirements` and `verification`, and the `[dependencies]` precondition
+list. A manifest that stays on schema 2 keeps working unchanged: it simply has
+no Install button and no dependency precondition, and the board reports it as
+needing an update. Migrating means raising `schema` to 3 and, if the project
+has the commands for it, declaring the new fields.
+
 ## Capability status
 
 Atrium evaluates the manifest and the project icon declaration into four

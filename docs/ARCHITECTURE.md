@@ -100,7 +100,7 @@ React UI
        │  ├─ types/common   Base types for facets, commands, and configuration state
        │  ├─ types/project  Project and workspace DTOs
        │  ├─ types/protocol Protocol and icon DTOs
-       │  ├─ types/storage  Storage, artifact, and cleanup DTOs
+       │  ├─ types/storage  Storage, artifact, dependency, and cleanup DTOs
        │  ├─ types/git      Git DTOs
        │  └─ types/run      Run event and result DTOs
        ├─ fake-bridge       Preview adapter compatibility facade
@@ -152,6 +152,7 @@ Rust native core
   │  ├─ facets              Platform/channel declarations
   │  ├─ profiles            Build profiles and command bindings
   │  ├─ cleanup             Cleanup directory declarations
+  │  ├─ dependencies        Declared dependency directory declarations
   │  ├─ links               Optional terminal declaration
   │  └─ path_policy         Manifest-relative path and protected path rules
   ├─ protocol               Protocol capability status evaluation
@@ -176,6 +177,8 @@ Rust native core
   │  ├─ output              stdout/stderr reads, event forwarding, and output summaries
   │  └─ outcome             Pure policy mapping from process results to run status
   ├─ state                  Concurrent run control and application state
+  ├─ network_proxy          Host proxy settings and child-process environment injection
+  ├─ install_policy         Project-local boundary for the bound Install command
   └─ history                Run history and logs in the application data directory
 ```
 
@@ -224,6 +227,8 @@ ProjectSnapshot
   buildProfiles: BuildProfile[]
   configuration: ProjectConfiguration
   commands: ProjectCommand[]
+  dependencies: DependencyDeclaration   # project-declared directories
+  missingDependencies: string[]         # observed absence, recomputed at each scan
   cleanup: CleanupDeclaration
   storage: ProjectStorage?       # loaded by detail inspection; includes isComplete
   artifacts: BuildArtifact[]?    # loaded by detail inspection; metrics include isComplete
