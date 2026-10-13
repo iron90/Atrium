@@ -709,6 +709,21 @@ mod tests {
             .collect()
     }
 
+    // Windows resolves a variable name without regard to case, and the
+    // process builder keeps its environment in one case-insensitive table, so
+    // writing both spellings leaves a single entry under the spelling that was
+    // written first. The child reads the variable under either name; here only
+    // one of them can be observed.
+    fn carries(environment: &[(String, String)], variable: &str, value: &str) -> bool {
+        if cfg!(windows) {
+            environment.iter().any(|(written, carried)| {
+                written.eq_ignore_ascii_case(variable) && carried == value
+            })
+        } else {
+            environment.contains(&(variable.to_string(), value.to_string()))
+        }
+    }
+
     #[test]
     fn a_configured_proxy_reaches_a_child_in_both_cases() {
         let settings = NetworkProxySettings {
@@ -728,7 +743,7 @@ mod tests {
             "all_proxy",
         ] {
             assert!(
-                environment.contains(&(variable.to_string(), "http://127.0.0.1:7890".to_string())),
+                carries(&environment, variable, "http://127.0.0.1:7890"),
                 "{variable} should carry the configured proxy"
             );
         }
@@ -742,8 +757,8 @@ mod tests {
             test_host: None,
         });
 
-        assert!(environment.contains(&("NO_PROXY".to_string(), DEFAULT_NO_PROXY.to_string())));
-        assert!(environment.contains(&("no_proxy".to_string(), DEFAULT_NO_PROXY.to_string())));
+        assert!(carries(&environment, "NO_PROXY", DEFAULT_NO_PROXY));
+        assert!(carries(&environment, "no_proxy", DEFAULT_NO_PROXY));
     }
 
     #[test]
