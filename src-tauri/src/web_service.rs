@@ -3,7 +3,8 @@ use std::time::Duration;
 
 use url::Url;
 
-use crate::model::{CommandKind, HostOs, ProjectConfigurationStatus, ProjectSnapshot};
+use crate::model::{CommandKind, ProjectConfigurationStatus, ProjectSnapshot};
+use crate::run_validation::ensure_action_allowed;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -19,13 +20,6 @@ pub(crate) fn resolve_web_service_url(
         .iter()
         .find(|profile| profile.id == profile_id)
         .ok_or_else(|| "Build profile is not declared in the scanned project".to_string())?;
-    if !profile.issues.is_empty() {
-        return Err(format!(
-            "Build profile {} is invalid: {}",
-            profile.id,
-            profile.issues.join(" ")
-        ));
-    }
     if profile.platform.key != "web" {
         return Err(format!(
             "Build profile {} is not a web profile.",
@@ -38,61 +32,12 @@ pub(crate) fn resolve_web_service_url(
             profile.id
         ));
     };
-    let action = CommandKind::Run;
-    if !profile.action_supported_on_current_host(&action) {
-        let allowed_hosts = profile
-            .host_requirements_for_action(&action)
-            .map(|hosts| {
-                hosts
-                    .iter()
-                    .map(|host| host.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            })
-            .unwrap_or_else(|| "an unknown host".to_string());
-        let current_host = HostOs::current()
-            .map(HostOs::as_str)
-            .unwrap_or(std::env::consts::OS);
-        return Err(format!(
-            "Build profile {} action run is unavailable on the current host ({current_host}); required hosts: {allowed_hosts}.",
-            profile.id
-        ));
-    }
-    let binding = profile.action_binding_key(&action);
-    let verified_equivalently = project.build_profiles.iter().any(|candidate| {
-        candidate.action_binding_key(&action) == binding
-            && candidate.action_verified_on_current_host(&action)
-    });
-    if !profile.action_verified_on_current_host(&action) && !verified_equivalently {
-        let verified_hosts = profile
-            .verification
-            .for_action(&action)
-            .map(|hosts| {
-                hosts
-                    .iter()
-                    .map(|host| host.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            })
-            .unwrap_or_else(|| "none".to_string());
-        let current_host = HostOs::current()
-            .map(HostOs::as_str)
-            .unwrap_or(std::env::consts::OS);
-        return Err(format!(
-            "Build profile {} action run has not been verified on the current host ({current_host}); verified hosts: {verified_hosts}.",
-            profile.id
-        ));
-    }
-    if let Some(blocked) = profile
-        .blocked_actions
-        .iter()
-        .find(|blocked| blocked.action == action)
-    {
-        return Err(format!(
-            "Build profile {} action run is blocked: {}",
-            profile.id, blocked.reason
-        ));
-    }
+    // The same gate the command path uses: a web profile's Run is a bound
+    // action like any other, so it is blocked by the same declared blocker,
+    // needs the same declared directories, and carries the same host and
+    // verification requirements. Checking only some of them here would let Run
+    // start through the native path while the board shows it as unavailable.
+    ensure_action_allowed(project, profile, &CommandKind::Run)?;
     Ok(url)
 }
 
@@ -140,11 +85,12 @@ pub(crate) fn ensure_service_accepting(url: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{ensure_service_accepting, resolve_web_service_url};
+    use crate::model::CommandKind;
     use crate::model::{
-        BuildHostRequirements, BuildProfile, CleanupDeclaration, DependencyDeclaration, Facet,
-        FacetSource, GuidanceStatus, HostOs, IconConformance, IconConformanceStatus,
-        ProjectConfiguration, ProjectConfigurationStatus, ProjectSnapshot, ProjectTools,
-        ProtocolStatus,
+        BlockedAction, BuildHostRequirements, BuildProfile, CleanupDeclaration,
+        DependencyDeclaration, Facet, FacetSource, GuidanceStatus, HostOs, IconConformance,
+        IconConformanceStatus, ProjectConfiguration, ProjectConfigurationStatus, ProjectSnapshot,
+        ProjectTools, ProtocolStatus,
     };
     use std::net::TcpListener;
 
@@ -245,6 +191,37 @@ mod tests {
             resolve_web_service_url(&project, "web-direct").expect("service url"),
             "http://127.0.0.1:3000"
         );
+    }
+
+    #[test]
+    fn a_declared_blocker_is_reported_instead_of_a_missing_verification() {
+        // The project wrote down why Run cannot run. Saying "not verified"
+        // instead hides the only sentence that helps.
+        let mut blocked_profile = profile("web-direct", Some("http://127.0.0.1:3000"), true);
+        blocked_profile.blocked_actions = vec![BlockedAction {
+            action: CommandKind::Run,
+            reason: "The deployment key is not on this machine.".to_string(),
+        }];
+        let project = project(vec![blocked_profile]);
+
+        let error = resolve_web_service_url(&project, "web-direct").expect_err("blocked");
+
+        assert!(error.contains("not on this machine"), "{error}");
+    }
+
+    #[test]
+    fn a_missing_declared_dependency_stops_a_web_run_like_any_other_action() {
+        let mut blocked = project(vec![profile(
+            "web-direct",
+            Some("http://127.0.0.1:3000"),
+            true,
+        )]);
+        blocked.missing_dependencies = vec!["node_modules".to_string()];
+
+        let error = resolve_web_service_url(&blocked, "web-direct").expect_err("dependency");
+
+        assert!(error.contains("node_modules"), "{error}");
+        assert!(error.contains("Run Install first"), "{error}");
     }
 
     #[test]

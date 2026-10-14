@@ -25,7 +25,7 @@ pub(super) fn parse_dependencies(
                 ));
                 return None;
             };
-            if !seen.insert(normalized.to_lowercase()) {
+            if !seen.insert(super::path_comparison_key(&normalized)) {
                 issues.push(format!("Duplicate dependency path: {normalized}."));
                 return None;
             }

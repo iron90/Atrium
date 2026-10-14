@@ -1,7 +1,8 @@
 use std::path::Path;
 
 use crate::model::{
-    CommandKind, Facet, HostOs, ProjectCommand, ProjectConfigurationStatus, ProjectSnapshot,
+    BuildProfile, CommandKind, Facet, HostOs, ProjectCommand, ProjectConfigurationStatus,
+    ProjectSnapshot,
 };
 use crate::scanner::scan_project;
 
@@ -86,11 +87,47 @@ fn resolve_profile(
             profile.id
         ));
     }
+    ensure_action_allowed(project, profile, action)?;
+
+    Ok((
+        Some(profile.platform.clone()),
+        Some(profile.channel.clone()),
+    ))
+}
+
+/// Every gate a bound action passes before Atrium starts it, ordered so the
+/// reason the user reads is the one that explains the failure best: a declared
+/// blocker says more than "not verified", and a missing directory says more than
+/// a host mismatch.
+///
+/// The command path and the web service path both come through here. They were
+/// two copies of this function, and the copies drifted: the command path never
+/// looked at declared blockers at all, so the reason a project wrote about its
+/// own environment was dropped in favour of a generic one, and the web path
+/// checked blockers in a branch it could never reach while never checking
+/// dependencies at all.
+pub(crate) fn ensure_action_allowed(
+    project: &ProjectSnapshot,
+    profile: &BuildProfile,
+    action: &CommandKind,
+) -> Result<(), String> {
     if !profile.issues.is_empty() {
         return Err(format!(
             "Build profile {} is invalid: {}",
             profile.id,
             profile.issues.join(" ")
+        ));
+    }
+    if let Some(blocked) = profile
+        .blocked_actions
+        .iter()
+        .find(|blocked| blocked.action == *action)
+    {
+        return Err(format!(
+            "Build profile {} action {} is blocked: {}",
+            profile.id,
+            format_command_kind(action),
+            blocked.reason
         ));
     }
     // Install is the action that repairs a missing dependency, so it is never
@@ -100,12 +137,7 @@ fn resolve_profile(
     if *action != CommandKind::Install && !project.missing_dependencies.is_empty() {
         return Err(format!(
             "Build profile {} action {} needs the declared dependency {}, which is not present. Run Install first.",
-            project
-                .build_profiles
-                .iter()
-                .find(|candidate| candidate.id == profile_id)
-                .map(|candidate| candidate.id.as_str())
-                .unwrap_or(profile_id),
+            profile.id,
             format_command_kind(action),
             project.missing_dependencies.join(", ")
         ));
@@ -122,56 +154,52 @@ fn resolve_profile(
                 }
             }
         }
-        let allowed_hosts = profile
-            .host_requirements_for_action(action)
-            .map(|hosts| {
-                hosts
-                    .iter()
-                    .map(|host| host.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            })
-            .unwrap_or_else(|| "an unknown host".to_string());
-        let current_host = HostOs::current()
-            .map(HostOs::as_str)
-            .unwrap_or(std::env::consts::OS);
+        let allowed_hosts = host_list(
+            profile.host_requirements_for_action(action),
+            "an unknown host",
+        );
         return Err(format!(
             "Build profile {} action {} is unavailable on the current host ({current_host}); required hosts: {allowed_hosts}.",
             profile.id,
-            format_command_kind(action)
+            format_command_kind(action),
+            current_host = current_host(),
         ));
     }
 
+    let binding = profile.action_binding_key(action);
     let verified_equivalently = project.build_profiles.iter().any(|candidate| {
-        candidate.command_id_for_action(action) == Some(command.id.as_str())
+        candidate.action_binding_key(action) == binding
             && candidate.action_verified_on_current_host(action)
     });
     if !profile.action_verified_on_current_host(action) && !verified_equivalently {
-        let verified_hosts = profile
-            .verification
-            .for_action(action)
-            .map(|hosts| {
-                hosts
-                    .iter()
-                    .map(|host| host.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            })
-            .unwrap_or_else(|| "none".to_string());
-        let current_host = HostOs::current()
-            .map(HostOs::as_str)
-            .unwrap_or(std::env::consts::OS);
+        let verified_hosts = host_list(profile.verification.for_action(action), "none");
         return Err(format!(
             "Build profile {} action {} has not been verified on the current host ({current_host}); verified hosts: {verified_hosts}.",
             profile.id,
-            format_command_kind(action)
+            format_command_kind(action),
+            current_host = current_host(),
         ));
     }
+    Ok(())
+}
 
-    Ok((
-        Some(profile.platform.clone()),
-        Some(profile.channel.clone()),
-    ))
+/// Names the host Atrium is running on, which every host-bound message needs.
+fn current_host() -> &'static str {
+    HostOs::current()
+        .map(HostOs::as_str)
+        .unwrap_or(std::env::consts::OS)
+}
+
+fn host_list(hosts: Option<&[HostOs]>, empty: &str) -> String {
+    hosts
+        .map(|hosts| {
+            hosts
+                .iter()
+                .map(|host| host.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .unwrap_or_else(|| empty.to_string())
 }
 
 fn format_command_kind(kind: &CommandKind) -> &'static str {

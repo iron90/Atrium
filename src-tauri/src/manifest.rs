@@ -1166,11 +1166,59 @@ channel = "local"
 install = "package.json#scripts.ci"
 "#,
         );
+        // The command exists, so the only reason this manifest can be rejected
+        // is its schema. Passing an empty command list would let this test pass
+        // on a missing command reference and prove nothing about the gate.
+        let commands = vec![command(
+            "package.json#scripts.ci",
+            "package.json#scripts.ci",
+            CommandKind::Other,
+        )];
+
+        let result = scan_project_configuration(&root, &commands);
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Invalid
+        );
+        assert!(
+            result
+                .configuration
+                .issues
+                .iter()
+                .any(|issue| issue.contains("commands.install requires protocol schema 3")),
+            "{:?}",
+            result.configuration.issues
+        );
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn a_legacy_schema_manifest_cannot_declare_dependency_paths() {
+        let root = write_manifest(
+            "dependencies-legacy",
+            r#"schema = 2
+
+[dependencies]
+paths = ["node_modules"]
+"#,
+        );
+
         let result = scan_project_configuration(&root, &[]);
 
         assert_eq!(
             result.configuration.status,
             ProjectConfigurationStatus::Invalid
+        );
+        assert!(
+            result
+                .configuration
+                .issues
+                .iter()
+                .any(|issue| issue.contains("dependency paths requires protocol schema 3")),
+            "{:?}",
+            result.configuration.issues
         );
 
         fs::remove_dir_all(root).expect("remove manifest directory");

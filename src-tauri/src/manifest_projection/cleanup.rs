@@ -51,7 +51,7 @@ fn parse_cleanup_paths(
                 ));
                 return None;
             };
-            if !seen.insert(path_comparison_key(&normalized)) {
+            if !seen.insert(super::path_comparison_key(&normalized)) {
                 issues.push(format!("Duplicate cleanup directory: {normalized}."));
                 return None;
             }
@@ -84,13 +84,9 @@ fn parse_cleanup_paths(
 }
 
 fn is_nested_path(parent: &str, candidate: &str) -> bool {
-    let parent = path_comparison_key(parent);
-    let candidate = path_comparison_key(candidate);
+    let parent = super::path_comparison_key(parent);
+    let candidate = super::path_comparison_key(candidate);
     candidate.starts_with(&format!("{parent}/"))
-}
-
-fn path_comparison_key(path: &str) -> String {
-    path.to_lowercase()
 }
 
 #[cfg(test)]

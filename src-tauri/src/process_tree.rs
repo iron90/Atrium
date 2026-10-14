@@ -1,7 +1,6 @@
 // Kills the whole process tree rooted at `pid`. Repo commands spawn children
 // of their own (npm -> vite, sh gradlew -> java), so killing only the direct
 // child leaves the real work running.
-#[allow(unused_variables)]
 pub(crate) fn kill_process_tree(pid: u32) {
     #[cfg(unix)]
     {

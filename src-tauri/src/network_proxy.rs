@@ -245,7 +245,9 @@ const COMMON_PROXY_PORTS: [u16; 14] = [
 ];
 
 const PROBE_CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
-const PROBE_READ_TIMEOUT: Duration = Duration::from_millis(900);
+/// Applies to both directions of a probe: the handshake is one short write
+/// followed by one short read, and neither side may hold the detector up.
+const PROBE_TIMEOUT: Duration = Duration::from_millis(900);
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -300,18 +302,16 @@ fn detect_proxy_ports(ports: &[u16]) -> Vec<LocalProxyCandidate> {
 
 fn classify(port: u16) -> Option<LocalProxyKind> {
     let mut stream = open_probe(port)?;
-    let kind = if opens_tunnel(&mut stream) {
+    let answers_http = opens_tunnel(&mut stream);
+    drop(stream);
+    Some(if answers_http {
         LocalProxyKind::Http
+    } else if speaks_socks5(port) {
+        LocalProxyKind::Socks5
     } else {
-        // The connection carried an unknown protocol, so it is reused only as
+        // The connection carried an unknown protocol, so it is kept only as
         // evidence that something is listening there.
         LocalProxyKind::Listener
-    };
-    drop(stream);
-    Some(match kind {
-        LocalProxyKind::Http => LocalProxyKind::Http,
-        _ if speaks_socks5(port) => LocalProxyKind::Socks5,
-        _ => LocalProxyKind::Listener,
     })
 }
 
@@ -320,6 +320,12 @@ fn classify(port: u16) -> Option<LocalProxyKind> {
 /// unresolvable host but stalls on CONNECT is still an HTTP proxy, and asking
 /// about something else first is how a mixed port got labelled SOCKS5 and sent
 /// the user off to fill in the wrong scheme.
+///
+/// The handshake names a real host, so detecting a working proxy does reach the
+/// network once through it. That is deliberate: a probe answered without
+/// leaving the machine would prove the endpoint speaks HTTP and nothing more,
+/// and a proxy that cannot actually reach anything is exactly the case the user
+/// opens this card to find out about.
 fn opens_tunnel(stream: &mut TcpStream) -> bool {
     let request = format!(
         "CONNECT {DEFAULT_TEST_HOST}:{TEST_PORT} HTTP/1.1\r\nHost: {DEFAULT_TEST_HOST}:{TEST_PORT}\r\n\r\n"
@@ -331,7 +337,7 @@ fn opens_tunnel(stream: &mut TcpStream) -> bool {
     // granted is the connection test's question, not detection's: a proxy
     // whose upstream is down still speaks HTTP, and calling it "just a
     // listener" would hide the very thing the user is looking for.
-    read_status_line(stream).is_some()
+    read_http_head(stream).is_some_and(|head| parse_status(&head).is_some())
 }
 
 /// A SOCKS5 greeting advertises exactly one no-authentication method; the
@@ -356,15 +362,9 @@ fn open_probe(port: u16) -> Option<TcpStream> {
         PROBE_CONNECT_TIMEOUT,
     )
     .ok()?;
-    let _ = stream.set_read_timeout(Some(PROBE_READ_TIMEOUT));
-    let _ = stream.set_write_timeout(Some(PROBE_READ_TIMEOUT));
+    let _ = stream.set_read_timeout(Some(PROBE_TIMEOUT));
+    let _ = stream.set_write_timeout(Some(PROBE_TIMEOUT));
     Some(stream)
-}
-
-/// The status code of the reply, or None when the peer did not speak HTTP.
-fn read_status_line(stream: &mut TcpStream) -> Option<u16> {
-    let head = read_http_head(stream)?;
-    parse_status(&head)
 }
 
 #[tauri::command]
@@ -420,10 +420,14 @@ pub fn test_proxy(settings: &NetworkProxySettings) -> Result<ProxyTestOutcome, S
     let Some(proxy) = normalized.proxy else {
         return Ok(ProxyTestOutcome::Inherited);
     };
-    let url = Url::parse(&proxy).map_err(|_| "A proxy address must be a valid absolute URL")?;
+    // `normalized` already refused anything that is not an absolute URL, that
+    // carries no host, or that uses an unsupported scheme, so neither of these
+    // can fail and neither needs a message the user could be shown twice.
+    let url = Url::parse(&proxy)
+        .expect("normalize_proxy accepts only absolute URLs with a supported scheme");
     let host = url
         .host_str()
-        .ok_or_else(|| "A proxy address must include a host name or IP address".to_string())?
+        .expect("normalize_proxy accepts only addresses with a host")
         .to_string();
     let scheme = url.scheme().to_string();
     // A non-special scheme carries no default port, so guessing 80 here would
@@ -462,51 +466,55 @@ pub fn test_proxy(settings: &NetworkProxySettings) -> Result<ProxyTestOutcome, S
     let _ = socket.set_read_timeout(Some(TUNNEL_READ_TIMEOUT));
     let _ = socket.set_write_timeout(Some(TUNNEL_CONNECT_TIMEOUT));
 
-    let outcome = if matches!(scheme.as_str(), "socks5" | "socks5h") {
-        socks5_connect(&mut socket, &test_host, TEST_PORT)?
+    let handshake = if matches!(scheme.as_str(), "socks5" | "socks5h") {
+        socks5_connect(&mut socket, &test_host, TEST_PORT)
     } else {
-        http_connect(&mut socket, &test_host, TEST_PORT)?
+        http_connect(&mut socket, &test_host, TEST_PORT)
     };
-    if matches!(outcome, ProxyTestOutcome::Tunnelled { .. }) {
+    Ok(match handshake {
         // The grant alone is not the answer the user asked for: measure a real
         // round trip through the tunnel to the target itself.
-        return Ok(ProxyTestOutcome::Tunnelled {
+        Handshake::Granted => ProxyTestOutcome::Tunnelled {
             latency_millis: probe_through_tunnel(&mut socket, &test_host),
-        });
-    }
-    Ok(outcome)
+        },
+        Handshake::Refused(outcome) => outcome,
+    })
+}
+
+/// What a CONNECT handshake achieved, before anything is sent through the
+/// tunnel. A grant carries no measurement on purpose: the answer the user asked
+/// for is the round trip to the target, and only the caller can make it.
+enum Handshake {
+    Granted,
+    Refused(ProxyTestOutcome),
 }
 
 /// A SOCKS5 endpoint is the common case for a local client, and it does not
 /// speak HTTP at all, so the tunnel is opened with the SOCKS5 handshake rather
 /// than assumed away.
-fn socks5_connect(
-    socket: &mut TcpStream,
-    host: &str,
-    port: u16,
-) -> Result<ProxyTestOutcome, String> {
+fn socks5_connect(socket: &mut TcpStream, host: &str, port: u16) -> Handshake {
     if socket.write_all(&[0x05, 0x01, 0x00]).is_err() {
-        return Ok(ProxyTestOutcome::Unreachable);
+        return Handshake::Refused(ProxyTestOutcome::Unreachable);
     }
     let mut greeting = [0u8; 2];
     if socket.read_exact(&mut greeting).is_err() {
-        return Ok(ProxyTestOutcome::Timeout);
+        return Handshake::Refused(ProxyTestOutcome::Timeout);
     }
     if greeting[0] != 0x05 || greeting[1] != 0x00 {
-        return Ok(ProxyTestOutcome::NotAProxy);
+        return Handshake::Refused(ProxyTestOutcome::NotAProxy);
     }
     let mut request = vec![0x05, 0x01, 0x00, 0x03, host.len() as u8];
     request.extend_from_slice(host.as_bytes());
     request.extend_from_slice(&port.to_be_bytes());
     if socket.write_all(&request).is_err() {
-        return Ok(ProxyTestOutcome::Unreachable);
+        return Handshake::Refused(ProxyTestOutcome::Unreachable);
     }
     let mut reply = [0u8; 4];
     if socket.read_exact(&mut reply).is_err() {
-        return Ok(ProxyTestOutcome::Timeout);
+        return Handshake::Refused(ProxyTestOutcome::Timeout);
     }
     if reply[0] != 0x05 {
-        return Ok(ProxyTestOutcome::NotAProxy);
+        return Handshake::Refused(ProxyTestOutcome::NotAProxy);
     }
     // The bind address that follows must be consumed before the tunnel is
     // used: left in the socket it lands in front of the HTTP response and
@@ -517,48 +525,44 @@ fn socks5_connect(
         0x03 => {
             let mut length = [0u8; 1];
             if socket.read_exact(&mut length).is_err() {
-                return Ok(ProxyTestOutcome::Timeout);
+                return Handshake::Refused(ProxyTestOutcome::Timeout);
             }
             usize::from(length[0]) + 2
         }
-        _ => return Ok(ProxyTestOutcome::NotAProxy),
+        _ => return Handshake::Refused(ProxyTestOutcome::NotAProxy),
     };
     let mut bind_address = vec![0u8; bind_length];
     if socket.read_exact(&mut bind_address).is_err() {
-        return Ok(ProxyTestOutcome::Timeout);
+        return Handshake::Refused(ProxyTestOutcome::Timeout);
     }
-    Ok(match reply[1] {
-        0x00 => ProxyTestOutcome::Tunnelled {
-            latency_millis: Some(0),
-        },
+    match reply[1] {
+        0x00 => Handshake::Granted,
         // The SOCKS5 reply code is the honest status here; it is not an HTTP
         // status and must not be presented as one.
-        code => ProxyTestOutcome::Refused {
+        code => Handshake::Refused(ProxyTestOutcome::Refused {
             status: code as u16,
-        },
-    })
+        }),
+    }
 }
 
-fn http_connect(socket: &mut TcpStream, host: &str, port: u16) -> Result<ProxyTestOutcome, String> {
+fn http_connect(socket: &mut TcpStream, host: &str, port: u16) -> Handshake {
     // No `Proxy-Connection: close`: a local proxy honours it by dropping the
     // tunnel, which reads as a proxy that never answers.
     let request = format!("CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n");
     if socket.write_all(request.as_bytes()).is_err() {
-        return Ok(ProxyTestOutcome::Unreachable);
+        return Handshake::Refused(ProxyTestOutcome::Unreachable);
     }
     let Some(head) = read_http_head(socket) else {
-        return Ok(ProxyTestOutcome::Timeout);
+        return Handshake::Refused(ProxyTestOutcome::Timeout);
     };
     let Some(status) = parse_status(&head) else {
-        return Ok(ProxyTestOutcome::NotAProxy);
+        return Handshake::Refused(ProxyTestOutcome::NotAProxy);
     };
-    Ok(if (200..300).contains(&status) {
-        ProxyTestOutcome::Tunnelled {
-            latency_millis: Some(0),
-        }
+    if (200..300).contains(&status) {
+        Handshake::Granted
     } else {
-        ProxyTestOutcome::Refused { status }
-    })
+        Handshake::Refused(ProxyTestOutcome::Refused { status })
+    }
 }
 
 /// Milliseconds, rounded up: a round trip cannot take no time at all, and
@@ -818,32 +822,13 @@ mod tests {
             .all(|candidate| candidate.url.contains("127.0.0.1:")));
     }
 
-    /// Serves a proxy that opens the tunnel, like a mixed local port does.
-    fn spawn_tunnelling_probe_server() -> Option<u16> {
-        let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).ok()?;
-        let port = listener.local_addr().ok()?.port();
-        std::thread::spawn(move || {
-            for _ in 0..2 {
-                let Ok((mut stream, _)) = listener.accept() else {
-                    return;
-                };
-                let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
-                let mut chunk = [0u8; 512];
-                let _ = stream.read(&mut chunk);
-                let _ = stream.write_all(b"HTTP/1.1 200 Connection established\r\n\r\n");
-                let _ = stream.flush();
-                std::thread::sleep(Duration::from_millis(200));
-            }
-        });
-        Some(port)
-    }
-
     #[test]
     fn a_mixed_port_is_reported_as_http_so_the_scheme_is_the_common_one() {
         // A Clash-style mixed port answers both handshakes. Labelling it
         // SOCKS5 sent a user off to fill in a scheme most tools handle worse,
         // for a capability the port actually had.
-        let port = spawn_tunnelling_probe_server().expect("bind a listener");
+        let port = spawn_probe_server(b"HTTP/1.1 200 Connection established\r\n\r\n")
+            .expect("bind a probe listener");
 
         let found = detect_proxy_ports(&[port])
             .into_iter()
@@ -1152,11 +1137,15 @@ mod tests {
         );
     }
 
-    /// Serves a proxy that grants the tunnel and then answers, or stays
-    /// silent, exactly as the script asks.
-    fn spawn_tunnelling_http_proxy(answer_after_tunnel: bool) -> Option<u16> {
+    /// Serves a proxy that grants the tunnel and then answers, or stays silent,
+    /// exactly as the script asks. The CONNECT request is handed to the caller
+    /// so a test can prove which host and port were actually measured.
+    fn spawn_granting_http_proxy(
+        answer_after_tunnel: bool,
+    ) -> Option<(u16, std::sync::mpsc::Receiver<String>)> {
         let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).ok()?;
         let port = listener.local_addr().ok()?.port();
+        let (sender, receiver) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
             let Ok((mut stream, _)) = listener.accept() else {
                 return;
@@ -1173,6 +1162,7 @@ mod tests {
                 }
                 request.extend_from_slice(&chunk[..read]);
             }
+            let _ = sender.send(String::from_utf8_lossy(&request).into_owned());
             if stream
                 .write_all(b"HTTP/1.1 200 Connection established\r\n\r\n")
                 .is_err()
@@ -1187,12 +1177,12 @@ mod tests {
             let _ = stream.read(&mut chunk);
             let _ = stream.write_all(b"HTTP/1.1 204 No Content\r\n\r\n");
         });
-        Some(port)
+        Some((port, receiver))
     }
 
     #[test]
     fn a_granted_tunnel_is_reported_with_the_round_trip_to_the_target() {
-        let port = spawn_tunnelling_http_proxy(true).expect("bind a proxy listener");
+        let (port, _requests) = spawn_granting_http_proxy(true).expect("bind a proxy listener");
 
         let outcome = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),
@@ -1214,7 +1204,7 @@ mod tests {
 
     #[test]
     fn a_silent_target_is_not_reported_as_an_instant_success() {
-        let port = spawn_tunnelling_http_proxy(false).expect("bind a proxy listener");
+        let (port, _requests) = spawn_granting_http_proxy(false).expect("bind a proxy listener");
 
         let outcome = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),
@@ -1243,7 +1233,7 @@ mod tests {
 
     #[test]
     fn the_tunnel_probe_reads_a_real_response_instead_of_a_handshake() {
-        let port = spawn_tunnelling_http_proxy(true).expect("bind a proxy listener");
+        let (port, _requests) = spawn_granting_http_proxy(true).expect("bind a proxy listener");
 
         let outcome = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),
@@ -1297,39 +1287,9 @@ mod tests {
         );
     }
 
-    /// A proxy that records the CONNECT request line it was asked to open, so
-    /// a test can prove which host and port were actually measured.
-    fn spawn_recording_http_proxy() -> Option<(u16, std::sync::mpsc::Receiver<String>)> {
-        let listener = TcpListener::bind(SocketAddr::from((Ipv4Addr::LOCALHOST, 0))).ok()?;
-        let port = listener.local_addr().ok()?.port();
-        let (sender, receiver) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            let Ok((mut stream, _)) = listener.accept() else {
-                return;
-            };
-            let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
-            let mut request = Vec::new();
-            let mut chunk = [0u8; 512];
-            while !request.windows(4).any(|window| window == b"\r\n\r\n") {
-                let Ok(read) = stream.read(&mut chunk) else {
-                    return;
-                };
-                if read == 0 {
-                    return;
-                }
-                request.extend_from_slice(&chunk[..read]);
-            }
-            let _ = sender.send(String::from_utf8_lossy(&request).into_owned());
-            let _ = stream.write_all(b"HTTP/1.1 200 Connection established\r\n\r\n");
-            let _ = stream.read(&mut chunk);
-            let _ = stream.write_all(b"HTTP/1.1 204 No Content\r\n\r\n");
-        });
-        Some((port, receiver))
-    }
-
     #[test]
     fn the_configured_host_and_port_are_the_ones_measured() {
-        let (port, requests) = spawn_recording_http_proxy().expect("bind a proxy listener");
+        let (port, requests) = spawn_granting_http_proxy(true).expect("bind a proxy listener");
 
         let outcome = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),
@@ -1350,7 +1310,7 @@ mod tests {
 
     #[test]
     fn the_connect_request_never_asks_the_proxy_to_close_the_tunnel() {
-        let (port, requests) = spawn_recording_http_proxy().expect("bind a proxy listener");
+        let (port, requests) = spawn_granting_http_proxy(true).expect("bind a proxy listener");
 
         let _ = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),
@@ -1391,7 +1351,7 @@ mod tests {
 
     #[test]
     fn the_default_host_is_used_when_none_is_configured() {
-        let (port, requests) = spawn_recording_http_proxy().expect("bind a proxy listener");
+        let (port, requests) = spawn_granting_http_proxy(true).expect("bind a proxy listener");
 
         let _ = test_proxy(&NetworkProxySettings {
             proxy: Some(format!("http://127.0.0.1:{port}")),

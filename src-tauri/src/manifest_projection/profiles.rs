@@ -529,7 +529,7 @@ fn parse_artifact_paths(
                 ));
                 return None;
             };
-            if !seen.insert(normalized.clone()) {
+            if !seen.insert(super::path_comparison_key(&normalized)) {
                 issues.push(format!(
                     "Build profile {profile_id} declares duplicate artifact path: {normalized}."
                 ));

@@ -59,7 +59,6 @@ pub enum CleanupProgressPhase {
 #[serde(rename_all = "camelCase")]
 pub struct BuildArtifact {
     pub profile_id: String,
-    pub profile_label: String,
     pub relative_path: String,
     pub kind: BuildArtifactKind,
     pub bytes: u64,

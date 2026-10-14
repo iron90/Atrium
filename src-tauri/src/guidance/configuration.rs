@@ -87,7 +87,7 @@ fn host_verification_rules() -> String {
 
 Every bound action on a candidate host has one of three verification states: verified (the host is recorded in `[build_profiles.verification]`), blocked (a `[[build_profiles.<profile-id>.verification_blockers]]` entry declares why verification cannot complete on that host), or pending (no record yet). When the current host matches but verification cannot complete — a missing signing identity, credential, SDK, or toolchain — declare the blocker with the exact reason instead of leaving the action silently pending.
 
-Verification evidence follows the command: when several profiles bind the same command for the same action, execute it once per host and record the verified host under each identical binding; never re-run an identical command on a host where it has already passed solely because another profile binds it too. A declared blocker follows the same rule: it is attested once per command and host, and identical bindings inherit it.\n\nSupported host values are `macos`, `windows`, and `linux`. The three actions may use different lists. Atrium disables and rejects a profile action whose declared host list does not include the current host, before starting the process. It also disables an action on a matching host until that host appears in `verification`, and it shows the declared blocker reason while the action stays disabled.\n\n"
+Verification evidence follows the command: when several profiles bind the same command for the same action, execute it once per host and record the verified host under each identical binding; never re-run an identical command on a host where it has already passed solely because another profile binds it too. A declared blocker follows the same rule: it is attested once per command and host, and identical bindings inherit it.\n\nSupported host values are `macos`, `windows`, and `linux`. The actions may use different lists. Atrium disables and rejects a profile action whose declared host list does not include the current host, before starting the process. It also disables an action on a matching host until that host appears in `verification`, and it shows the declared blocker reason while the action stays disabled.\n\n"
         .to_string()
 }
 
@@ -139,12 +139,16 @@ Atrium guidance revision: {GUIDANCE_REVISION}
 }
 
 fn render_manifest_template() -> String {
-    r#"## manifest.toml template
+    // The schema is interpolated rather than written out: a template that
+    // lags behind the protocol leaves every project created from it flagged
+    // as needing an update, with nothing in the report pointing at the cause.
+    format!(
+        r#"## manifest.toml template
 
 Replace every `<...>` value with a fact verified in the repository. Remove an optional block when it does not apply; do not leave example values in the manifest. Repeat the array blocks for each real platform, channel, or build profile.
 
 ```toml
-schema = 2
+schema = {GUIDANCE_PROTOCOL_SCHEMA}
 
 # Optional adapter hint. Remove this line when no supported adapter applies.
 # profile = "<adapter-name>"
@@ -244,8 +248,9 @@ build = ["<relative build directory>"]
 # terminal = "<terminal executable path>"
 ```
 
-"#
-    .to_string()
+"#,
+        GUIDANCE_PROTOCOL_SCHEMA = GUIDANCE_PROTOCOL_SCHEMA,
+    )
 }
 
 fn render_icon_guidance(inspection: &crate::conformance::IconInspection) -> String {

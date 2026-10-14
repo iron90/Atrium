@@ -34,7 +34,6 @@ fn inspect_artifact(
     let Ok(metadata) = fs::symlink_metadata(&target) else {
         return BuildArtifact {
             profile_id: profile.id.clone(),
-            profile_label: profile.label.clone(),
             relative_path: relative_path.to_string(),
             kind: BuildArtifactKind::Missing,
             bytes: 0,
@@ -66,7 +65,6 @@ fn inspect_artifact(
 
     BuildArtifact {
         profile_id: profile.id.clone(),
-        profile_label: profile.label.clone(),
         relative_path: relative_path.to_string(),
         kind,
         bytes: metrics.bytes,
@@ -79,7 +77,6 @@ fn inspect_artifact(
 fn invalid_artifact(profile: &BuildProfile, relative_path: &str) -> BuildArtifact {
     BuildArtifact {
         profile_id: profile.id.clone(),
-        profile_label: profile.label.clone(),
         relative_path: relative_path.to_string(),
         kind: BuildArtifactKind::Invalid,
         bytes: 0,
