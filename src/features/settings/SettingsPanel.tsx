@@ -117,18 +117,38 @@ export const SettingsPanel = memo(function SettingsPanel({
       ? releaseNoteBlocks(updateState.info.notes, language)
       : [];
 
+  // A tablist is one stop in the tab order, not six: arrow keys move between
+  // the tabs and only the selected one is reachable with Tab. Without this the
+  // card announces a tab list whose relationship to its panels is missing and
+  // a keyboard user has to step through every tab to reach the content.
+  const tabs = ["general", "network"] as const;
+  const onTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const step =
+      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const next =
+      tabs[(tabs.indexOf(settingsTab) + step + tabs.length) % tabs.length];
+    setSettingsTab(next);
+    document.getElementById(`settings-tab-${next}`)?.focus();
+  };
+
   return (
     <div className="settings-view">
       <div className="settings-grid">
         <div className="settings-tabs" role="tablist">
-          {(["general", "network"] as const).map((id) => (
+          {tabs.map((id) => (
             <button
               key={id}
+              id={`settings-tab-${id}`}
               type="button"
               role="tab"
-              className={`settings-tab${settingsTab === id ? " is-active" : ""}`}
+              aria-controls={`settings-panel-${id}`}
               aria-selected={settingsTab === id}
+              tabIndex={settingsTab === id ? 0 : -1}
+              className={`settings-tab${settingsTab === id ? " is-active" : ""}`}
               onClick={() => setSettingsTab(id)}
+              onKeyDown={onTabKeyDown}
             >
               {t(
                 id === "general" ? "settingsTabGeneral" : "settingsTabNetwork",
@@ -137,7 +157,12 @@ export const SettingsPanel = memo(function SettingsPanel({
           ))}
         </div>
         {settingsTab === "general" ? (
-          <div className="settings-tab-panel">
+          <div
+            className="settings-tab-panel"
+            role="tabpanel"
+            id="settings-panel-general"
+            aria-labelledby="settings-tab-general"
+          >
             <section className="settings-card">
               <h3>{t("appearance")}</h3>
               <p>{t("appearanceDescription")}</p>
@@ -494,7 +519,12 @@ export const SettingsPanel = memo(function SettingsPanel({
             </section>
           </div>
         ) : (
-          <div className="settings-tab-panel">
+          <div
+            className="settings-tab-panel"
+            role="tabpanel"
+            id="settings-panel-network"
+            aria-labelledby="settings-tab-network"
+          >
             <section className="settings-card settings-card-wide">
               <h3>{t("networkProxyCard")}</h3>
               <p>
