@@ -13,14 +13,14 @@ Phase-one goals:
   inside them;
 - Obtain platforms, channels, and build profiles from the deterministic declarations in
   `.atrium/manifest.toml`;
-- Discover `Run`, `Check`, and `Build` entry points from the project's existing
+- Discover `Install`, `Run`, `Check`, and `Build` entry points from the project's existing
   configuration;
 - Invoke these entry points with safe argument arrays;
 - Read Git branch, worktree status, remote URL, and recent commits;
 - Find existing project icons in the repository and reuse them in the list and detail
   views;
 - Provide a switchable English/Chinese UI and a reachable Settings page;
-- Present the facts above on a board with multiple themes and layouts.
+- Present the facts above on a board with multiple themes.
 
 Phase-one non-goals:
 
@@ -37,7 +37,7 @@ Phase-one non-goals:
 | ------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Desktop shell       | Tauri 2                                         | Window management, packaging, cross-platform entry, IPC                                                                  |
 | Native/service core | Rust + Tokio                                    | File scanning, Git, command discovery, process execution, OS differences                                                 |
-| UI                  | React + TypeScript + Vite                       | Board, detail, themes, layouts, and interaction                                                                          |
+| UI                  | React + TypeScript + Vite                       | Board, detail, themes, and interaction                                                                                   |
 | Contract            | Serde DTO + TypeScript mirror                   | Keep the frontend/backend boundary narrow and testable                                                                   |
 | Persistence         | localStorage + app-data JSON / SQLite (planned) | Preferences and first-version run history; later hosts multi-workspace and large-scale history                           |
 | Project protocol    | `.atrium/manifest.toml` (optional)              | Lets projects proactively declare platform, channel, and command bindings; projects without configuration are unaffected |
@@ -61,12 +61,13 @@ React UI
   │  ├─ workspace-snapshot  Workspace snapshot fingerprints, merging, and empty snapshots
   │  ├─ ProjectInspector    Detail page section composition root
   │  │  ├─ ProjectRepositorySection      Repository facts
-  │  │  ├─ ProjectToolsSection           Project tools
   │  │  ├─ ProjectStorageSection         Storage and cleanup
   │  │  ├─ ProjectContextSection         Platform and channel context
   │  │  ├─ ProjectBuildProfilesSection   Build profiles and actions
   │  │  ├─ ProjectRunSection             Active run output
   │  │  └─ ProjectCommitsSection         Recent commits
+  │  ├─ missing-dependency-signature  Guesses whether failed output means an absent dependency
+  │  ├─ proxy-test-targets        Hosts a build downloads from, used by the proxy card
   │  ├─ use-project-workspace        Workspace and project selection composition root
   │  ├─ use-project-selection        Selected project state and selection actions
   │  ├─ use-project-detail-lifecycle Async detail reads, refreshes, and stale-request protection
@@ -90,7 +91,7 @@ React UI
   │  ├─ use-project-runner  Command triggering, preview runs, and active run selection
   │  ├─ use-run-event-stream  Run event subscription and the run collection
   │  └─ run-output-buffer   Pure functions for output buffering, isolated per run ID and bounded
-  ├─ features/settings      Theme, layout, and workspace preferences
+  ├─ features/settings      Theme, language, workspace, and network proxy preferences
   ├─ shared                 Domain-independent code such as formatting and cross-feature activity message contracts
   │  ├─ format              Time, relative time, byte, and template text formatting
   │  ├─ activity            Shared contracts for workspace/run activity messages
@@ -282,11 +283,13 @@ BuildProfile
   label
   platform: Facet
   channel: Facet
+  installCommandId?
   checkCommandId?
   buildCommandId?
   runCommandId?
-  hostRequirements: { check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
-  verification: { check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
+  hostRequirements: { install?: HostOs[]; check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
+  verification: { install?: HostOs[]; check?: HostOs[]; build?: HostOs[]; run?: HostOs[] }
+  verificationBlockers: { action, host, reason }[]
   hostMismatchActions / unverifiedActions
   source: manifest key
   region? / payment?  (reserved for later variants)
@@ -297,7 +300,7 @@ BuildProfile
 A BuildProfile is the combination of "platform + channel + project command bindings".
 For a formal target action, the user first selects a profile, and Atrium then invokes
 the repository command bound to that profile. Those actions are presented and
-discussed in workflow order: check, then build, then run.
+discussed in workflow order: install, then check, then build, then run.
 
 `hostRequirements` is the per-action lower bound of host compatibility (the
 environments where execution is allowed), not a verification conclusion; `verification`
@@ -322,7 +325,7 @@ the business semantics remain separate.
 ```text
 ProjectCommand
   id: stable detector id
-  kind: check | build | run | other
+  kind: install | check | build | run | other
   label: Check / Build / Run / ...
   program: executable name
   args: argv array
@@ -451,10 +454,11 @@ pollute another project's:
   workflows, directory names, or documents;
 - The manifest structure strictly rejects every undeclared field; a typo or a
   future-version field invalidates the configuration instead of being silently
-  ignored. The current schema is 1 and already includes per-action host system
-  declarations for Check / Build / Run (host_requirements) and host verification
-  records (verification); future protocol evolution must introduce a new schema
-  number before adding fields;
+  ignored. The current schema is 3 and already includes per-action host system
+  declarations for Install / Check / Build / Run (host_requirements), host
+  verification records (verification), the optional install binding, and declared
+  dependency paths; future protocol evolution must introduce a new schema number
+  before adding fields;
 - Fixed project description files such as package.json, Cargo.toml, pyproject.toml,
   pubspec.yaml, Makefile, and `.atrium/manifest.toml` are all read through the
   project root path boundary; missing, unreadable, and symlinked are not the same
@@ -584,8 +588,8 @@ in the snapshot directly as input.
 - The working directory is always the project root;
 - The command display text is kept separate from the actual argv; display text is
   never parsed for execution;
-- The runner will later gain more complete process supervision, cancellation, output
-  streaming, and Windows process tree cleanup;
+- The runner supervises the process tree it started, streams bounded output, and
+  cancels on request;
 - A missing tool, insufficient permissions, and a non-zero exit code are all returned
   as explicit run results.
 
@@ -597,7 +601,6 @@ current workspace paths:
 ```text
 atrium.preferences.v1
   theme
-  layout
   language
   rootPath
   workspaces
@@ -628,7 +631,7 @@ Repository source files and Git are never written back to by the Atrium database
 The scan cache must remain discardable and regenerable; only user manual
 configuration and display preferences need migration.
 
-## 9. Themes and Layouts
+## 9. Themes
 
 Themes change only design tokens, never domain data:
 
@@ -636,13 +639,8 @@ Themes change only design tokens, never domain data:
 - Mist Silver
 - Warm Ink
 
-Layouts change only data arrangement and add no project semantics:
-
-- Overview: project list + detail inspector;
-- Platform Matrix: filtered by platform and channel facts.
-
-The Settings page provides persistent theme, layout, language, and workspace scan
-settings. When switching projects, the selection highlight does not wait for a scan
+The Settings page provides persistent theme, language, and workspace scan
+settings, grouped into a General tab and a Network proxy tab. When switching projects, the selection highlight does not wait for a scan
 to finish; the inspector on the right shows an async loading skeleton, so opening a
 project for the first time does not block the whole board.
 

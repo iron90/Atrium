@@ -2,6 +2,10 @@ use serde::Deserialize;
 
 pub(crate) const CURRENT_SCHEMA: u32 = 3;
 pub(crate) const LEGACY_SCHEMA: u32 = 1;
+/// The schema that introduced the install binding and declared dependency
+/// paths. Named separately from `CURRENT_SCHEMA` so that raising the current
+/// schema later does not retroactively invalidate manifests written against 3.
+pub(crate) const DEPENDENCY_DECLARATION_SCHEMA: u32 = 3;
 
 pub(crate) fn is_supported_schema(schema: u32) -> bool {
     (LEGACY_SCHEMA..=CURRENT_SCHEMA).contains(&schema)

@@ -58,13 +58,11 @@ and profile actions are gated by the relevant capabilities. Cleanup is
 optional: without cleanup declarations, Atrium can still measure project size
 but exposes no cleanup target.
 
-Schema 1 is strict: unknown fields at any manifest level make the manifest
+Every schema is strict: unknown fields at any manifest level make the manifest
 invalid instead of being ignored. This prevents a misspelled field or a field
 from a newer protocol version from looking configured while silently having no
-effect. Schema 1 supports every section documented here, including
-`host_requirements` and `verification` records: `host_requirements` declares
-where an action may run, while `verification` records hosts where the exact
-command has passed. A host mismatch is deferred verification, not a failure,
+effect. `host_requirements` declares where an action may run, while
+`verification` records hosts where the exact command has passed. A host mismatch is deferred verification, not a failure,
 and must not cause a valid command binding to be removed. A future protocol
 revision must introduce a new schema number before adding fields.
 
@@ -212,7 +210,7 @@ build = ["windows"]
 run = ["macos"]
 ```
 
-Host values are limited to `macos`, `windows`, and `linux`. The three actions
+Host values are limited to `macos`, `windows`, and `linux`. The four actions
 may use different lists. `host_requirements` is the lower compatibility
 boundary; `verification` is the upper evidence boundary. Omit an action's
 host requirement only when it is genuinely unrestricted; do not infer host

@@ -47,8 +47,10 @@ structured JSON.
 ## Settings
 
 - **Workspaces** — add, edit, and remove the folders Atrium scans, with deterministic exclusion names; scanning lives here and nowhere else.
-- **Appearance** — three themes, two layouts, and the English/Chinese interface switch.
+- **Appearance** — three themes and the English/Chinese interface switch.
 - **Project detail card** — one switch per detail-card section.
+- **Network proxy** — one address that every project command uses, with local-proxy
+  detection and a per-host reachability report.
 
 ## Download
 
