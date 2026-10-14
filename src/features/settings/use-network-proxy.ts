@@ -14,7 +14,7 @@ export interface NetworkProxyController {
   setProxy: (value: string) => void;
   setNoProxy: (value: string) => void;
   setTestHost: (value: string) => void;
-  savePhase: "loading" | "idle" | "saving" | "saved" | "error";
+  savePhase: "loading" | "idle" | "saving" | "saved";
   error: string | null;
   detection: {
     phase: "idle" | "detecting" | "done" | "error";
@@ -47,7 +47,7 @@ const scheme = /^(https?|socks5|socks5h|socks4):\/\/[^\s]+$/;
 const bareHost = /^[^\s/:@?#[\]]+$/;
 
 /** Whether the field contents can be persisted as they stand. */
-export const isSettable = (proxy: string, testHost: string): boolean => {
+const isSettable = (proxy: string, testHost: string): boolean => {
   const address = proxy.trim();
   if (address && !scheme.test(address)) return false;
   const host = testHost.trim();
@@ -68,9 +68,12 @@ export function useNetworkProxy(): NetworkProxyController {
   const [sweep, setSweep] = useState<
     Omit<NetworkProxyController["sweep"], "checkAll" | "checkHost">
   >({ phase: "idle", running: {}, outcomes: {}, errors: {} });
-  const sweepOutcomes = useRef<Record<string, unknown>>({});
+  // Whether the report holds anything, kept outside the state it mirrors: the
+  // save effect below must not depend on the sweep, or typing would restart
+  // the debounce every time a host answered.
+  const hasSweepResults = useRef(false);
   const resetSweep = () => {
-    sweepOutcomes.current = {};
+    hasSweepResults.current = false;
     setSweep({ phase: "idle", running: {}, outcomes: {}, errors: {} });
   };
   const [detection, setDetection] = useState<
@@ -102,7 +105,7 @@ export function useNetworkProxy(): NetworkProxyController {
       } catch (loadError) {
         if (!active) return;
         setError(messageOf(loadError));
-        setSavePhase("error");
+        setSavePhase("idle");
       }
     };
     void load();
@@ -136,7 +139,7 @@ export function useNetworkProxy(): NetworkProxyController {
           // must not outlive it.
           if (
             (settings.proxy ?? "") !== loaded.current.proxy &&
-            Object.keys(sweepOutcomes.current).length > 0
+            hasSweepResults.current
           ) {
             resetSweep();
           }
@@ -152,7 +155,7 @@ export function useNetworkProxy(): NetworkProxyController {
           // Nothing is stored, so the previous proxy keeps working and the
           // user's text stays in the field for them to correct.
           setError(messageOf(saveError));
-          setSavePhase("error");
+          setSavePhase("idle");
         });
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);
@@ -182,7 +185,10 @@ export function useNetworkProxy(): NetworkProxyController {
   // three seconds each would make the card unusable, and a slow host says
   // nothing about the fast ones.
   const checkAll = useCallback(() => {
-    setSweep((current) => ({ ...current, phase: "running" }));
+    // Every host in the report is being asked again, so every host in the
+    // report is marked busy. Leaving the per-row buttons live meant a row kept
+    // looking idle while a sweep was already in flight, and clicking it started
+    // a second probe against the same proxy.
     const hosts = [
       ...PROXY_TEST_TARGETS.map((target) => target.host),
       // The address the user typed belongs in the same report; probing it
@@ -191,6 +197,14 @@ export function useNetworkProxy(): NetworkProxyController {
     ].filter(
       (host, index, all) => host.length > 0 && all.indexOf(host) === index,
     );
+    setSweep((current) => ({
+      ...current,
+      phase: "running",
+      running: Object.fromEntries(hosts.map((host) => [host, true])),
+      // A stale answer is worse than no answer: it was measured against a
+      // different moment and the user cannot tell which one they are reading.
+      errors: Object.fromEntries(hosts.map((host) => [host, undefined])),
+    }));
     void Promise.all(
       hosts.map(async (host) => {
         try {
@@ -205,10 +219,9 @@ export function useNetworkProxy(): NetworkProxyController {
         }
       }),
     ).then((results) => {
-      sweepOutcomes.current = Object.fromEntries(
-        results.flatMap((result) => ["outcome" in result ? [result.host] : []]),
-      );
+      hasSweepResults.current = results.length > 0;
       setSweep((current) => ({
+        ...current,
         phase: "idle",
         running: {},
         outcomes: {
@@ -235,6 +248,7 @@ export function useNetworkProxy(): NetworkProxyController {
   // meant pressing a button next to a host had no visible effect at all.
   const checkHost = useCallback(
     (host: string) => {
+      hasSweepResults.current = true;
       setSweep((current) => ({
         ...current,
         running: { ...current.running, [host]: true },
@@ -243,7 +257,6 @@ export function useNetworkProxy(): NetworkProxyController {
       void bridge
         .testNetworkProxy({ proxy, noProxy, testHost: host })
         .then((outcome) => {
-          sweepOutcomes.current = { ...sweepOutcomes.current, [host]: outcome };
           setSweep((current) => ({
             ...current,
             running: { ...current.running, [host]: false },

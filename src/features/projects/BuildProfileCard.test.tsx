@@ -99,7 +99,6 @@ const commands: ProjectCommand[] = [
 
 const availableArtifact: BuildArtifact = {
   profileId: profile.id,
-  profileLabel: profile.label,
   relativePath: "dist/SnapCutout.dmg",
   kind: "file",
   bytes: 1024,

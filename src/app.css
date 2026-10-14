@@ -3212,11 +3212,6 @@ button[aria-busy="true"] {
   font-weight: 400;
   line-height: 1.55;
 }
-/* A passing connectivity check is the one settings result the user acts on,
-   so it reads as a result rather than as another line of grey text. */
-.settings-version-status.is-success {
-  color: var(--accent);
-}
 .settings-version-notes {
   display: grid;
   gap: 8px;

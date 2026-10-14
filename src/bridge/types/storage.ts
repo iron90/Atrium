@@ -18,7 +18,6 @@ export type BuildArtifactKind = "file" | "directory" | "missing" | "invalid";
 
 export interface BuildArtifact {
   profileId: string;
-  profileLabel: string;
   relativePath: string;
   kind: BuildArtifactKind;
   bytes: number;

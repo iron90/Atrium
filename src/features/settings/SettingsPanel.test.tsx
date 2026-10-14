@@ -7,7 +7,11 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bridge, type NetworkProxySettings } from "../../bridge";
+import {
+  bridge,
+  type NetworkProxySettings,
+  type ProxyTestOutcome,
+} from "../../bridge";
 import { SettingsPanel } from "./SettingsPanel";
 import { I18nProvider, translate } from "../../i18n";
 import type { InspectorSectionId } from "../projects/inspector-section-visibility";
@@ -38,8 +42,6 @@ afterEach(cleanup);
 const baseProps = () => ({
   theme: "deep-ocean" as const,
   setTheme: vi.fn(),
-  layout: "overview" as const,
-  setLayout: vi.fn(),
   language: "en" as const,
   setLanguage: vi.fn(),
   workspacePaths: [] as string[],
@@ -777,6 +779,95 @@ describe("build network proxy", () => {
     await renderNetwork();
 
     expect(screen.getAllByText(/· Not checked yet/).length).toBe(6);
+  });
+
+  it("replaces an earlier failure once the same host succeeds", async () => {
+    let refused = true;
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({
+      proxy: "http://127.0.0.1:7890",
+    });
+    vi.spyOn(bridge, "testNetworkProxy").mockImplementation(
+      async (settings) => {
+        if (settings.testHost !== "registry.npmjs.org") {
+          return { kind: "tunnelled", latencyMillis: 90 } as const;
+        }
+        if (refused) {
+          throw new Error("registry.npmjs.org refused the tunnel (status 403)");
+        }
+        return { kind: "tunnelled", latencyMillis: 90 } as const;
+      },
+    );
+    await renderNetwork();
+
+    fireEvent.click(screen.getByRole("button", { name: "Check all" }));
+    await waitFor(() =>
+      expect(rowText("registry.npmjs.org")).toContain("refused the tunnel"),
+    );
+
+    refused = false;
+    fireEvent.click(screen.getByRole("button", { name: "Check all" }));
+
+    // The row was measured again, so it now shows the second answer. Keeping
+    // the first failure would report a proxy problem that no longer exists.
+    await waitFor(() =>
+      expect(rowText("registry.npmjs.org")).toContain(
+        "Connected through the proxy in 90 ms",
+      ),
+    );
+  });
+
+  it("holds the per-row buttons while a sweep is running", async () => {
+    let release: (outcome: ProxyTestOutcome) => void = () => undefined;
+    vi.spyOn(bridge, "readNetworkProxy").mockResolvedValue({
+      proxy: "http://127.0.0.1:7890",
+    });
+    vi.spyOn(bridge, "testNetworkProxy").mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    await renderNetwork();
+
+    fireEvent.click(screen.getByRole("button", { name: "Check all" }));
+
+    // Every row is being asked, so every row's button says so and refuses a
+    // second probe against the same proxy.
+    const rows = [...document.querySelectorAll(".proxy-detection-row")];
+    for (const row of rows) {
+      expect(within(row as HTMLElement).getByRole("button")).toBeDisabled();
+    }
+
+    release({ kind: "tunnelled", latencyMillis: 90 });
+    await waitFor(() =>
+      expect(
+        within(rows[0] as HTMLElement).getByRole("button"),
+      ).not.toBeDisabled(),
+    );
+  });
+
+  it("moves between the settings tabs with the arrow keys", async () => {
+    render(<SettingsPanel {...baseProps()} />);
+    const general = await screen.findByRole("tab", { name: "General" });
+    const network = screen.getByRole("tab", { name: "Network proxy" });
+
+    expect(general).toHaveAttribute("aria-selected", "true");
+    expect(general).toHaveAttribute("aria-controls", "settings-panel-general");
+    expect(network).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(general, { key: "ArrowRight" });
+
+    expect(await screen.findByLabelText("Proxy address")).toBeInTheDocument();
+    expect(network).toHaveAttribute("aria-selected", "true");
+    expect(network).toHaveAttribute("aria-controls", "settings-panel-network");
+    // The tablist is one stop in the tab order; only the selected tab is in it.
+    expect(network).toHaveAttribute("tabindex", "0");
+    expect(general).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(network, { key: "ArrowLeft" });
+    expect(await screen.findByRole("tab", { name: "General" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("keeps what the user typed when the saved settings arrive late", async () => {

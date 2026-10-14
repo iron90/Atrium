@@ -5,7 +5,7 @@ import type {
   ProxyTestOutcome,
 } from "./types";
 
-export const EMPTY_NETWORK_PROXY: NetworkProxySettings = {};
+const EMPTY_NETWORK_PROXY: NetworkProxySettings = {};
 
 export const nativeSettingsMethods = {
   readNetworkProxy: async (): Promise<NetworkProxySettings> =>
