@@ -510,8 +510,32 @@ fn resolve_command_reference(
     {
         return Some(command.id.clone());
     }
-    issues.push(format!("Command reference {reference} was not found."));
-    None
+
+    // A hand-written manifest may name the command the way the project shows
+    // it, such as `npm ci` for a lockfile-derived install. The text is only a
+    // lookup key: the resolved command still runs from its discovered
+    // program + args, and an ambiguous key is rejected instead of guessed.
+    let normalized = normalize_command_text(reference);
+    let mut matches = commands
+        .iter()
+        .filter(|command| normalize_command_text(&command.display_command) == normalized);
+    match (matches.next(), matches.next()) {
+        (Some(command), None) => Some(command.id.clone()),
+        (Some(_), Some(_)) => {
+            issues.push(format!(
+                "Command reference {reference} is ambiguous; use the command id or source."
+            ));
+            None
+        }
+        _ => {
+            issues.push(format!("Command reference {reference} was not found."));
+            None
+        }
+    }
+}
+
+fn normalize_command_text(value: &str) -> String {
+    value.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn parse_artifact_paths(

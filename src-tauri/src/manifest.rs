@@ -1098,6 +1098,105 @@ install = ["macos"]
     }
 
     #[test]
+    fn resolves_an_install_binding_from_its_exact_command_text() {
+        let root = write_manifest(
+            "install-command-text",
+            r#"schema = 3
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "local"
+label = "Local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.commands]
+install = "npm ci"
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[command_with_arguments(
+                "npm:ci",
+                "package-lock.json",
+                CommandKind::Install,
+                "npm",
+                &["ci"],
+            )],
+        );
+
+        assert_eq!(
+            result.configuration.status,
+            ProjectConfigurationStatus::Configured
+        );
+        assert_eq!(
+            result.build_profiles[0].install_command_id.as_deref(),
+            Some("npm:ci")
+        );
+        assert!(result.build_profiles[0].issues.is_empty());
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
+    fn refuses_an_ambiguous_command_text_reference() {
+        let root = write_manifest(
+            "install-ambiguous",
+            r#"schema = 3
+
+[[platforms]]
+id = "macos"
+label = "macOS"
+
+[[channels]]
+id = "local"
+label = "Local"
+
+[[build_profiles]]
+id = "macos-local"
+platform = "macos"
+channel = "local"
+
+[build_profiles.commands]
+install = "npm ci"
+"#,
+        );
+        let result = scan_project_configuration(
+            &root,
+            &[
+                command_with_arguments(
+                    "npm:ci",
+                    "package-lock.json",
+                    CommandKind::Install,
+                    "npm",
+                    &["ci"],
+                ),
+                command_with_arguments(
+                    "npm:ci:alias",
+                    "package.json#scripts.ci",
+                    CommandKind::Install,
+                    "npm",
+                    &["ci"],
+                ),
+            ],
+        );
+
+        assert_eq!(result.build_profiles[0].install_command_id, None);
+        assert!(result.build_profiles[0]
+            .issues
+            .iter()
+            .any(|issue| issue.contains("ambiguous")));
+
+        fs::remove_dir_all(root).expect("remove manifest directory");
+    }
+
+    #[test]
     fn refuses_an_install_binding_that_leaves_the_project() {
         let root = write_manifest(
             "install-scope",

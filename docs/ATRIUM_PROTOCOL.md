@@ -144,8 +144,10 @@ run = ["macos"]
 The `build_profiles` entry is the executable relationship. It combines a
 target platform with a distribution channel and binds each action to a command
 already owned by the repository. A command reference may use the discovered
-command id or its structured source path. Atrium never replaces that command
-with its own build implementation.
+command id, its structured source path, or its exact displayed command text.
+The text form is only a lookup key for a discovered command and must match
+exactly one command; it is never executed as shell input. Atrium never replaces
+that command with its own build implementation.
 
 The command roles are framework-neutral, in workflow order:
 
@@ -156,7 +158,11 @@ The command roles are framework-neutral, in workflow order:
   to a command the project already owns that restores a clean dependency state
   from its lockfile; it must not modify a lockfile, must not install outside
   the project, must not escalate privileges or use a system or user-wide
-  scope, and must not open, install, or replace an application. A binding that
+  scope, and must not open, install, or replace an application. When a Node
+  lockfile is present, command discovery already exposes the package manager's
+  frozen restore (`npm ci`, `pnpm install --frozen-lockfile`, or the matching
+  Yarn/Bun form) as a structured Install command, so the manifest can bind to
+  it without adding a project script. A binding that
   does any of those is reported as an issue and no button is offered. Omit
   `install` when the project has no reliable entry; a build command that
   already restores its own dependencies does not need one. Install has its own

@@ -88,6 +88,125 @@ mod tests {
     }
 
     #[test]
+    fn discovers_a_frozen_install_from_the_package_lock() {
+        let root = fixture_root("npm-install");
+        fs::create_dir_all(&root).expect("create command fixture");
+        fs::write(
+            root.join("package.json"),
+            r#"{"scripts":{"build":"vite build","dev":"vite"}}"#,
+        )
+        .expect("write package manifest");
+        fs::write(root.join("package-lock.json"), "{}").expect("write package lock");
+
+        let commands = discover_commands(&root);
+
+        let install = command_with_id(&commands, "npm:ci");
+        assert_eq!(install.kind, CommandKind::Install);
+        assert_eq!(install.args, vec!["ci"]);
+        assert_eq!(install.source, "package-lock.json");
+        assert_eq!(install.display_command, "npm ci");
+
+        fs::remove_dir_all(root).expect("remove command fixture");
+    }
+
+    #[test]
+    fn discovers_frozen_install_for_other_package_managers() {
+        let cases = [
+            (
+                "pnpm",
+                "pnpm-lock.yaml",
+                None,
+                "pnpm:install",
+                &["install", "--frozen-lockfile"][..],
+            ),
+            (
+                "yarn",
+                "yarn.lock",
+                None,
+                "yarn:install",
+                &["install", "--frozen-lockfile"][..],
+            ),
+            (
+                "yarn-berry",
+                "yarn.lock",
+                Some(".yarnrc.yml"),
+                "yarn:install",
+                &["install", "--immutable"][..],
+            ),
+            (
+                "bun",
+                "bun.lock",
+                None,
+                "bun:install",
+                &["install", "--frozen-lockfile"][..],
+            ),
+        ];
+        for (name, lockfile, extra, id, args) in cases {
+            let root = fixture_root(&format!("install-{name}"));
+            fs::create_dir_all(&root).expect("create command fixture");
+            fs::write(root.join("package.json"), r#"{"scripts":{"dev":"vite"}}"#)
+                .expect("write package manifest");
+            fs::write(root.join(lockfile), "").expect("write lockfile");
+            if let Some(extra) = extra {
+                fs::write(root.join(extra), "").expect("write package manager config");
+            }
+
+            let commands = discover_commands(&root);
+            let install = command_with_id(&commands, id);
+            assert_eq!(install.kind, CommandKind::Install);
+            assert_eq!(install.args, args);
+            assert_eq!(install.source, lockfile);
+
+            fs::remove_dir_all(root).expect("remove command fixture");
+        }
+    }
+
+    #[test]
+    fn does_not_invent_install_without_a_lockfile() {
+        let root = fixture_root("npm-no-install");
+        fs::create_dir_all(&root).expect("create command fixture");
+        fs::write(root.join("package.json"), r#"{"scripts":{"dev":"vite"}}"#)
+            .expect("write package manifest");
+
+        let commands = discover_commands(&root);
+
+        assert!(commands
+            .iter()
+            .all(|command| command.kind != CommandKind::Install));
+
+        fs::remove_dir_all(root).expect("remove command fixture");
+    }
+
+    #[test]
+    fn install_is_not_counted_against_the_general_command_limit() {
+        let root = fixture_root("npm-install-limit");
+        fs::create_dir_all(&root).expect("create command fixture");
+        let scripts = (0..30)
+            .map(|index| format!(r#""task{index}":"echo {index}""#))
+            .collect::<Vec<_>>()
+            .join(",");
+        fs::write(
+            root.join("package.json"),
+            format!(r#"{{"scripts":{{{scripts}}}}}"#),
+        )
+        .expect("write package manifest");
+        fs::write(root.join("package-lock.json"), "{}").expect("write package lock");
+
+        let commands = discover_commands(&root);
+
+        assert!(commands.iter().any(|command| command.id == "npm:ci"));
+        assert_eq!(
+            commands
+                .iter()
+                .filter(|command| command.kind != CommandKind::Install)
+                .count(),
+            18
+        );
+
+        fs::remove_dir_all(root).expect("remove command fixture");
+    }
+
+    #[test]
     fn ignores_script_names_that_cannot_be_represented_safely() {
         let root = fixture_root("safety");
         fs::create_dir_all(&root).expect("create command fixture");
