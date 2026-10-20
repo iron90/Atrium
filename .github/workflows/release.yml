@@ -15,8 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - macos-latest
           - windows-latest
+          # macOS packaging is paused until November 2026 to conserve GitHub
+          # Actions minutes. Restore this entry to ship macOS artifacts again.
+          # - macos-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -75,8 +77,9 @@ jobs:
             exit 1
           fi
 
-      # Builds both platforms in parallel; tauri-action creates the GitHub
-      # release from the first finished job and uploads into it from the rest.
+      # Builds each enabled platform in parallel; tauri-action creates the
+      # GitHub release from the first finished job and uploads into it from
+      # the rest.
       - name: Build and publish the macOS release
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
