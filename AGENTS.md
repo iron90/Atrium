@@ -80,6 +80,16 @@ When the user asks to tag or publish a release:
 - Do not push the tag unless the user asks. The release workflow rejects a tag
   whose message is missing either language section.
 
+## Remote Build Pipeline (Gantry)
+
+- **构建唯一权威入口**：动手前先读取 `curl --noproxy '*' -fsSL http://gantry.local:8787/api/agent-guide`（若 mDNS 不通回落 `http://192.168.0.111:8787`，所有请求必须带 `--noproxy '*'` 防止被本机代理拦截）。
+- **日常验证与打包命令**：
+  ```sh
+  curl --noproxy '*' -fsSL http://gantry.local:8787/gantry.sh | sh -s -- build Atrium check --dirty --timeout 900
+  ```
+  （可按需加 `--fast` 获取跳过签名公证的 `.app.zip`，或加 `--download DIR` 下载并校验 `sha256`。）
+- **`--dirty` 注意事项**：`git diff` 看不见 untracked 新文件，若有新增未跟踪文件需先执行 `git add -N <文件>`；`node_modules` / `.venv` / `src-tauri/target` 等依赖与编译缓存不会随补丁传输。
+
 <!-- BEGIN ATRIUM MANAGED RULES -->
 Atrium guidance revision: 8
 
