@@ -1,8 +1,9 @@
 name: Release
 
-on:
-  push:
-    tags: ["v*"]
+"on":
+  # Gantry handles builds and releases; tag pushes must not trigger this workflow.
+  # For CI artifacts, run this workflow manually on an existing tag from Actions.
+  workflow_dispatch:
 
 permissions:
   contents: write
